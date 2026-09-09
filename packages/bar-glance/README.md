@@ -8,8 +8,9 @@ behind it.
   tiling layout switcher grow out of the frame like part of it instead of
   floating as separate pills. With *contain bar* off they stay floating pills,
   as stock.
-- **Bluetooth in the bar.** An indicator with a frame-attached flyout: adapter
-  power, scanning, and connect, disconnect, pair, trust and forget per device.
+- **Bluetooth in the bar.** An indicator that opens a frame-attached flyout on
+  hover or click: adapter power, scanning, and connect, disconnect, pair, trust
+  and forget per device. Right click opens `blueman-manager`.
   A second indicator shows the battery level of connected devices that report
   one (headsets, controllers, mice, keyboards).
 - **Weather that knows it's night.** The bar's weather glyph switches to moon

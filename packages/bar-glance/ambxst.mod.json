@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.bar-glance",
   "name": "Bar at a Glance",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "More of your system readable straight from the bar. With contain-bar on, the clock, controls, battery/power-profile and layout popouts grow out of the frame instead of floating as pills. A Bluetooth indicator gets a frame-attached flyout with power, scanning, connect/pair/trust/forget per device, and a battery readout for connected devices. The weather glyph switches to moon and night variants after sunset.",
   "license": "MIT",
   "author": "drpezzer",

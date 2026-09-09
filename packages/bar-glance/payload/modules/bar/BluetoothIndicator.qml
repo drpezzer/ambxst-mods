@@ -35,7 +35,26 @@ Item {
 
     Component.onCompleted: BluetoothService.initialize()
 
-    onIsHoveredChanged: BluetoothControl.buttonHovered = isHovered
+    onIsHoveredChanged: {
+        BluetoothControl.buttonHovered = isHovered;
+        if (isHovered)
+            hoverOpenTimer.restart();
+        else
+            hoverOpenTimer.stop();
+    }
+
+    // Hover opens the panel after a short dwell, so brushing past the icon on
+    // the way to another widget doesn't pop it. Click still toggles, and the
+    // panel closes itself once the pointer leaves both it and the button
+    // (BluetoothControl.leaveTimer).
+    Timer {
+        id: hoverOpenTimer
+        interval: 300
+        onTriggered: {
+            if (root.isHovered && !root.panelOpen)
+                BluetoothControl.openPanel(root.screenName, root.currentAnchor());
+        }
+    }
 
     // Where the panel should sprout from, along the bar axis, in panel
     // coordinates. Read at click time: mapToItem isn't a bindable dependency, so
