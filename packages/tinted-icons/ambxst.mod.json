@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.tinted-icons",
   "name": "Tinted icons",
-  "version": "2.0.1",
-  "description": "Rethemes tinted app icons in the tray, dock, workspaces and launcher through a lightness ramp of the theme's primary family, so every icon lands in one hue with its shading intact (method ported from Iconicul by dvrkxed). A True Monochrome switch under Theme > Tint Icons flattens them to a single colour instead. The active workspace and selected launcher entry swap to the primary colour.",
+  "version": "2.1.0",
+  "description": "Two switches under Theme > Tint Icons. True Matugen Icons rethemes tinted app icons in the tray, dock, workspaces and launcher through a lightness ramp of the theme's primary family, so every icon lands in one hue with its shading intact (method ported from Iconicul by dvrkxed). True Monochrome flattens them to a single colour. The stock Tint Icons blend is untouched; the active workspace and selected launcher entry swap to the primary colour.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -20,8 +20,8 @@
   "conflicts": [],
   "commands": [],
   "permissions": [
-    "Adds the theme.trueMonochromeTint key to theme.json",
-    "Changes how app icons are rendered in the bar, dock and launcher while Tint Icons is on"
+    "Adds the theme.trueMatugenIcons and theme.trueMonochromeTint keys to theme.json",
+    "Changes how app icons are rendered in the bar, dock and launcher while the switches are on"
   ],
   "operations": [
     {

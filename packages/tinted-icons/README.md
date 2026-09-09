@@ -1,18 +1,20 @@
 # Tinted icons
 
-Makes Ambxst's *Tint Icons* retheme app icons instead of filtering them.
-Icons in the tray, dock, workspace pills and launcher are mapped through a
-lightness ramp built from your theme's primary family, so every icon lands in
-one hue with its own shading intact: gradients stay gradients, greys stay
-neutral, and the whole set follows whatever matugen generated from your
-wallpaper. The active workspace and the selected launcher entry swap to the
-primary colour.
+Adds two switches under *Settings → Theme → Tint Icons*. Stock *Tint Icons*
+is left exactly as Ambxst ships it.
 
-A **True Monochrome** switch under *Settings → Theme → Tint Icons* flattens
-icons to a single colour instead. It only does anything while *Tint Icons* is
-on, and it is off by default.
+- **True Matugen Icons** rethemes tinted app icons in the tray, dock, workspace
+  pills and launcher through a lightness ramp built from your theme's primary
+  family, so every icon lands in one hue with its own shading intact:
+  gradients stay gradients, and the whole set follows whatever matugen
+  generated from your wallpaper. The active workspace and the selected launcher
+  entry swap to the primary colour.
+- **True Monochrome** flattens icons to a single colour instead. It wins if
+  both are on.
 
-<img src="assets/comparison.png" alt="Default ramp tint, True Monochrome, and the original icons">
+Both only do something while *Tint Icons* is on, and both are off by default.
+
+<img src="assets/comparison.png" alt="True Matugen Icons, True Monochrome, and the original icons">
 
 <p>
 <img src="assets/bar.png" alt="Bar with tinted app icons" height="320">
@@ -34,11 +36,11 @@ ambxst mods enable drpezzer.tinted-icons
 ambxst reload
 ```
 
-Then make sure *Settings → Theme → Tint Icons* is on.
+Then turn on *Settings → Theme → Tint Icons* and *True Matugen Icons*.
 
 ## How the recolouring works
 
-The shader is a port of the colour mapping in
+The ramp shader is a port of the colour mapping in
 [Iconicul](https://codeberg.org/dvrkxed/iconicul) by dvrkxed (MIT), which
 recolours whole icon themes on disk. Each pixel is converted to Lab, its
 lightness is remapped onto the ramp's lightness range, the ramp anchors are
@@ -48,32 +50,32 @@ saturated the source pixel was, so anti-aliased greys stay quiet. The ramp is
 Neutral pixels stay neutral in the dock, launcher and workspace pills; the
 tray disables that because its icons are symbolic white glyphs.
 
-Stock *Tint Icons* blends the whole 26-colour palette by RGB distance, which
-posterises multicolour icons. Feeding a lightness mapping the whole palette
-does not help either: matugen's accents share a lightness band, so they
-average out into beige. Restricting the ramp to the primary family is what
-makes it read as a retheme.
+Feeding a lightness mapping the whole 26-colour palette does not work:
+matugen's accents share a lightness band, so they average out into beige.
+Restricting the ramp to the primary family is what makes it read as a retheme.
 
 ## What it changes
 
 - New: `modules/components/icon_ramp_tint.frag` / `.vert` and their compiled `.qsb` files.
-- `modules/components/Tinted.qml` — the ramp palette, the new shader, and the
-  `monochrome` / `tintColor` properties. The existing `fullTint`, which the
-  launcher logo uses, is untouched.
-- `config/Config.qml`, `config/defaults/theme.js` — the `theme.trueMonochromeTint` key.
-- `modules/widgets/dashboard/controls/ThemePanel.qml` — the switch.
-- `modules/globals/GlobalStates.qml` — the key joins the theme snapshot list.
+- `modules/components/Tinted.qml` — the ramp palette and shader behind a `ramp`
+  property, plus `monochrome` / `tintColor` / `neutralKeep`. The stock palette
+  shader and the existing `fullTint` (used by the launcher logo) are untouched.
+- `config/Config.qml`, `config/defaults/theme.js` — the `theme.trueMatugenIcons`
+  and `theme.trueMonochromeTint` keys.
+- `modules/widgets/dashboard/controls/ThemePanel.qml` — the two switches.
+- `modules/globals/GlobalStates.qml` — the keys join the theme snapshot list.
 - `SysTrayItem.qml`, `DockAppButton.qml`, `Workspaces.qml`, `LauncherView.qml`
-  — pass the switch and the per-state colour into `Tinted`.
+  — pass the switches and the per-state colour into `Tinted`.
 
 Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- **2.1.0** — stock *Tint Icons* is left alone; the ramp moves behind a
+  *True Matugen Icons* switch next to *True Monochrome*.
 - **2.0.1** — tray icons get the ramp's full hue: they are mostly symbolic
   white glyphs, which the neutral-preserving default left white.
-
-- **2.0.0** — the tint is now a primary-family lightness ramp (Iconicul's
+- **2.0.0** — the tint became a primary-family lightness ramp (Iconicul's
   method); the flat single-colour mode moved behind a *True Monochrome* switch.
 - **1.2.0** — monochrome only, no switch.
 - **1.1.0** — restored the stock `fullTint`, which 1.0.0 had changed and which
