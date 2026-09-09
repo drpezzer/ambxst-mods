@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.tinted-icons",
   "name": "Tinted icons",
-  "version": "1.2.0",
-  "description": "Makes Tint Icons draw app icons in the tray, dock, workspaces and launcher as single-colour glyphs that keep their own shading, instead of the stock palette remap. The active workspace and the selected launcher entry swap to the primary colour.",
+  "version": "2.0.0",
+  "description": "Rethemes tinted app icons in the tray, dock, workspaces and launcher through a lightness ramp of the theme's primary family, so every icon lands in one hue with its shading intact (method ported from Iconicul by dvrkxed). A True Monochrome switch under Theme > Tint Icons flattens them to a single colour instead. The active workspace and selected launcher entry swap to the primary colour.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -20,9 +20,20 @@
   "conflicts": [],
   "commands": [],
   "permissions": [
+    "Adds the theme.trueMonochromeTint key to theme.json",
     "Changes how app icons are rendered in the bar, dock and launcher while Tint Icons is on"
   ],
   "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/components/icon_ramp_tint.frag",
+      "target": "modules/components/icon_ramp_tint.frag"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/components/icon_ramp_tint.frag.qsb",
+      "target": "modules/components/icon_ramp_tint.frag.qsb"
+    },
     {
       "type": "patch",
       "source": "patches/tinted-icons.patch"
