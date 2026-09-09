@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.mpris-player-fixes",
   "name": "MPRIS player fixes",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Browser-player fixes for the compact, full and lock players: seek bars no longer pin at the end when a player (Firefox, Zen, YouTube tabs) reports no track length; Zen gets its own player icon (it shares Firefox's MPRIS bus name); and cover art falls back to the YouTube thumbnail from xesam:url when mpris:artUrl is empty. Ships a companion userscript that keeps Firefox and Zen publishing position and length on every site.",
   "license": "MIT",
   "author": "drpezzer",

@@ -12,36 +12,10 @@ index 8f135b4d..cbb02f2c 100644
      // property var playerColors: hasArtwork ? PlayerColors.getColorsForPlayer(player) : null
  
 diff --git a/modules/services/MprisController.qml b/modules/services/MprisController.qml
-index 0443fe95..4857a78f 100644
+index 0443fe95..dd5ff87c 100644
 --- a/modules/services/MprisController.qml
 +++ b/modules/services/MprisController.qml
-@@ -52,28 +52,58 @@ Singleton {
-         }
-     }
- 
--    property bool _restored: false
-     Component.onCompleted: {
-         root.cachedDbusName = StateService.get("lastPlayerDbusName", "");
--        root._restore();
-+        if (StateService.initialized) {
-+            root.loadLastPlayer();
-+        }
-     }
- 
-     Connections {
-         target: StateService
--        function onInitializedChanged() {
--            root._restore();
--        }
--    }
--
--    function _restore() {
--        if (StateService.initialized && !root._restored) {
--            root._restored = true;
-+        function onStateLoaded() {
-             root.cachedDbusName = StateService.get("lastPlayerDbusName", "");
-             root.loadLastPlayer();
-         }
+@@ -74,6 +74,42 @@ Singleton {
      }
  
      // --- Functions ---

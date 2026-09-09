@@ -57,6 +57,9 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- **1.0.2** — the Visibilities hunk no longer drops upstream 1.3's bar-popup
+  grouping.
+
 - **1.0.1** — re-ported the Wallpaper changes onto 1.3; 1.0.0's patch had
   carried the pre-1.3 helper-script calls into that file.
 - **1.0.0** — first packaged release.

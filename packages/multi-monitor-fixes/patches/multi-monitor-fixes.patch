@@ -391,47 +391,10 @@ index 5a80e6bd..c3b9019b 100644
  
      NotchContent {
 diff --git a/modules/services/Visibilities.qml b/modules/services/Visibilities.qml
-index ee97b092..40a21883 100644
+index ee97b092..378ef7ed 100644
 --- a/modules/services/Visibilities.qml
 +++ b/modules/services/Visibilities.qml
-@@ -21,43 +21,16 @@ Singleton {
-     property bool playerMenuOpen: false
-     readonly property var moduleNames: ["launcher", "dashboard", "overview", "powermenu", "tools", "presets"]
- 
--    // BarPopup registry keyed by groupId. Each entry is a list of
--    // currently-open BarPopup instances belonging to that group.
--    // BarPopup.open() registers itself and asks the registry to close
--    // anything else already in its group, giving the bar flyouts the
--    // mutually-exclusive behavior expected of a menu bar.
--    property var barPopupGroups: ({})
--
--    function registerBarPopup(popup) {
--        if (!popup || !popup.groupId) return;
--        const groups = Object.assign({}, barPopupGroups);
--        const list = groups[popup.groupId] || [];
--        for (let i = 0; i < list.length; i++) {
--            if (list[i] !== popup && list[i] !== null && list[i].visible) {
--                list[i].close();
--            }
--        }
--        groups[popup.groupId] = list.concat([popup]);
--        barPopupGroups = groups;
--    }
--
--    function unregisterBarPopup(popup) {
--        if (!popup || !popup.groupId) return;
--        const groups = Object.assign({}, barPopupGroups);
--        const list = (groups[popup.groupId] || []).filter(p => p !== popup && p !== null);
--        if (list.length === 0) {
--            delete groups[popup.groupId];
--        } else {
--            groups[popup.groupId] = list;
--        }
--        barPopupGroups = groups;
--    }
--
-     function setContextMenu(menu) {
-         contextMenu = menu;
+@@ -58,6 +58,11 @@ Singleton {
      }
  
      function getForScreen(screenName) {
@@ -443,7 +406,7 @@ index ee97b092..40a21883 100644
          if (!screens[screenName]) {
              screens[screenName] = screenPropertiesComponent.createObject(root, {
                  screenName: screenName
-@@ -73,6 +46,23 @@ Singleton {
+@@ -73,6 +78,23 @@ Singleton {
          return getForScreen(AxctlService.focusedMonitor.name);
      }
  
@@ -467,7 +430,7 @@ index ee97b092..40a21883 100644
      // Helper to clone map and trigger update
      function _updateMap(map, key, value) {
          var newMap = {};
-@@ -91,7 +81,9 @@ Singleton {
+@@ -91,7 +113,9 @@ Singleton {
          panels = _updateMap(panels, screenName, panel);
      }
  
@@ -478,7 +441,7 @@ index ee97b092..40a21883 100644
          panels = _updateMap(panels, screenName, null);
      }
  
-@@ -99,7 +91,9 @@ Singleton {
+@@ -99,7 +123,9 @@ Singleton {
          bars = _updateMap(bars, screenName, barContainer);
      }
  
@@ -489,7 +452,7 @@ index ee97b092..40a21883 100644
          bars = _updateMap(bars, screenName, null);
      }
  
-@@ -111,7 +105,9 @@ Singleton {
+@@ -111,7 +137,9 @@ Singleton {
          barPanels = _updateMap(barPanels, screenName, barPanel);
      }
  
@@ -500,7 +463,7 @@ index ee97b092..40a21883 100644
          barPanels = _updateMap(barPanels, screenName, null);
      }
  
-@@ -123,7 +119,9 @@ Singleton {
+@@ -123,7 +151,9 @@ Singleton {
          notches = _updateMap(notches, screenName, notchContainer);
      }
  
@@ -511,7 +474,7 @@ index ee97b092..40a21883 100644
          notches = _updateMap(notches, screenName, null);
      }
  
-@@ -135,7 +133,9 @@ Singleton {
+@@ -135,7 +165,9 @@ Singleton {
          notchPanels = _updateMap(notchPanels, screenName, notchPanel);
      }
  
@@ -522,7 +485,7 @@ index ee97b092..40a21883 100644
          notchPanels = _updateMap(notchPanels, screenName, null);
      }
  
-@@ -147,7 +147,9 @@ Singleton {
+@@ -147,7 +179,9 @@ Singleton {
          docks = _updateMap(docks, screenName, dockContainer);
      }
  
@@ -533,7 +496,7 @@ index ee97b092..40a21883 100644
          docks = _updateMap(docks, screenName, null);
      }
  
-@@ -159,7 +161,9 @@ Singleton {
+@@ -159,7 +193,9 @@ Singleton {
          dockPanels = _updateMap(dockPanels, screenName, dockPanel);
      }
  
@@ -544,7 +507,7 @@ index ee97b092..40a21883 100644
          dockPanels = _updateMap(dockPanels, screenName, null);
      }
  
-@@ -227,7 +231,7 @@ Singleton {
+@@ -227,7 +263,7 @@ Singleton {
              return;
  
          const screenProps = getForScreen(screenName);

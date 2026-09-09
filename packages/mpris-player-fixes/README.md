@@ -63,6 +63,9 @@ Works with Ambxst `>=1.3.0`. No new config keys.
 
 ## Changelog
 
+- **1.1.2** — the MprisController hunk no longer drops upstream 1.3's
+  last-player restore on startup.
+
 - **1.1.1** — the userscript works on every site, not just YouTube.
 
 - **1.1.0** — ships the Zen icon and the YouTube userscript.
