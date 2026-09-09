@@ -1,0 +1,201 @@
+diff --git a/modules/theme/Icons.qml b/modules/theme/Icons.qml
+index 3333506c..1b413738 100644
+--- a/modules/theme/Icons.qml
++++ b/modules/theme/Icons.qml
+@@ -92,6 +92,11 @@ QtObject {
+     readonly property string caffeine: ""
+     readonly property string gameMode: ""
+ 
++    // Vector icons, for controls with no Phosphor glyph. Consumed via
++    // ControlButton's `iconSource` rather than `iconName`, and drawn white so
++    // the button can tint them to the active theme colour.
++    readonly property string steamdeck: Qt.resolvedUrl("icons/steamdeck.svg")
++
+     // Toolbox
+     readonly property string toolbox: ""
+     readonly property string regionScreenshot: ""
+diff --git a/modules/widgets/dashboard/widgets/ControlButton.qml b/modules/widgets/dashboard/widgets/ControlButton.qml
+index 2ad87376..33876037 100644
+--- a/modules/widgets/dashboard/widgets/ControlButton.qml
++++ b/modules/widgets/dashboard/widgets/ControlButton.qml
+@@ -1,4 +1,5 @@
+ import QtQuick
++import QtQuick.Effects
+ import QtQuick.Layouts
+ import qs.modules.theme
+ import qs.modules.components
+@@ -10,6 +11,16 @@ StyledRect {
+     required property bool isActive
+     required property string iconName
+     required property string tooltipText
++
++    // Optional vector icon, for controls with no glyph in the Phosphor font
++    // (Steamdeck Mode). Takes over from `iconName` when set. Tinted rather than
++    // drawn in a fixed colour so it tracks `item` through the active/hover
++    // variants exactly as the font glyphs do.
++    property string iconSource: ""
++
++    // Optional label under the icon (Steamdeck Mode's grace countdown). When
++    // set, the icon shifts up to make room rather than being drawn over.
++    property string badgeText: ""
+     signal clicked
+     signal rightClicked
+     signal longPressed
+@@ -30,6 +41,8 @@ StyledRect {
+ 
+     Text {
+         anchors.centerIn: parent
++        anchors.verticalCenterOffset: root.badgeText ? -6 : 0
++        visible: root.iconSource === ""
+         text: root.iconName
+         color: root.item
+         font.family: Icons.font
+@@ -46,6 +59,58 @@ StyledRect {
+         }
+     }
+ 
++    Loader {
++        anchors.centerIn: parent
++        anchors.verticalCenterOffset: root.badgeText ? -6 : 0
++        active: root.iconSource !== ""
++
++        sourceComponent: Item {
++            implicitWidth: 20
++            implicitHeight: 20
++
++            Image {
++                id: vectorIcon
++
++                anchors.fill: parent
++                source: root.iconSource
++                // Rasterise at device resolution rather than scaling a 20px
++                // bitmap up on a HiDPI output.
++                sourceSize.width: 64
++                sourceSize.height: 64
++                fillMode: Image.PreserveAspectFit
++                smooth: true
++                visible: false
++            }
++
++            MultiEffect {
++                anchors.fill: parent
++                source: vectorIcon
++                colorization: 1
++                colorizationColor: root.item
++
++                Behavior on colorizationColor {
++                    enabled: Config.animDuration > 0
++                    ColorAnimation {
++                        duration: Config.animDuration / 2
++                        easing.type: Easing.OutQuart
++                    }
++                }
++            }
++        }
++    }
++
++    Text {
++        anchors.horizontalCenter: parent.horizontalCenter
++        anchors.bottom: parent.bottom
++        anchors.bottomMargin: 6
++        visible: root.badgeText !== ""
++        text: root.badgeText
++        color: root.item
++        font.family: Config.theme.font
++        font.pixelSize: 12
++        font.bold: true
++    }
++
+     MouseArea {
+         id: mouseArea
+         anchors.fill: parent
+diff --git a/modules/widgets/dashboard/widgets/QuickControls.qml b/modules/widgets/dashboard/widgets/QuickControls.qml
+index bc4a6acc..4e79e67b 100644
+--- a/modules/widgets/dashboard/widgets/QuickControls.qml
++++ b/modules/widgets/dashboard/widgets/QuickControls.qml
+@@ -102,27 +102,59 @@ StyledRect {
+                     Layout.preferredWidth: 48
+                     Layout.preferredHeight: 48
+                     iconName: Icons.nightLight
+-                    isActive: NightLightClient.active
+-                    tooltipText: NightLightClient.active ? "Night Light: On" : "Night Light: Off"
+-                    onClicked: NightLightClient.toggle()
++                    isActive: NightLightService.active
++                    tooltipText: NightLightService.active ? "Night Light: On" : "Night Light: Off"
++                    onClicked: NightLightService.toggle()
+                 }
+ 
+                 ControlButton {
+                     Layout.preferredWidth: 48
+                     Layout.preferredHeight: 48
+                     iconName: Icons.caffeine
+-                    isActive: CaffeineClient.inhibit
+-                    tooltipText: CaffeineClient.inhibit ? "Caffeine: On" : "Caffeine: Off"
+-                    onClicked: CaffeineClient.toggle()
++                    isActive: CaffeineService.inhibit
++                    tooltipText: CaffeineService.inhibit ? "Caffeine: On" : "Caffeine: Off"
++                    onClicked: CaffeineService.toggleInhibit()
+                 }
+ 
+                 ControlButton {
+                     Layout.preferredWidth: 48
+                     Layout.preferredHeight: 48
+                     iconName: Icons.gameMode
+-                    isActive: GameModeClient.toggled
+-                    tooltipText: GameModeClient.toggled ? "Game Mode: On" : "Game Mode: Off"
+-                    onClicked: GameModeClient.toggle()
++                    isActive: GameModeService.toggled
++                    tooltipText: GameModeService.toggled ? "Game Mode: On" : "Game Mode: Off"
++                    onClicked: GameModeService.toggle()
++                }
++
++                ControlButton {
++                    Layout.preferredWidth: 48
++                    Layout.preferredHeight: 48
++                    iconName: ""
++                    iconSource: Icons.steamdeck
++                    isActive: SteamDeckService.active
++
++                    // Grace countdown, drawn under the icon so the tooltip is
++                    // not the only warning that the desk is about to go dark.
++                    badgeText: SteamDeckService.arming ? String(SteamDeckService.graceLeft) : ""
++
++                    tooltipText: {
++                        if (SteamDeckService.arming)
++                            return `Steamdeck Mode: going dark in ${SteamDeckService.graceLeft}s - click to cancel`;
++                        if (!SteamDeckService.active)
++                            return "Steamdeck Mode: Off";
++                        if (SteamDeckService.streaming)
++                            return `Steamdeck Mode: playing ${SteamDeckService.gameName}`;
++                        return "Steamdeck Mode: On - waiting for the Deck";
++                    }
++
++                    // A press during the countdown cancels rather than toggling,
++                    // so a misclick is undone by clicking the same button again
++                    // instead of having to wait for the desk to go dark first.
++                    onClicked: {
++                        if (SteamDeckService.arming)
++                            SteamDeckService.cancel();
++                        else
++                            SteamDeckService.toggle();
++                    }
+                 }
+             }
+         }
+diff --git a/shell.qml b/shell.qml
+index 888996d3..a83ac7d3 100644
+--- a/shell.qml
++++ b/shell.qml
+@@ -273,6 +273,12 @@ ShellRoot {
+         }
+     }
+ 
++    // Steamdeck Mode's screen for the physical monitors. Deliberately NOT part
++    // of the WlSessionLock: a session lock covers every output including the
++    // Deck's virtual display, which would black out the game. See the file
++    // header for the security trade that implies.
++    SteamDeckLock {}
++
+     // Init clipboard service
+     Connections {
+         target: ClipboardService

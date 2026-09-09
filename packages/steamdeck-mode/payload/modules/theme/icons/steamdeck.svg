@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Steam Deck, drawn to match Phosphor Bold: 256 viewBox, 24px round stroke.
+       The Deck is mostly screen, so the inner rect carries the silhouette and
+       the thumbsticks are small dots that survive down to 18px. -->
+  <g fill="none" stroke="#fff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="18" y="62" width="220" height="132" rx="50"/>
+    <rect x="84" y="96" width="88" height="64" rx="12"/>
+  </g>
+  <circle cx="52" cy="128" r="13" fill="#fff"/>
+  <circle cx="204" cy="128" r="13" fill="#fff"/>
+</svg>

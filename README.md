@@ -28,6 +28,7 @@ the shell fails to start within eight seconds Ambxst rolls back on its own.
 | Package | What it does |
 |---|---|
 | [tinted-icons](packages/tinted-icons) | App icons in the bar, dock, workspaces and launcher drawn as solid theme-coloured glyphs |
+| [steamdeck-mode](packages/steamdeck-mode) | Quick Controls button that turns the PC into a Steam Deck streaming host: Sunshine + MoonDeck Buddy, a dedicated headless output, dark desk with a password overlay |
 
 More are on the way as they are ported from a long-running personal fork.
 

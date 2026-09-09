@@ -1,0 +1,14 @@
+[Unit]
+Description=MoonDeck Buddy
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+SuccessExitStatus=143
+Type=simple
+ExecStart=/usr/bin/MoonDeckBuddy
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=graphical-session.target

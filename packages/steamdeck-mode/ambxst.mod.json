@@ -1,0 +1,68 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "drpezzer.steamdeck-mode",
+  "name": "Steamdeck Mode",
+  "version": "1.0.0",
+  "description": "One button in Quick Controls turns the PC into a Steam Deck streaming host: after a 15s grace countdown it starts Sunshine and MoonDeck Buddy, gives the Deck a dedicated headless output named 'sunshine', blanks the physical monitors and covers them with a password overlay that shows what the Deck is playing. Turning it off tears everything back down.",
+  "license": "MIT",
+  "author": "drpezzer",
+  "authorUrl": "https://github.com/drpezzer",
+  "homepage": "https://github.com/drpezzer/ambxst-mods",
+  "compatibility": {
+    "api": 1,
+    "ambxst": ">=1.3.0 <2.0.0",
+    "testedBaseCommits": [
+      "6f9e93cb81767ff14c4867c349fc176d8d9e6697"
+    ]
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "commands": [
+    "hyprctl",
+    "jq",
+    "systemctl",
+    "sunshine",
+    "MoonDeckBuddy"
+  ],
+  "permissions": [
+    "Starts and stops the Sunshine and moondeckbuddy systemd user units",
+    "Creates and removes a Hyprland headless output named 'sunshine' and blanks the physical monitors with DPMS",
+    "Covers the physical monitors with a PAM password overlay (a layer surface, not a compositor session lock)",
+    "Holds Caffeine while the mode is on so the idle chain cannot suspend the host",
+    "Pauses and resumes ~/.local/bin/topaz-starlight-ctl if present",
+    "Reads Steam's appmanifest files to name the running game",
+    "Writes ~/.local/state/ambxst-steamdeck/state.json and $XDG_RUNTIME_DIR/ambxst-steamdeck"
+  ],
+  "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/lockscreen/SteamDeckLock.qml",
+      "target": "modules/lockscreen/SteamDeckLock.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/SteamDeckService.qml",
+      "target": "modules/services/SteamDeckService.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/theme/icons/steamdeck.svg",
+      "target": "modules/theme/icons/steamdeck.svg"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/scripts/steamdeck_game.sh",
+      "target": "scripts/steamdeck_game.sh"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/scripts/steamdeck_mode.sh",
+      "target": "scripts/steamdeck_mode.sh"
+    },
+    {
+      "type": "patch",
+      "source": "patches/steamdeck-mode.patch"
+    }
+  ]
+}

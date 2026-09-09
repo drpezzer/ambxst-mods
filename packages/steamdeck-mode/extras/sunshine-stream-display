@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# help: Point Hyprland focus at the headless display Sunshine streams, and back.
+#
+# Sunshine runs this from global_prep_cmd in ~/.config/sunshine/sunshine.conf:
+#   do   -> sunshine-stream-display focus
+#   undo -> sunshine-stream-display restore
+#
+# Why it exists: Hyprland maps every new window onto whichever workspace
+# currently has focus. Without this, Steam and the games it launches open on
+# DP-1 -- the desktop you were last looking at -- instead of the "sunshine"
+# headless output being captured, so the stream shows an empty desktop.
+# Focusing workspace 11 (pinned to that output in hyprland.lua) BEFORE the app
+# launches puts the windows where the capture can see them.
+#
+# This runs from a systemd user service whose environment does not necessarily
+# carry HYPRLAND_INSTANCE_SIGNATURE -- and sunshine's file capabilities make
+# its /proc/PID/environ unreadable, so it cannot be inherited by inspection
+# either. The signature is therefore rediscovered from the runtime dir.
+set -uo pipefail
+
+STREAM_WS=11
+FALLBACK_WS=2   # DP-1's default workspace
+
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+STATE="$XDG_RUNTIME_DIR/sunshine-stream-display.prevws"
+
+if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    for d in $(ls -1t "$XDG_RUNTIME_DIR/hypr" 2>/dev/null); do
+        if [ -S "$XDG_RUNTIME_DIR/hypr/$d/.socket.sock" ]; then
+            export HYPRLAND_INSTANCE_SIGNATURE="$d"
+            break
+        fi
+    done
+fi
+[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || { echo "no live Hyprland instance" >&2; exit 1; }
+
+current_ws() {
+    hyprctl activeworkspace -j 2>/dev/null |
+        python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' 2>/dev/null
+}
+
+case "${1:-}" in
+    focus)
+        cur=$(current_ws)
+        if [ -n "$cur" ] && [ "$cur" != "$STREAM_WS" ]; then
+            printf '%s' "$cur" > "$STATE"
+        fi
+        hyprctl dispatch "hl.dsp.focus({ workspace = '$STREAM_WS' })" >/dev/null
+        ;;
+    restore)
+        back=$(cat "$STATE" 2>/dev/null)
+        [ -n "$back" ] || back=$FALLBACK_WS
+        hyprctl dispatch "hl.dsp.focus({ workspace = '$back' })" >/dev/null
+        rm -f "$STATE"
+        ;;
+    *)
+        echo "usage: sunshine-stream-display focus|restore" >&2
+        exit 2
+        ;;
+esac
