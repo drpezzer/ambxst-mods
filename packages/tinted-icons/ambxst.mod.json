@@ -35,6 +35,16 @@
       "target": "modules/components/icon_ramp_tint.frag.qsb"
     },
     {
+      "type": "overlay",
+      "source": "payload/modules/components/icon_ramp_tint.vert",
+      "target": "modules/components/icon_ramp_tint.vert"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/components/icon_ramp_tint.vert.qsb",
+      "target": "modules/components/icon_ramp_tint.vert.qsb"
+    },
+    {
       "type": "patch",
       "source": "patches/tinted-icons.patch"
     }
