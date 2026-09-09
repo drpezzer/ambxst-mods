@@ -7,13 +7,12 @@ import qs.modules.lockscreen.cae.services
 
 // A fortune in the bottom-left corner, drawn once per lock rather than on a
 // timer - it should not change under you while you are typing.
-LockText {
+ScrambleText {
     id: root
 
     required property real contentScale
 
-    text: ""
-    visible: text !== ""
+    visible: source !== ""
 
     color: Qt.alpha(Colours.palette.m3tertiary, 0.82)
     font.pixelSize: Math.round(26 * contentScale)
@@ -28,7 +27,7 @@ LockText {
         command: ["bash", Quickshell.shellPath("modules/lockscreen/cae/lock/lock_fortune.sh"), "--raw"]
 
         stdout: StdioCollector {
-            onStreamFinished: root.text = text.trim()
+            onStreamFinished: root.source = text.trim()
         }
     }
 }

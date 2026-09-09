@@ -1,4 +1,4 @@
-# Caelestia lockscreen
+# Caelestia Style Lockscreen
 
 A port of [Caelestia](https://github.com/caelestia-dots/shell)'s lockscreen
 into Ambxst, restyled to a minimal composition in Ambxst's own palette.
@@ -15,6 +15,9 @@ into Ambxst, restyled to a minimal composition in Ambxst's own palette.
 - Clock, date, avatar (`~/.face.icon`, as set from Ambxst's avatar picker), a
   fortune quote bottom-left, and a now-playing line up top. The vitals use
   Caelestia's compiled services, coloured to match Ambxst's metrics panel.
+- The clock, date and quote decode into place: each glyph cycles through
+  katakana and settles left to right. The clock re-scrambles on every minute.
+- The clock follows Ambxst's own 12/24-hour setting (`bar.use12hFormat`).
 
 Two new keys in `lockscreen.json`:
 
@@ -47,6 +50,12 @@ ambxst reload
 
 Then test with `ambxst lock`, or `qs -p <generation>/shell.qml ipc call lockscreen lock`
 which locks without asking for a password on the way out.
+
+## Changelog
+
+- **1.1.0** — katakana scramble on the clock, date and quote; the clock follows
+  Ambxst's 12/24-hour setting; renamed to Caelestia Style Lockscreen.
+- **1.0.0** — first packaged release.
 
 ## What it changes
 

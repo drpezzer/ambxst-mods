@@ -26,12 +26,12 @@ Item {
         contentScale: root.contentScale
     }
 
-    LockText {
+    ScrambleText {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         anchors.verticalCenterOffset: Math.round(-180 * root.contentScale)
 
-        text: Time.format("dddd, d MMMM")
+        source: Time.format("dddd, d MMMM")
         font.pixelSize: Math.round(40 * root.contentScale)
     }
 
