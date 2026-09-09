@@ -31,7 +31,6 @@ the shell fails to start within eight seconds Ambxst rolls back on its own.
 | [steamdeck-mode](packages/steamdeck-mode) | Quick Controls button that turns the PC into a Steam Deck streaming host: Sunshine + MoonDeck Buddy, a dedicated headless output, dark desk with a password overlay |
 | [mpris-player-fixes](packages/mpris-player-fixes) | Browser-player fixes: no seek bar pinned at the end, a Zen icon, YouTube thumbnails as cover art, plus a companion userscript |
 | [bar-glance](packages/bar-glance) | Frame-attached popouts for clock, controls, battery and layout, a Bluetooth widget with flyout and battery readout, and night weather glyphs |
-| [caelestia-lockscreen](packages/caelestia-lockscreen) | Caelestia Style Lockscreen: blurred desktop grab, padlock intro, Material-shapes password field, katakana scramble-in, per-screen placement and lock-on-start |
 
 More are on the way as they are ported from a long-running personal fork.
 
