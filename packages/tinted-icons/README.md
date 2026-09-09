@@ -1,7 +1,7 @@
 # Tinted icons
 
-Adds two switches under *Settings → Theme → Tint Icons*. Stock *Tint Icons*
-is left exactly as Ambxst ships it.
+Adds two switches under *Settings → Theme → Tint Icons*, each usable on its
+own. Stock *Tint Icons* is left exactly as Ambxst ships it.
 
 - **True Matugen Icons** rethemes tinted app icons in the tray, dock, workspace
   pills and launcher through a lightness ramp built from your theme's primary
@@ -12,7 +12,7 @@ is left exactly as Ambxst ships it.
 - **True Monochrome** flattens icons to a single colour instead. It wins if
   both are on.
 
-Both only do something while *Tint Icons* is on, and both are off by default.
+Neither needs *Tint Icons* on; both are off by default.
 
 <img src="assets/comparison.png" alt="True Matugen Icons, True Monochrome, and the original icons">
 
@@ -36,7 +36,7 @@ ambxst mods enable drpezzer.tinted-icons
 ambxst reload
 ```
 
-Then turn on *Settings → Theme → Tint Icons* and *True Matugen Icons*.
+Then turn on *Settings → Theme → True Matugen Icons*.
 
 ## How the recolouring works
 
@@ -70,6 +70,9 @@ Restricting the ramp to the primary family is what makes it read as a retheme.
 Works with Ambxst `>=1.3.0`.
 
 ## Changelog
+
+- **2.2.0** — True Matugen Icons and True Monochrome no longer require
+  Tint Icons to be on.
 
 - **2.1.0** — stock *Tint Icons* is left alone; the ramp moves behind a
   *True Matugen Icons* switch next to *True Monochrome*.

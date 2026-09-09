@@ -1,5 +1,5 @@
 diff --git a/config/Config.qml b/config/Config.qml
-index 4e4834ee..f62b206a 100644
+index 4e4834ee..3265184d 100644
 --- a/config/Config.qml
 +++ b/config/Config.qml
 @@ -141,6 +141,14 @@ Singleton {
@@ -7,12 +7,12 @@ index 4e4834ee..f62b206a 100644
              property int monoFontSize: 14
              property bool tintIcons: false
 +            // Tinted icons rethemed through a primary-family lightness ramp
-+            // instead of the stock palette blend (see Tinted.ramp). Only takes
-+            // effect while tintIcons is on.
++            // instead of the stock palette blend (see Tinted.ramp). Independent
++            // of tintIcons.
 +            property bool trueMatugenIcons: false
 +            // Tinted icons drawn in one flat theme colour with their own shading
 +            // kept (see Tinted.monochrome), instead of the primary-family ramp.
-+            // Only takes effect while tintIcons is on.
++            // Independent of tintIcons; wins over trueMatugenIcons.
 +            property bool trueMonochromeTint: false
              property bool enableCorners: true
              property int animDuration: 300
@@ -69,7 +69,7 @@ index 48f68cdd..9db984c1 100644
                      }
                  }
 diff --git a/modules/components/Tinted.qml b/modules/components/Tinted.qml
-index 7144741f..9e05852f 100644
+index 7144741f..24353402 100644
 --- a/modules/components/Tinted.qml
 +++ b/modules/components/Tinted.qml
 @@ -8,6 +8,21 @@ Item {
@@ -124,7 +124,18 @@ index 7144741f..9e05852f 100644
                  delegate: Rectangle {
                      id: paletteRect
                      required property string modelData
-@@ -84,29 +108,32 @@ Item {
+@@ -55,7 +79,9 @@ Item {
+         recursive: false
+     }
+ 
+-    property bool active: Config.tintIcons
++    // The ramp and monochrome modes stand on their own; the stock palette
++    // blend still needs Tint Icons.
++    property bool active: Config.tintIcons || root.ramp || root.monochrome
+ 
+     Loader {
+         active: root.active
+@@ -84,29 +110,32 @@ Item {
                  function onVisibleChanged() { if (root.visible) internalSource.scheduleUpdate(); }
              }
  
@@ -192,20 +203,18 @@ index 528a20b3..9b6985f2 100644
      ]
      readonly property var _srVariantProps: [
 diff --git a/modules/widgets/dashboard/controls/ThemePanel.qml b/modules/widgets/dashboard/controls/ThemePanel.qml
-index e622dff3..a159deff 100644
+index e622dff3..0eb26925 100644
 --- a/modules/widgets/dashboard/controls/ThemePanel.qml
 +++ b/modules/widgets/dashboard/controls/ThemePanel.qml
-@@ -402,6 +402,150 @@ Item {
+@@ -402,6 +402,146 @@ Item {
                                  }
                              }
  
 +                            // True Matugen Icons toggle: retheme through a primary-family lightness
-+                            // ramp instead of the stock palette blend. Only meaningful while Tint Icons is on.
++                            // ramp instead of the stock palette blend. Works with Tint Icons off.
 +                            RowLayout {
 +                                Layout.fillWidth: true
 +                                spacing: 8
-+                                enabled: Config.theme.tintIcons
-+                                opacity: enabled ? 1 : 0.5
 +
 +                                Text {
 +                                    text: "True Matugen Icons"
@@ -272,12 +281,10 @@ index e622dff3..a159deff 100644
 +                            }
 +
 +                            // True Monochrome toggle: flat single-colour icons instead of the
-+                            // primary-family ramp. Only meaningful while Tint Icons is on.
++                            // primary-family ramp. Works with Tint Icons off; wins over True Matugen Icons.
 +                            RowLayout {
 +                                Layout.fillWidth: true
 +                                spacing: 8
-+                                enabled: Config.theme.tintIcons
-+                                opacity: enabled ? 1 : 0.5
 +
 +                                Text {
 +                                    text: "True Monochrome"
