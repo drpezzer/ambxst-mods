@@ -11,6 +11,7 @@ Item {
     id: root
 
     required property real contentScale
+    required property var lock
 
     implicitWidth: time.implicitWidth
     // Trimmed to the glyphs' own height so the 360px offset in Center.qml lands
@@ -23,8 +24,11 @@ Item {
         y: -(metrics.tightBoundingRect.y - metrics.boundingRect.y)
 
         // Follows Ambxst's own clock setting (bar.use12hFormat) rather than
-        // Caelestia's, so the lock and the bar always agree.
-        source: Time.format(Ambxst.Config.bar.use12hFormat ? "h:mm" : "HH:mm")
+        // Caelestia's, so the lock and the bar always agree. Built from the
+        // hour and minute values: Qt's "h" only turns twelve-hour when the
+        // format also carries an am/pm token, and the suffix is not wanted.
+        source: Ambxst.Config.bar.use12hFormat ? `${(Time.hours % 12) || 12}:${String(Time.minutes).padStart(2, "0")}` : Time.format("HH:mm")
+        active: root.lock.reveal > 0
         font.pixelSize: Math.round(150 * root.contentScale)
         font.weight: Font.Medium
 

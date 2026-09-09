@@ -8,6 +8,10 @@ LockText {
     id: root
 
     property string source: ""
+    // The composition sits invisible behind the padlock intro, so the decode
+    // has to wait for the reveal rather than run at creation. Bind this to
+    // "the text can be seen now"; each rise to true restarts the decode.
+    property bool active: true
     // Longer strings get a little longer to decode, capped so the quote never
     // drags on while the password field is already waiting.
     property int revealDuration: Math.min(1400, 500 + source.length * 8)
@@ -19,12 +23,13 @@ LockText {
     text: ""
 
     onSourceChanged: restart()
+    onActiveChanged: restart()
     Component.onCompleted: restart()
 
     function restart(): void {
-        if (source === "") {
+        if (source === "" || !active) {
             ticker.stop();
-            text = "";
+            text = source;
             return;
         }
         _startedAt = Date.now();

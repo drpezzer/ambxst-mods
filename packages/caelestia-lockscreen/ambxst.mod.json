@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.caelestia-lockscreen",
   "name": "Caelestia Style Lockscreen",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Replaces the lockscreen with a port of Caelestia's: the desktop is grabbed just before locking and blurred in and out, a Hypr-Prelock style padlock animation sweeps in, and the Material-shapes password field morphs a different shape per typed character. Clock, date, avatar, a fortune quote and a now-playing line, all in Ambxst's palette, decoding into place through a katakana scramble. The clock follows Ambxst's 12/24-hour setting. Adds lockscreen.screen (which monitor the composition is drawn on) and lockscreen.lockOnStart (lock once per session as soon as the shell is ready, for passwordless autologin).",
   "license": "MIT",
   "author": "drpezzer",

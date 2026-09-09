@@ -24,6 +24,7 @@ Item {
         anchors.verticalCenterOffset: Math.round(-360 * root.contentScale)
 
         contentScale: root.contentScale
+        lock: root.lock
     }
 
     ScrambleText {
@@ -32,6 +33,7 @@ Item {
         anchors.verticalCenterOffset: Math.round(-180 * root.contentScale)
 
         source: Time.format("dddd, d MMMM")
+        active: root.lock.reveal > 0
         font.pixelSize: Math.round(40 * root.contentScale)
     }
 

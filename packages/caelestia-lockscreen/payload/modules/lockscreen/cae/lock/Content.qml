@@ -46,5 +46,6 @@ Item {
         anchors.bottomMargin: Math.round(70 * root.contentScale)
 
         contentScale: root.contentScale
+        active: root.lock.reveal > 0
     }
 }
