@@ -85,7 +85,7 @@ index 0443fe95..4857a78f 100644
          if (!root.cachedDbusName) {
              root.isInitializing = false;
 diff --git a/modules/theme/Icons.qml b/modules/theme/Icons.qml
-index 3333506c..8276ce5d 100644
+index 3333506c..d3b055f3 100644
 --- a/modules/theme/Icons.qml
 +++ b/modules/theme/Icons.qml
 @@ -1,6 +1,7 @@
@@ -100,10 +100,10 @@ index 3333506c..8276ce5d 100644
      readonly property string player: ""
      readonly property string spotify: "<font face='Symbols Nerd Font Mono'>󰓇</font>"
      readonly property string firefox: "<font face='Symbols Nerd Font Mono'>󰈹</font>"
-+    // Zen has no Nerd Font glyph, so embed the themed desktop icon inline. This needs a real
++    // Zen has no Nerd Font glyph, so embed a white ring logo inline. This needs a real
 +    // file path: Quickshell.iconPath() returns an "image://icon/..." provider URL, which the
 +    // rich text engine can't read (it goes through QImageReader, not QQuickImageProvider).
-+    readonly property string zen: "<img src='file://" + Quickshell.env("HOME") + "/.local/share/icons/hicolor/scalable/apps/zen-browser.svg' width='19' height='19'>"
++    readonly property string zen: "<img src='" + Qt.resolvedUrl("icons/zen-browser.svg") + "' width='19' height='19'>"
      readonly property string chromium: "<font face='Symbols Nerd Font Mono'></font>"
      readonly property string telegram: "<font face='Symbols Nerd Font Mono'></font>"
  

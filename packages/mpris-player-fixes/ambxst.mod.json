@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.mpris-player-fixes",
   "name": "MPRIS player fixes",
-  "version": "1.0.0",
-  "description": "Browser-player fixes for the compact, full and lock players: seek bars no longer pin at the end when a player (Firefox, Zen, YouTube tabs) reports no track length; Zen gets its own player icon (it shares Firefox's MPRIS bus name); and cover art falls back to the YouTube thumbnail from xesam:url when mpris:artUrl is empty.",
+  "version": "1.1.0",
+  "description": "Browser-player fixes for the compact, full and lock players: seek bars no longer pin at the end when a player (Firefox, Zen, YouTube tabs) reports no track length; Zen gets its own player icon (it shares Firefox's MPRIS bus name); and cover art falls back to the YouTube thumbnail from xesam:url when mpris:artUrl is empty. Ships a companion userscript that makes YouTube keep publishing position and length.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -20,10 +20,14 @@
   "conflicts": [],
   "commands": [],
   "permissions": [
-    "Loads cover-art thumbnails from i.ytimg.com when a player provides no artwork",
-    "Reads ~/.local/share/icons/hicolor/scalable/apps/zen-browser.svg for the Zen player icon"
+    "Loads cover-art thumbnails from i.ytimg.com when a player provides no artwork"
   ],
   "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/theme/icons/zen-browser.svg",
+      "target": "modules/theme/icons/zen-browser.svg"
+    },
     {
       "type": "patch",
       "source": "patches/mpris-player-fixes.patch"
