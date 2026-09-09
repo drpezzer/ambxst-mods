@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.caelestia-lockscreen",
   "name": "Caelestia Style Lockscreen",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Replaces the lockscreen with a port of Caelestia's: the desktop is grabbed just before locking and blurred in and out, a Hypr-Prelock style padlock animation sweeps in, and the Material-shapes password field morphs a different shape per typed character. Clock, date, avatar, a fortune quote and a now-playing line, all in Ambxst's palette, decoding into place through a katakana scramble. The clock follows Ambxst's 12/24-hour setting. Adds lockscreen.screen (which monitor the composition is drawn on) and lockscreen.lockOnStart (lock once per session as soon as the shell is ready, for passwordless autologin).",
   "license": "MIT",
   "author": "drpezzer",
@@ -19,13 +19,14 @@
   "dependencies": [],
   "conflicts": [],
   "commands": [
-    "grim"
+    "grim",
+    "caelestia"
   ],
   "permissions": [
     "Authenticates through PAM (pam.d configs shipped in modules/lockscreen/cae/assets/pam.d)",
     "Captures every output with grim into $XDG_RUNTIME_DIR/ambxst-lock just before locking; the images are deleted on unlock",
     "Reads ~/.face.icon for the avatar and runs fortune for the quote if installed",
-    "Requires the caelestia-shell package for its M3Shapes and Caelestia QML plugins (system-wide Qt import path); it is never launched"
+    "Requires the caelestia-shell package for its M3Shapes and Caelestia QML plugins; it is never launched. Its caelestia-cli dependency provides the `caelestia` command the build checks for."
   ],
   "operations": [
     {

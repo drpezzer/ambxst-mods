@@ -29,11 +29,23 @@ Two new keys in `lockscreen.json`:
 
 ## Requirements
 
-- `grim` (declared; the build refuses without it).
-- The `caelestia-shell` package, for its `M3Shapes` and `Caelestia.*` QML
-  plugins on the system-wide Qt import path. It is only a library here and is
-  never started. On Arch: `yay -S caelestia-shell`.
-- `fortune` is optional; without it the quote is simply empty.
+Ambxst mods never install packages or run scripts, so these are on you. On
+Arch, `extras/install-deps.sh` does it in one go with yay or paru:
+
+```bash
+bash extras/install-deps.sh
+```
+
+| Package | Why | Checked by the build? |
+|---|---|---|
+| `caelestia-shell` (AUR) | The `M3Shapes` and `Caelestia.*` QML plugins the password field and vitals are built on. Library only; it is never started. | Indirectly: its `caelestia-cli` dependency provides the `caelestia` command, which the manifest requires. |
+| `grim` | Screenshots the desktop to blur behind the lock. | Yes. |
+| `fortune-mod` | The quote in the bottom-left. | No; the label is empty without it. |
+
+If the plugins are missing the build is refused with "requires command
+caelestia". Do not bypass that: without them the lock surface cannot be
+created and `ambxst lock` would do nothing at all, which is worse than an
+error.
 
 ## Install
 
@@ -53,6 +65,9 @@ Then test with `ambxst lock`, or `qs -p <generation>/shell.qml ipc call lockscre
 which locks without asking for a password on the way out.
 
 ## Changelog
+
+- **1.1.3** — the build now requires the `caelestia` command as a stand-in
+  for the caelestia-shell plugins; adds `extras/install-deps.sh`.
 
 - **1.1.2** — the scramble is a reveal transition only; real twelve-hour
   clock (Qt's `h` needs an am/pm token to be twelve-hour, so the string is
