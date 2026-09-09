@@ -1,0 +1,2283 @@
+diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
+index b9e57ca7..762dfe3f 100644
+--- a/modules/bar/BarContent.qml
++++ b/modules/bar/BarContent.qml
+@@ -520,6 +520,22 @@ Item {
+                             endRadius: root.innerRadius
+                         }
+ 
++                        Bar.BluetoothIndicator {
++                            id: bluetoothIndicator
++                            bar: root
++                            layerEnabled: root.shadowsEnabled
++                            startRadius: root.innerRadius
++                            endRadius: root.innerRadius
++                        }
++
++                        Bar.BluetoothBatteryIndicator {
++                            id: btBatteryIndicator
++                            bar: root
++                            layerEnabled: root.shadowsEnabled
++                            startRadius: root.innerRadius
++                            endRadius: root.innerRadius
++                        }
++
+                         ControlsButton {
+                             id: controlsButton
+                             bar: root
+@@ -576,6 +592,14 @@ Item {
+                             endRadius: root.innerRadius
+                         }
+ 
++                        Bar.BluetoothIndicator {
++                            id: bluetoothIndicatorVert
++                            bar: root
++                            layerEnabled: root.shadowsEnabled
++                            startRadius: root.innerRadius
++                            endRadius: root.innerRadius
++                        }
++
+                         ToolsButton {
+                             id: toolsButtonVert
+                             startRadius: root.innerRadius
+@@ -727,11 +751,21 @@ Item {
+                             }
+                         }
+ 
++                        Bar.BluetoothBatteryIndicator {
++                            id: btBatteryIndicatorVert
++                            bar: root
++                            layerEnabled: root.shadowsEnabled
++                            startRadius: root.outerRadius
++                            endRadius: root.innerRadius
++                        }
++
+                         ControlsButton {
+                             id: controlsButtonVert
+                             bar: root
+                             layerEnabled: root.shadowsEnabled
+-                            startRadius: root.outerRadius
++                            // Heads the bottom group only while the Bluetooth
++                            // battery readout above it is hidden.
++                            startRadius: btBatteryIndicatorVert.visible ? root.innerRadius : root.outerRadius
+                             endRadius: root.innerRadius
+                         }
+ 
+diff --git a/modules/bar/BatteryIndicator.qml b/modules/bar/BatteryIndicator.qml
+index c3fcb229..43226190 100644
+--- a/modules/bar/BatteryIndicator.qml
++++ b/modules/bar/BatteryIndicator.qml
+@@ -190,145 +190,151 @@ Item {
+         }
+     }
+ 
+-    // Battery popup with Power Profiles
+-    BarPopup {
++    // Battery and power profiles popout — a floating pill next to the bar, or
++    // grown out of the frame when the bar is contained by it. See BarPopout.
++    BarPopout {
+         id: batteryPopup
+         anchorItem: buttonBg
+         bar: root.bar
+ 
+-        contentWidth: Math.max(280, mainColumn.implicitWidth + batteryPopup.popupPadding * 2)
+-        // Fixed height calculation to prevent expansion animation on first open
+-        // Battery details (60px) + spacing (4px) + Profiles (36px)
+-        contentHeight: (Battery.available ? 64 : 0) + 36 + batteryPopup.popupPadding * 2
+-
+-        ColumnLayout {
+-            id: mainColumn
+-            anchors.fill: parent
+-            spacing: 4
+-
+-            StyledRect {
+-                id: batteryDetailsContainer
+-                Layout.fillWidth: true
+-                Layout.preferredHeight: 60
+-                visible: Battery.available
+-                variant: "common"
+-                enableShadow: false
++        Item {
++            // The pill has always been 280 wide, which is this plus its own
++            // padding either side — unless the profile row needs more.
++            implicitWidth: Math.max(280 - batteryPopup.popupPadding * 2, mainColumn.implicitWidth)
++            // Battery details (60px) + spacing (4px) + profiles (36px). Fixed
++            // rather than derived so the panel doesn't expand into place on
++            // first open.
++            implicitHeight: (Battery.available ? 64 : 0) + 36
++
++            ColumnLayout {
++                id: mainColumn
++                anchors.fill: parent
++                spacing: 4
+ 
+-                radius: Styling.radius(0)
++                StyledRect {
++                    id: batteryDetailsContainer
++                    Layout.fillWidth: true
++                    Layout.preferredHeight: 60
++                    visible: Battery.available
++                    variant: "common"
++                    enableShadow: false
+ 
+-                RowLayout {
+-                    anchors.fill: parent
+-                    anchors.leftMargin: 12
+-                    anchors.rightMargin: 12
+-                    anchors.topMargin: 8
+-                    anchors.bottomMargin: 8
+-                    spacing: 12
+-
+-                    Text {
+-                        Layout.alignment: Qt.AlignVCenter
+-                        text: Battery.getBatteryIcon()
+-                        font.family: Icons.font
+-                        font.pixelSize: 24
+-                        color: root.getBatteryColor()
+-                    }
++                    radius: Styling.radius(0)
+ 
+-                    ColumnLayout {
+-                        Layout.fillWidth: true
+-                        Layout.fillHeight: true
+-                        Layout.alignment: Qt.AlignVCenter
+-                        spacing: 2
++                    RowLayout {
++                        anchors.fill: parent
++                        anchors.leftMargin: 12
++                        anchors.rightMargin: 12
++                        anchors.topMargin: 8
++                        anchors.bottomMargin: 8
++                        spacing: 12
+ 
+                         Text {
++                            Layout.alignment: Qt.AlignVCenter
++                            text: Battery.getBatteryIcon()
++                            font.family: Icons.font
++                            font.pixelSize: 24
++                            color: root.getBatteryColor()
++                        }
++
++                        ColumnLayout {
+                             Layout.fillWidth: true
+-                            text: Battery.isPluggedIn ? (Battery.isCharging ? "Charging" : "Full") : "On battery"
+-                            font.family: Styling.defaultFont
+-                            font.pixelSize: Styling.fontSize(0)
+-                            font.bold: true
+-                            color: Colors.overBackground
++                            Layout.fillHeight: true
++                            Layout.alignment: Qt.AlignVCenter
++                            spacing: 2
++
++                            Text {
++                                Layout.fillWidth: true
++                                text: Battery.isPluggedIn ? (Battery.isCharging ? "Charging" : "Full") : "On battery"
++                                font.family: Styling.defaultFont
++                                font.pixelSize: Styling.fontSize(0)
++                                font.bold: true
++                                color: Colors.overBackground
++                            }
++
++                            Text {
++                                text: Battery.isPluggedIn ? (Battery.timeToFull !== "" ? "Full in " + Battery.timeToFull : "Fully charged") : (Battery.timeToEmpty !== "" ? Battery.timeToEmpty + " remaining" : "")
++                                font.family: Styling.defaultFont
++                                font.pixelSize: Styling.fontSize(-1)
++                                color: Colors.overBackground
++                                opacity: 0.8
++                                Layout.fillWidth: true
++                                elide: Text.ElideRight
++                            }
+                         }
+ 
++                        // Battery percentage display
+                         Text {
+-                            text: Battery.isPluggedIn ? (Battery.timeToFull !== "" ? "Full in " + Battery.timeToFull : "Fully charged") : (Battery.timeToEmpty !== "" ? Battery.timeToEmpty + " remaining" : "")
++                            Layout.alignment: Qt.AlignVCenter
++                            text: Math.round(Battery.percentage) + "%"
+                             font.family: Styling.defaultFont
+-                            font.pixelSize: Styling.fontSize(-1)
+-                            color: Colors.overBackground
++                            font.pixelSize: Styling.fontSize(2)
++                            font.bold: true
++                            color: root.getBatteryColor()
+                             opacity: 0.8
+-                            Layout.fillWidth: true
+-                            elide: Text.ElideRight
+                         }
+                     }
+-
+-                    // Battery percentage display
+-                    Text {
+-                        Layout.alignment: Qt.AlignVCenter
+-                        text: Math.round(Battery.percentage) + "%"
+-                        font.family: Styling.defaultFont
+-                        font.pixelSize: Styling.fontSize(2)
+-                        font.bold: true
+-                        color: root.getBatteryColor()
+-                        opacity: 0.8
+-                    }
+                 }
+-            }
+-
+-            RowLayout {
+-                id: profilesRow
+-                Layout.fillWidth: true
+-                Layout.fillHeight: true
+-                spacing: 4
+-
+-                Repeater {
+-                    model: PowerProfileClient.availableProfiles
+-
+-                    delegate: StyledRect {
+-                        id: profileButton
+-                        required property string modelData
+-                        required property int index
+-
+-                        Layout.fillWidth: true
+-                        Layout.preferredWidth: 80
+-                        height: 36
+-
+-                        readonly property bool isSelected: PowerProfileClient.currentProfile === modelData
+-                        readonly property bool isFirst: index === 0
+-                        readonly property bool isLast: index === PowerProfileClient.availableProfiles.length - 1
+-                        property bool buttonHovered: false
+ 
+-                        readonly property real defaultRadius: Styling.radius(0)
+-                        readonly property real selectedRadius: Styling.radius(0) / 2
++                RowLayout {
++                    id: profilesRow
++                    Layout.fillWidth: true
++                    Layout.fillHeight: true
++                    spacing: 4
+ 
+-                        variant: isSelected ? "primary" : (buttonHovered ? "focus" : "common")
+-                        enableShadow: false
++                    Repeater {
++                        model: PowerProfileClient.availableProfiles
+ 
+-                        topLeftRadius: isSelected ? (isFirst ? defaultRadius : selectedRadius) : defaultRadius
+-                        bottomLeftRadius: isSelected ? (isFirst ? defaultRadius : selectedRadius) : defaultRadius
+-                        topRightRadius: isSelected ? (isLast ? defaultRadius : selectedRadius) : defaultRadius
+-                        bottomRightRadius: isSelected ? (isLast ? defaultRadius : selectedRadius) : defaultRadius
++                        delegate: StyledRect {
++                            id: profileButton
++                            required property string modelData
++                            required property int index
+ 
+-                        Text {
+-                            anchors.centerIn: parent
+-                            text: PowerProfileClient.getProfileIcon(profileButton.modelData)
+-                            font.family: Icons.font
+-                            font.pixelSize: 18
+-                            color: profileButton.item
+-                        }
++                            Layout.fillWidth: true
++                            Layout.preferredWidth: 80
++                            height: 36
++
++                            readonly property bool isSelected: PowerProfileClient.currentProfile === modelData
++                            readonly property bool isFirst: index === 0
++                            readonly property bool isLast: index === PowerProfileClient.availableProfiles.length - 1
++                            property bool buttonHovered: false
++
++                            readonly property real defaultRadius: Styling.radius(0)
++                            readonly property real selectedRadius: Styling.radius(0) / 2
++
++                            variant: isSelected ? "primary" : (buttonHovered ? "focus" : "common")
++                            enableShadow: false
++
++                            topLeftRadius: isSelected ? (isFirst ? defaultRadius : selectedRadius) : defaultRadius
++                            bottomLeftRadius: isSelected ? (isFirst ? defaultRadius : selectedRadius) : defaultRadius
++                            topRightRadius: isSelected ? (isLast ? defaultRadius : selectedRadius) : defaultRadius
++                            bottomRightRadius: isSelected ? (isLast ? defaultRadius : selectedRadius) : defaultRadius
++
++                            Text {
++                                anchors.centerIn: parent
++                                text: PowerProfileClient.getProfileIcon(profileButton.modelData)
++                                font.family: Icons.font
++                                font.pixelSize: 18
++                                color: profileButton.item
++                            }
+ 
+-                        MouseArea {
+-                            anchors.fill: parent
+-                            hoverEnabled: true
+-                            cursorShape: Qt.PointingHandCursor
++                            MouseArea {
++                                anchors.fill: parent
++                                hoverEnabled: true
++                                cursorShape: Qt.PointingHandCursor
+ 
+-                            onEntered: profileButton.buttonHovered = true
+-                            onExited: profileButton.buttonHovered = false
++                                onEntered: profileButton.buttonHovered = true
++                                onExited: profileButton.buttonHovered = false
+ 
+-                            onClicked: {
+-                                PowerProfileClient.setProfile(profileButton.modelData);
++                                onClicked: {
++                                    PowerProfileClient.setProfile(profileButton.modelData);
++                                }
+                             }
+-                        }
+ 
+-                        StyledToolTip {
+-                            show: profileButton.buttonHovered
+-                            tooltipText: PowerProfileClient.getProfileDisplayName(profileButton.modelData)
++                            StyledToolTip {
++                                show: profileButton.buttonHovered
++                                tooltipText: PowerProfileClient.getProfileDisplayName(profileButton.modelData)
++                            }
+                         }
+                     }
+                 }
+diff --git a/modules/bar/ControlsButton.qml b/modules/bar/ControlsButton.qml
+index 687f077b..6c20b450 100644
+--- a/modules/bar/ControlsButton.qml
++++ b/modules/bar/ControlsButton.qml
+@@ -87,166 +87,176 @@ Item {
+         }
+     }
+ 
+-    // Controls popup
+-    BarPopup {
++    // Controls popout — a floating pill next to the bar, or grown out of the
++    // frame when the bar is contained by it. See BarPopout.
++    BarPopout {
+         id: controlsPopup
+         anchorItem: buttonBg
+         bar: root.bar
+         popupPadding: 16
+ 
+-        contentWidth: 220
+-        // Fixed height calculation to prevent expansion animation on first open
+-        // 3 rows * 36px + 2 gaps * 12px = 132px
+-        contentHeight: 132 + popupPadding * 2
+-
+-        ColumnLayout {
+-            id: slidersColumn
+-            anchors.fill: parent
+-            spacing: 12
+-
+-            // Volume Slider
+-            ControlSliderRow {
+-                id: volumeRow
+-                Layout.fillWidth: true
+-                Layout.preferredHeight: 36
+-                Layout.rightMargin: 8
+-
+-                icon: {
+-                    if (Audio.sink?.audio?.muted)
+-                        return Icons.speakerSlash;
+-                    const vol = Audio.sink?.audio?.volume ?? 0;
+-                    if (vol < 0.01)
+-                        return Icons.speakerX;
+-                    if (vol < 0.19)
+-                        return Icons.speakerNone;
+-                    if (vol < 0.49)
+-                        return Icons.speakerLow;
+-                    return Icons.speakerHigh;
+-                }
+-                sliderValue: Audio.sink?.audio?.volume ?? 0
+-                progressColor: Audio.sink?.audio?.muted ? Colors.outline : Styling.srItem("overprimary")
+-                wavy: true
+-                wavyAmplitude: Audio.sink?.audio?.muted ? 0.5 : 1.5 * sliderValue
+-                wavyFrequency: Audio.sink?.audio?.muted ? 1.0 : 8.0 * sliderValue
+-
+-                onValueChanged: newValue => {
+-                    if (Audio.sink?.audio) {
+-                        Audio.sink.audio.volume = newValue;
++        Item {
++            // The pill has always been 220 wide, which is this plus its own
++            // 16px of padding either side; and 3 rows * 36px + 2 gaps * 12px.
++            // Fixed rather than derived so the panel doesn't expand into
++            // place on first open.
++            implicitWidth: 188
++            implicitHeight: 132
++
++            ColumnLayout {
++                id: slidersColumn
++                anchors.fill: parent
++                spacing: 12
++
++                // Volume Slider
++                ControlSliderRow {
++                    id: volumeRow
++                    Layout.fillWidth: true
++                    Layout.preferredHeight: 36
++                    Layout.rightMargin: 8
++
++                    icon: {
++                        if (Audio.sink?.audio?.muted)
++                            return Icons.speakerSlash;
++                        const vol = Audio.sink?.audio?.volume ?? 0;
++                        if (vol < 0.01)
++                            return Icons.speakerX;
++                        if (vol < 0.19)
++                            return Icons.speakerNone;
++                        if (vol < 0.49)
++                            return Icons.speakerLow;
++                        return Icons.speakerHigh;
+                     }
+-                }
++                    sliderValue: Audio.sink?.audio?.volume ?? 0
++                    progressColor: Audio.sink?.audio?.muted ? Colors.outline : Styling.srItem("overprimary")
++                    wavy: true
++                    wavyAmplitude: Audio.sink?.audio?.muted ? 0.5 : 1.5 * sliderValue
++                    wavyFrequency: Audio.sink?.audio?.muted ? 1.0 : 8.0 * sliderValue
+ 
+-                onIconClicked: {
+-                    if (Audio.sink?.audio) {
+-                        Audio.sink.audio.muted = !Audio.sink.audio.muted;
++                    onValueChanged: newValue => {
++                        if (Audio.sink?.audio) {
++                            Audio.sink.audio.volume = newValue;
++                        }
+                     }
+-                }
+ 
+-                Connections {
+-                    target: Audio.sink?.audio ?? null
+-                    ignoreUnknownSignals: true
+-                    function onVolumeChanged() {
++                    onIconClicked: {
+                         if (Audio.sink?.audio) {
+-                            volumeRow.sliderValue = Audio.sink.audio.volume;
++                            Audio.sink.audio.muted = !Audio.sink.audio.muted;
+                         }
+                     }
+-                }
+-            }
+ 
+-            // Microphone Slider
+-            ControlSliderRow {
+-                id: micRow
+-                Layout.fillWidth: true
+-                Layout.preferredHeight: 36
+-                Layout.rightMargin: 8
+-
+-                icon: Audio.source?.audio?.muted ? Icons.micSlash : Icons.mic
+-                sliderValue: Audio.source?.audio?.volume ?? 0
+-                progressColor: Audio.source?.audio?.muted ? Colors.outline : Styling.srItem("overprimary")
+-                wavy: true
+-                wavyAmplitude: Audio.source?.audio?.muted ? 0.5 : 1.5 * sliderValue
+-                wavyFrequency: Audio.source?.audio?.muted ? 1.0 : 8.0 * sliderValue
+-
+-                onValueChanged: newValue => {
+-                    if (Audio.source?.audio) {
+-                        Audio.source.audio.volume = newValue;
++                    Component.onCompleted: {
++                        if (Audio.sink?.audio)
++                            volumeRow.sliderValue = Audio.sink.audio.volume;
+                     }
+-                }
+ 
+-                onIconClicked: {
+-                    if (Audio.source?.audio) {
+-                        Audio.source.audio.muted = !Audio.source.audio.muted;
++                    Connections {
++                        target: Audio.sink?.audio ?? null
++                        ignoreUnknownSignals: true
++                        function onVolumeChanged() {
++                            if (Audio.sink?.audio) {
++                                volumeRow.sliderValue = Audio.sink.audio.volume;
++                            }
++                        }
+                     }
+                 }
+ 
+-                Connections {
+-                    target: Audio.source?.audio ?? null
+-                    ignoreUnknownSignals: true
+-                    function onVolumeChanged() {
++                // Microphone Slider
++                ControlSliderRow {
++                    id: micRow
++                    Layout.fillWidth: true
++                    Layout.preferredHeight: 36
++                    Layout.rightMargin: 8
++
++                    icon: Audio.source?.audio?.muted ? Icons.micSlash : Icons.mic
++                    sliderValue: Audio.source?.audio?.volume ?? 0
++                    progressColor: Audio.source?.audio?.muted ? Colors.outline : Styling.srItem("overprimary")
++                    wavy: true
++                    wavyAmplitude: Audio.source?.audio?.muted ? 0.5 : 1.5 * sliderValue
++                    wavyFrequency: Audio.source?.audio?.muted ? 1.0 : 8.0 * sliderValue
++
++                    onValueChanged: newValue => {
++                        if (Audio.source?.audio) {
++                            Audio.source.audio.volume = newValue;
++                        }
++                    }
++
++                    onIconClicked: {
+                         if (Audio.source?.audio) {
++                            Audio.source.audio.muted = !Audio.source.audio.muted;
++                        }
++                    }
++
++                    Component.onCompleted: {
++                        if (Audio.source?.audio)
+                             micRow.sliderValue = Audio.source.audio.volume;
++                    }
++
++                    Connections {
++                        target: Audio.source?.audio ?? null
++                        ignoreUnknownSignals: true
++                        function onVolumeChanged() {
++                            if (Audio.source?.audio) {
++                                micRow.sliderValue = Audio.source.audio.volume;
++                            }
+                         }
+                     }
+                 }
+-            }
+ 
+-            // Brightness Slider
+-            ControlSliderRow {
+-                id: brightnessRow
+-                Layout.fillWidth: true
+-                Layout.preferredHeight: 36
+-                Layout.rightMargin: 8
+-
+-                property var currentMonitor: Brightness.getMonitorForScreen(root.bar.screen)
+-
+-                icon: Icons.sun
+-                sliderValue: currentMonitor?.brightness ?? 0.5
+-                progressColor: Styling.srItem("overprimary")
+-                wavy: true
+-                wavyAmplitude: 1.5 * sliderValue
+-                wavyFrequency: 8.0 * sliderValue
+-                iconRotation: (sliderValue / 1.0) * 180
+-                iconScale: 0.8 + (sliderValue / 1.0) * 0.2
+-
+-                onValueChanged: newValue => {
+-                    if (Brightness.syncBrightness) {
+-                        for (let i = 0; i < Brightness.monitors.length; i++) {
+-                            let mon = Brightness.monitors[i];
+-                            if (mon && mon.ready) {
+-                                mon.setBrightness(newValue);
++                // Brightness Slider
++                ControlSliderRow {
++                    id: brightnessRow
++                    Layout.fillWidth: true
++                    Layout.preferredHeight: 36
++                    Layout.rightMargin: 8
++
++                    property var currentMonitor: Brightness.getMonitorForScreen(root.bar.screen)
++
++                    icon: Icons.sun
++                    sliderValue: currentMonitor?.brightness ?? 0.5
++                    progressColor: Styling.srItem("overprimary")
++                    wavy: true
++                    wavyAmplitude: 1.5 * sliderValue
++                    wavyFrequency: 8.0 * sliderValue
++                    iconRotation: (sliderValue / 1.0) * 180
++                    iconScale: 0.8 + (sliderValue / 1.0) * 0.2
++
++                    onValueChanged: newValue => {
++                        if (Brightness.syncBrightness) {
++                            for (let i = 0; i < Brightness.monitors.length; i++) {
++                                let mon = Brightness.monitors[i];
++                                if (mon && mon.ready) {
++                                    mon.setBrightness(newValue);
++                                }
+                             }
++                        } else if (currentMonitor && currentMonitor.ready) {
++                            currentMonitor.setBrightness(newValue);
+                         }
+-                    } else if (currentMonitor && currentMonitor.ready) {
+-                        currentMonitor.setBrightness(newValue);
+                     }
+-                }
+ 
+-                onIconClicked: {}
++                    onIconClicked: {}
+ 
+-                Connections {
+-                    target: brightnessRow.currentMonitor ?? null
+-                    ignoreUnknownSignals: true
+-                    function onBrightnessChanged() {
+-                        if (brightnessRow.currentMonitor) {
++                    Component.onCompleted: {
++                        if (brightnessRow.currentMonitor?.ready)
+                             brightnessRow.sliderValue = brightnessRow.currentMonitor.brightness;
+-                        }
+                     }
+-                    function onReadyChanged() {
+-                        if (brightnessRow.currentMonitor?.ready) {
+-                            brightnessRow.sliderValue = brightnessRow.currentMonitor.brightness;
++
++                    Connections {
++                        target: brightnessRow.currentMonitor ?? null
++                        ignoreUnknownSignals: true
++                        function onBrightnessChanged() {
++                            if (brightnessRow.currentMonitor) {
++                                brightnessRow.sliderValue = brightnessRow.currentMonitor.brightness;
++                            }
++                        }
++                        function onReadyChanged() {
++                            if (brightnessRow.currentMonitor?.ready) {
++                                brightnessRow.sliderValue = brightnessRow.currentMonitor.brightness;
++                            }
+                         }
+                     }
+                 }
+             }
+         }
+     }
+-
+-    Component.onCompleted: {
+-        // Initialize values
+-        if (Audio.sink?.audio)
+-            volumeRow.sliderValue = Audio.sink.audio.volume;
+-        if (Audio.source?.audio)
+-            micRow.sliderValue = Audio.source.audio.volume;
+-        if (brightnessRow.currentMonitor?.ready)
+-            brightnessRow.sliderValue = brightnessRow.currentMonitor.brightness;
+-    }
+ }
+diff --git a/modules/bar/LayoutSelectorButton.qml b/modules/bar/LayoutSelectorButton.qml
+index a523e24b..7377a42e 100644
+--- a/modules/bar/LayoutSelectorButton.qml
++++ b/modules/bar/LayoutSelectorButton.qml
+@@ -111,87 +111,89 @@ Item {
+         }
+     }
+ 
+-    // Layout popup
+-    BarPopup {
++    // Layout popout — a floating pill next to the bar, or grown out of the
++    // frame when the bar is contained by it. See BarPopout.
++    BarPopout {
+         id: layoutPopup
+         anchorItem: buttonBg
+         bar: root.bar
+ 
+-        contentWidth: layoutColumn.implicitWidth + popupPadding * 2
+-        contentHeight: layoutColumn.implicitHeight + popupPadding * 2
++        Item {
++            implicitWidth: layoutRow.implicitWidth
++            implicitHeight: 36
+ 
+-        ColumnLayout {
+-            id: layoutColumn
+-            anchors.centerIn: parent
+-            spacing: 4
++            Row {
++                id: layoutRow
++                anchors.centerIn: parent
++                spacing: 4
+ 
+-            readonly property int currentIndex: {
+-                for (let i = 0; i < GlobalStates.availableLayouts.length; i++) {
+-                    if (GlobalStates.availableLayouts[i] === GlobalStates.compositorLayout) {
+-                        return i;
++                readonly property int currentIndex: {
++                    for (let i = 0; i < GlobalStates.availableLayouts.length; i++) {
++                        if (GlobalStates.availableLayouts[i] === GlobalStates.compositorLayout) {
++                            return i;
++                        }
+                     }
++                    return 0;
+                 }
+-                return 0;
+-            }
+ 
+-            Repeater {
+-                model: GlobalStates.availableLayouts
+-
+-                delegate: StyledRect {
+-                    id: layoutButton
+-                    required property string modelData
+-                    required property int index
+-
+-                    readonly property bool isSelected: layoutColumn.currentIndex === index
+-                    readonly property bool isFirst: index === 0
+-                    readonly property bool isLast: index === GlobalStates.availableLayouts.length - 1
+-                    property bool buttonHovered: false
+-
+-                    readonly property real defaultRadius: Styling.radius(0)
+-                    readonly property real selectedRadius: Styling.radius(0) / 2
+-
+-                    variant: isSelected ? "primary" : (buttonHovered ? "focus" : "common")
+-                    enableShadow: false
+-                    Layout.fillWidth: true
+-                    Layout.preferredWidth: layoutLabel.implicitWidth + 48
+-                    Layout.preferredHeight: 36
+-
+-                    topLeftRadius: isSelected ? (isFirst ? defaultRadius : selectedRadius) : defaultRadius
+-                    topRightRadius: isSelected ? (isFirst ? defaultRadius : selectedRadius) : defaultRadius
+-                    bottomLeftRadius: isSelected ? (isLast ? defaultRadius : selectedRadius) : defaultRadius
+-                    bottomRightRadius: isSelected ? (isLast ? defaultRadius : selectedRadius) : defaultRadius
+-
+-                    RowLayout {
+-                        anchors.centerIn: parent
+-                        spacing: 8
+-
+-                        Text {
+-                            text: root.getLayoutIcon(layoutButton.modelData)
+-                            font.family: Icons.font
+-                            font.pixelSize: 14
+-                            color: layoutButton.item
++                Repeater {
++                    model: GlobalStates.availableLayouts
++
++                    delegate: StyledRect {
++                        id: layoutButton
++                        required property string modelData
++                        required property int index
++
++                        readonly property bool isSelected: layoutRow.currentIndex === index
++                        readonly property bool isFirst: index === 0
++                        readonly property bool isLast: index === GlobalStates.availableLayouts.length - 1
++                        property bool buttonHovered: false
++
++                        readonly property real defaultRadius: Styling.radius(0)
++                        readonly property real selectedRadius: Styling.radius(0) / 2
++
++                        variant: isSelected ? "primary" : (buttonHovered ? "focus" : "common")
++                        enableShadow: false
++                        width: layoutLabel.implicitWidth + 48
++                        height: 36
++
++                        topLeftRadius: isSelected ? (isFirst ? defaultRadius : selectedRadius) : defaultRadius
++                        bottomLeftRadius: isSelected ? (isFirst ? defaultRadius : selectedRadius) : defaultRadius
++                        topRightRadius: isSelected ? (isLast ? defaultRadius : selectedRadius) : defaultRadius
++                        bottomRightRadius: isSelected ? (isLast ? defaultRadius : selectedRadius) : defaultRadius
++
++                        RowLayout {
++                            anchors.centerIn: parent
++                            spacing: 8
++
++                            Text {
++                                text: root.getLayoutIcon(layoutButton.modelData)
++                                font.family: Icons.font
++                                font.pixelSize: 14
++                                color: layoutButton.item
++                            }
++
++                            Text {
++                                id: layoutLabel
++                                text: root.getLayoutDisplayName(layoutButton.modelData)
++                                font.family: Styling.defaultFont
++                                font.pixelSize: Styling.fontSize(0)
++                                font.bold: true
++                                color: layoutButton.item
++                            }
+                         }
+ 
+-                        Text {
+-                            id: layoutLabel
+-                            text: root.getLayoutDisplayName(layoutButton.modelData)
+-                            font.family: Styling.defaultFont
+-                            font.pixelSize: Styling.fontSize(0)
+-                            font.bold: true
+-                            color: layoutButton.item
+-                        }
+-                    }
+-
+-                    MouseArea {
+-                        anchors.fill: parent
+-                        hoverEnabled: true
+-                        cursorShape: Qt.PointingHandCursor
++                        MouseArea {
++                            anchors.fill: parent
++                            hoverEnabled: true
++                            cursorShape: Qt.PointingHandCursor
+ 
+-                        onEntered: layoutButton.buttonHovered = true
+-                        onExited: layoutButton.buttonHovered = false
++                            onEntered: layoutButton.buttonHovered = true
++                            onExited: layoutButton.buttonHovered = false
+ 
+-                        onClicked: {
+-                            GlobalStates.setCompositorLayout(layoutButton.modelData);
++                            onClicked: {
++                                GlobalStates.setCompositorLayout(layoutButton.modelData);
++                            }
+                         }
+                     }
+                 }
+diff --git a/modules/bar/clock/Clock.qml b/modules/bar/clock/Clock.qml
+index 1cad557d..6be1a9c4 100644
+--- a/modules/bar/clock/Clock.qml
++++ b/modules/bar/clock/Clock.qml
+@@ -154,16 +154,18 @@ Item {
+         }
+     }
+ 
+-    // Clock & Weather popup
+-    BarPopup {
++    // Clock & weather popout — a floating pill next to the bar, or grown out
++    // of the frame when the bar is contained by it. See BarPopout.
++    BarPopout {
+         id: clockPopup
+         anchorItem: buttonBg
+         bar: root.bar
+         variant: "transparent"
+         popupPadding: 0
+-
+-        contentWidth: popupColumn.width
+-        contentHeight: popupColumn.height
++        // The cards draw their own edges, so the pill gives them no padding of
++        // its own. Attached they'd run straight into the frame, so there they
++        // get a little.
++        flyoutPadding: 8
+ 
+         onIsOpenChanged: {
+             if (isOpen && !WeatherService.dataAvailable) {
+@@ -171,427 +173,431 @@ Item {
+             }
+         }
+ 
+-        // Main popup column
+-        Column {
+-            id: popupColumn
+-            spacing: 4
+-
+-            // Mini weekly calendar
+-            StyledRect {
+-                id: calendarWrapper
+-                variant: "popup"
+-                radius: Styling.radius(8)
+-                enableShadow: false
+-                width: 300 + 16 // Match popupWrapper width
+-                height: calendarContent.height + 32
+-
+-                property date currentDate: new Date()
+-                property int currentDayOfWeek: (currentDate.getDay() + 6) % 7  // Monday = 0
+-                property int currentDayOfMonth: currentDate.getDate()
+-
+-                // Get the Monday of the current week
+-                function getWeekStart(date) {
+-                    var d = new Date(date);
+-                    var day = d.getDay();
+-                    var diff = d.getDate() - day + (day === 0 ? -6 : 1);
+-                    return new Date(d.setDate(diff));
+-                }
+-
+-                property date weekStart: getWeekStart(currentDate)
++        Item {
++            implicitWidth: popupColumn.width
++            implicitHeight: popupColumn.height
++
++            Column {
++                id: popupColumn
++                spacing: 4
++
++                // Mini weekly calendar
++                StyledRect {
++                    id: calendarWrapper
++                    variant: "popup"
++                    radius: Styling.radius(8)
++                    enableShadow: false
++                    width: 300 + 16 // Match popupWrapper width
++                    height: calendarContent.height + 32
++
++                    property date currentDate: new Date()
++                    property int currentDayOfWeek: (currentDate.getDay() + 6) % 7  // Monday = 0
++                    property int currentDayOfMonth: currentDate.getDate()
++
++                    // Get the Monday of the current week
++                    function getWeekStart(date) {
++                        var d = new Date(date);
++                        var day = d.getDay();
++                        var diff = d.getDate() - day + (day === 0 ? -6 : 1);
++                        return new Date(d.setDate(diff));
++                    }
+ 
+-                // Update date every minute
+-                Timer {
+-                    interval: 60000
+-                    running: !SuspendManager.isSuspending
+-                    repeat: true
+-                    onTriggered: calendarWrapper.currentDate = new Date()
+-                }
++                    property date weekStart: getWeekStart(currentDate)
+ 
+-                Column {
+-                    id: calendarContent
+-                    anchors.horizontalCenter: parent.horizontalCenter
+-                    anchors.top: parent.top
+-                    anchors.topMargin: 16
+-                    spacing: 4
+-
+-                    // Helper function to capitalize first letter
+-                    function capitalizeMonth(date) {
+-                        var month = date.toLocaleDateString(Qt.locale(), "MMMM");
+-                        return month.charAt(0).toUpperCase() + month.slice(1);
++                    // Update date every minute
++                    Timer {
++                        interval: 60000
++                        running: !SuspendManager.isSuspending
++                        repeat: true
++                        onTriggered: calendarWrapper.currentDate = new Date()
+                     }
+ 
+-                    // Header row: Month and events count
+-                    Item {
+-                        width: daysRow.width
+-                        height: monthText.height
+-
+-                        Text {
+-                            id: monthText
+-                            anchors.left: parent.left
+-                            anchors.leftMargin: 4
+-                            text: calendarContent.capitalizeMonth(calendarWrapper.currentDate)
+-                            color: Colors.outline
+-                            font.family: Config.theme.font
+-                            font.pixelSize: Styling.fontSize(0)
+-                            font.weight: Font.Medium
+-                        }
++                    Column {
++                        id: calendarContent
++                        anchors.horizontalCenter: parent.horizontalCenter
++                        anchors.top: parent.top
++                        anchors.topMargin: 16
++                        spacing: 4
+ 
+-                        // Placeholder for events count (future feature)
+-                        Text {
+-                            anchors.right: parent.right
+-                            anchors.rightMargin: 4
+-                            text: ""
+-                            color: Colors.outline
+-                            font.family: Config.theme.font
+-                            font.pixelSize: Styling.fontSize(-1)
+-                            visible: text !== ""
++                        // Helper function to capitalize first letter
++                        function capitalizeMonth(date) {
++                            var month = date.toLocaleDateString(Qt.locale(), "MMMM");
++                            return month.charAt(0).toUpperCase() + month.slice(1);
+                         }
+-                    }
+ 
+-                    // Days of week row
+-                    Row {
+-                        id: daysRow
+-                        spacing: 4
++                        // Header row: Month and events count
++                        Item {
++                            width: daysRow.width
++                            height: monthText.height
++
++                            Text {
++                                id: monthText
++                                anchors.left: parent.left
++                                anchors.leftMargin: 4
++                                text: calendarContent.capitalizeMonth(calendarWrapper.currentDate)
++                                color: Colors.outline
++                                font.family: Config.theme.font
++                                font.pixelSize: Styling.fontSize(0)
++                                font.weight: Font.Medium
++                            }
+ 
+-                        Repeater {
+-                            model: 7
++                            // Placeholder for events count (future feature)
++                            Text {
++                                anchors.right: parent.right
++                                anchors.rightMargin: 4
++                                text: ""
++                                color: Colors.outline
++                                font.family: Config.theme.font
++                                font.pixelSize: Styling.fontSize(-1)
++                                visible: text !== ""
++                            }
++                        }
+ 
+-                            Column {
+-                                id: dayColumn
+-                                required property int index
+-                                spacing: 2
+-                                width: 36
++                        // Days of week row
++                        Row {
++                            id: daysRow
++                            spacing: 4
+ 
+-                                // Get the date for this day of the week
+-                                property date dayDate: {
+-                                    var d = new Date(calendarWrapper.weekStart);
+-                                    d.setDate(d.getDate() + index);
+-                                    return d;
+-                                }
+-                                property bool isToday: index === calendarWrapper.currentDayOfWeek
+-
+-                                // Day abbreviation from locale
+-                                Text {
+-                                    anchors.horizontalCenter: parent.horizontalCenter
+-                                    text: {
+-                                        var dayName = dayColumn.dayDate.toLocaleDateString(Qt.locale(), "ddd");
+-                                        // Capitalize first letter and limit to 2 chars
+-                                        return (dayName.charAt(0).toUpperCase() + dayName.slice(1, 2)).replace(".", "");
+-                                    }
+-                                    color: Colors.overBackground
+-                                    font.family: Config.theme.font
+-                                    font.pixelSize: Styling.fontSize(0)
+-                                    font.weight: Font.Medium
+-                                }
++                            Repeater {
++                                model: 7
+ 
+-                                // Day number with circle for current day
+-                                Item {
+-                                    width: 28
+-                                    height: 28
+-                                    anchors.horizontalCenter: parent.horizontalCenter
++                                Column {
++                                    id: dayColumn
++                                    required property int index
++                                    spacing: 2
++                                    width: 36
+ 
+-                                    Rectangle {
+-                                        anchors.centerIn: parent
+-                                        width: 28
+-                                        height: 28
+-                                        radius: Styling.radius(0)
+-                                        color: Styling.srItem("overprimary")
+-                                        visible: dayColumn.isToday
++                                    // Get the date for this day of the week
++                                    property date dayDate: {
++                                        var d = new Date(calendarWrapper.weekStart);
++                                        d.setDate(d.getDate() + index);
++                                        return d;
+                                     }
++                                    property bool isToday: index === calendarWrapper.currentDayOfWeek
+ 
++                                    // Day abbreviation from locale
+                                     Text {
+-                                        anchors.centerIn: parent
+-                                        text: dayColumn.dayDate.getDate()
+-                                        color: dayColumn.isToday ? Colors.background : Colors.overBackground
++                                        anchors.horizontalCenter: parent.horizontalCenter
++                                        text: {
++                                            var dayName = dayColumn.dayDate.toLocaleDateString(Qt.locale(), "ddd");
++                                            // Capitalize first letter and limit to 2 chars
++                                            return (dayName.charAt(0).toUpperCase() + dayName.slice(1, 2)).replace(".", "");
++                                        }
++                                        color: Colors.overBackground
+                                         font.family: Config.theme.font
+                                         font.pixelSize: Styling.fontSize(0)
+-                                        font.weight: dayColumn.isToday ? Font.Bold : Font.Normal
++                                        font.weight: Font.Medium
+                                     }
+-                                }
+-                            }
+-                        }
+-                    }
+-                }
+-            }
+ 
+-            // Weather Wrapper StyledRect
+-            StyledRect {
+-                id: popupWrapper
+-                variant: "popup"
+-                radius: Styling.radius(8)
+-                enableShadow: false
+-                width: popupContent.width + 16
+-                height: popupContent.height + 16
+-                visible: WeatherService.dataAvailable
+-
+-                // Content container
+-                Column {
+-                    id: popupContent
+-                    anchors.centerIn: parent
+-                    spacing: 4
+-
+-                    // Weather widget with sun arc
+-                    WeatherWidget {
+-                        id: weatherWidget
+-                        width: 300
+-                        height: 140
+-                        showDebugControls: true
+-                        animationsEnabled: clockPopup.isOpen
+-                    }
+-
+-                    // 7-day forecast panel (below weather widget)
+-                    Item {
+-                        id: forecastPanel
+-                        width: weatherWidget.width
+-                        height: WeatherService.dataAvailable && WeatherService.forecast.length > 0 ? forecastContent.implicitHeight : 0
+-                        clip: true
+-                        visible: height > 0
+-
+-                        StyledRect {
+-                            id: forecastContent
+-                            variant: "pane"
+-                            anchors.fill: parent
+-                            implicitHeight: forecastRow.implicitHeight + 16
+-
+-                            Row {
+-                                id: forecastRow
+-                                anchors.centerIn: parent
+-                                spacing: 4
+-
+-                                Repeater {
+-                                    model: WeatherService.forecast.slice(0, 5)
+-
+-                                    Row {
+-                                        id: forecastDayRow
+-                                        required property var modelData
+-                                        required property int index
+-                                        spacing: 4
+-
+-                                        Column {
+-                                            id: forecastDay
+-                                            spacing: 2
+-                                            width: (weatherWidget.width - 16 - (4 * 4) - (4 * 6)) / 5
+-
+-                                            // Day name
+-                                            Text {
+-                                                anchors.horizontalCenter: parent.horizontalCenter
+-                                                text: forecastDayRow.modelData.dayName
+-                                                color: Colors.overBackground
+-                                                font.family: Config.theme.font
+-                                                font.pixelSize: Styling.fontSize(0)
+-                                                font.weight: Font.Medium
+-                                            }
+-
+-                                            // Weather emoji
+-                                            Text {
+-                                                anchors.horizontalCenter: parent.horizontalCenter
+-                                                text: forecastDayRow.modelData.emoji
+-                                                font.pixelSize: Styling.fontSize(4)
+-                                            }
+-
+-                                            // Max temperature
+-                                            Text {
+-                                                anchors.horizontalCenter: parent.horizontalCenter
+-                                                text: (Math.round(forecastDayRow.modelData.maxTemp) >= 0 ? "+" : "") + Math.round(forecastDayRow.modelData.maxTemp) + "\u00B0"
+-                                                color: Colors.overBackground
+-                                                font.family: Config.theme.font
+-                                                font.pixelSize: Styling.fontSize(0)
+-                                                font.weight: Font.Bold
+-                                            }
+-
+-                                            // Min temperature
+-                                            Text {
+-                                                anchors.horizontalCenter: parent.horizontalCenter
+-                                                text: (Math.round(forecastDayRow.modelData.minTemp) >= 0 ? "+" : "") + Math.round(forecastDayRow.modelData.minTemp) + "\u00B0"
+-                                                color: Colors.outline
+-                                                font.family: Config.theme.font
+-                                                font.pixelSize: Styling.fontSize(0)
+-                                                font.weight: Font.Normal
+-                                            }
++                                    // Day number with circle for current day
++                                    Item {
++                                        width: 28
++                                        height: 28
++                                        anchors.horizontalCenter: parent.horizontalCenter
++
++                                        Rectangle {
++                                            anchors.centerIn: parent
++                                            width: 28
++                                            height: 28
++                                            radius: Styling.radius(0)
++                                            color: Styling.srItem("overprimary")
++                                            visible: dayColumn.isToday
+                                         }
+ 
+-                                        // Separator between days (not after last)
+-                                        Separator {
+-                                            vert: true
+-                                            visible: forecastDayRow.index < 4
+-                                            anchors.verticalCenter: parent.verticalCenter
+-                                            height: forecastDay.height - 16
++                                        Text {
++                                            anchors.centerIn: parent
++                                            text: dayColumn.dayDate.getDate()
++                                            color: dayColumn.isToday ? Colors.background : Colors.overBackground
++                                            font.family: Config.theme.font
++                                            font.pixelSize: Styling.fontSize(0)
++                                            font.weight: dayColumn.isToday ? Font.Bold : Font.Normal
+                                         }
+                                     }
+                                 }
+                             }
+                         }
+                     }
++                }
+ 
+-                    // Debug panel (below weather widget)
+-                    Item {
+-                        id: debugPanel
+-                        width: weatherWidget.width
+-                        height: WeatherService.debugMode ? debugContent.implicitHeight : 0
+-                        clip: true
+-                        visible: height > 0
+-
+-                        ColumnLayout {
+-                            id: debugContent
+-                            anchors.fill: parent
+-                            spacing: 4
++                // Weather Wrapper StyledRect
++                StyledRect {
++                    id: popupWrapper
++                    variant: "popup"
++                    radius: Styling.radius(8)
++                    enableShadow: false
++                    width: popupContent.width + 16
++                    height: popupContent.height + 16
++                    visible: WeatherService.dataAvailable
++
++                    // Content container
++                    Column {
++                        id: popupContent
++                        anchors.centerIn: parent
++                        spacing: 4
+ 
+-                            // Time slider pane
+-                            StyledRect {
+-                                variant: "pane"
+-                                Layout.fillWidth: true
+-                                Layout.preferredHeight: 36
+-
+-                                StyledSlider {
+-                                    id: sliderContent
+-                                    anchors.fill: parent
+-                                    anchors.margins: 12
+-                                    icon: Icons.clock
+-                                    value: WeatherService.debugHour / 24
+-                                    tooltipText: {
+-                                        var hour = Math.floor(WeatherService.debugHour);
+-                                        var minutes = Math.round((WeatherService.debugHour - hour) * 60);
+-                                        return hour.toString().padStart(2, '0') + ":" + minutes.toString().padStart(2, '0');
+-                                    }
+-                                    onValueChanged: WeatherService.debugHour = value * 24
+-                                }
+-                            }
++                        // Weather widget with sun arc
++                        WeatherWidget {
++                            id: weatherWidget
++                            width: 300
++                            height: 140
++                            showDebugControls: true
++                            animationsEnabled: clockPopup.isOpen
++                        }
++
++                        // 7-day forecast panel (below weather widget)
++                        Item {
++                            id: forecastPanel
++                            width: weatherWidget.width
++                            height: WeatherService.dataAvailable && WeatherService.forecast.length > 0 ? forecastContent.implicitHeight : 0
++                            clip: true
++                            visible: height > 0
+ 
+-                            // Weather type selector pane
+                             StyledRect {
+-                                id: weatherSelector
++                                id: forecastContent
+                                 variant: "pane"
+-                                Layout.fillWidth: true
+-                                Layout.preferredHeight: 64 + 8
+-
+-                                readonly property int buttonPadding: 4
+-                                readonly property int buttonSpacing: 2
+-
+-                                readonly property var weatherTypes: [
+-                                    {
+-                                        code: 0,
+-                                        icon: "☀️",
+-                                        name: "Clear"
+-                                    },
+-                                    {
+-                                        code: 1,
+-                                        icon: "🌤️",
+-                                        name: "Mainly clear"
+-                                    },
+-                                    {
+-                                        code: 2,
+-                                        icon: "⛅",
+-                                        name: "Partly cloudy"
+-                                    },
+-                                    {
+-                                        code: 3,
+-                                        icon: "☁️",
+-                                        name: "Overcast"
+-                                    },
+-                                    {
+-                                        code: 45,
+-                                        icon: "🌫️",
+-                                        name: "Fog"
+-                                    },
+-                                    {
+-                                        code: 51,
+-                                        icon: "🌦️",
+-                                        name: "Drizzle"
+-                                    },
+-                                    {
+-                                        code: 61,
+-                                        icon: "🌧️",
+-                                        name: "Rain"
+-                                    },
+-                                    {
+-                                        code: 65,
+-                                        icon: "🌧️",
+-                                        name: "Heavy rain"
+-                                    },
+-                                    {
+-                                        code: 71,
+-                                        icon: "❄️",
+-                                        name: "Snow"
+-                                    },
+-                                    {
+-                                        code: 75,
+-                                        icon: "❄️",
+-                                        name: "Heavy snow"
+-                                    },
+-                                    {
+-                                        code: 95,
+-                                        icon: "⛈️",
+-                                        name: "Thunder"
+-                                    },
+-                                    {
+-                                        code: 96,
+-                                        icon: "🌩️",
+-                                        name: "Hail"
+-                                    }
+-                                ]
++                                anchors.fill: parent
++                                implicitHeight: forecastRow.implicitHeight + 16
+ 
+-                                readonly property int columns: 6
+-                                readonly property int rows: Math.ceil(weatherTypes.length / columns)
+-
+-                                Grid {
+-                                    id: weatherButtonsGrid
+-                                    anchors.fill: parent
+-                                    anchors.margins: weatherSelector.buttonPadding
+-                                    columns: weatherSelector.columns
+-                                    rowSpacing: weatherSelector.buttonSpacing
+-                                    columnSpacing: weatherSelector.buttonSpacing
++                                Row {
++                                    id: forecastRow
++                                    anchors.centerIn: parent
++                                    spacing: 4
+ 
+                                     Repeater {
+-                                        model: weatherSelector.weatherTypes
++                                        model: WeatherService.forecast.slice(0, 5)
+ 
+-                                        delegate: StyledRect {
+-                                            id: weatherBtn
++                                        Row {
++                                            id: forecastDayRow
+                                             required property var modelData
+                                             required property int index
+-
+-                                            readonly property bool isSelected: WeatherService.debugWeatherCode === modelData.code
+-                                            readonly property int row: Math.floor(index / weatherSelector.columns)
+-                                            readonly property int col: index % weatherSelector.columns
+-                                            readonly property bool isFirstCol: col === 0
+-                                            readonly property bool isLastCol: col === weatherSelector.columns - 1
+-                                            readonly property bool isFirstRow: row === 0
+-                                            readonly property bool isLastRow: row === weatherSelector.rows - 1
+-                                            property bool buttonHovered: false
+-
+-                                            readonly property real defaultRadius: Styling.radius(0)
+-                                            readonly property real selectedRadius: Styling.radius(0) / 2
+-
+-                                            readonly property real gridWidth: weatherButtonsGrid.width
+-                                            readonly property real gridHeight: weatherButtonsGrid.height
+-
+-                                            variant: isSelected ? "primary" : (buttonHovered ? "focus" : "internalbg")
+-                                            enableShadow: false
+-                                            width: (gridWidth - (weatherSelector.columns - 1) * weatherSelector.buttonSpacing) / weatherSelector.columns
+-                                            height: (gridHeight - (weatherSelector.rows - 1) * weatherSelector.buttonSpacing) / weatherSelector.rows
+-
+-                                            topLeftRadius: isSelected ? (isFirstCol && isFirstRow ? defaultRadius : selectedRadius) : defaultRadius
+-                                            topRightRadius: isSelected ? (isLastCol && isFirstRow ? defaultRadius : selectedRadius) : defaultRadius
+-                                            bottomLeftRadius: isSelected ? (isFirstCol && isLastRow ? defaultRadius : selectedRadius) : defaultRadius
+-                                            bottomRightRadius: isSelected ? (isLastCol && isLastRow ? defaultRadius : selectedRadius) : defaultRadius
+-
+-                                            Text {
+-                                                anchors.centerIn: parent
+-                                                text: weatherBtn.modelData.icon
+-                                                font.pixelSize: 14
++                                            spacing: 4
++
++                                            Column {
++                                                id: forecastDay
++                                                spacing: 2
++                                                width: (weatherWidget.width - 16 - (4 * 4) - (4 * 6)) / 5
++
++                                                // Day name
++                                                Text {
++                                                    anchors.horizontalCenter: parent.horizontalCenter
++                                                    text: forecastDayRow.modelData.dayName
++                                                    color: Colors.overBackground
++                                                    font.family: Config.theme.font
++                                                    font.pixelSize: Styling.fontSize(0)
++                                                    font.weight: Font.Medium
++                                                }
++
++                                                // Weather emoji
++                                                Text {
++                                                    anchors.horizontalCenter: parent.horizontalCenter
++                                                    text: forecastDayRow.modelData.emoji
++                                                    font.pixelSize: Styling.fontSize(4)
++                                                }
++
++                                                // Max temperature
++                                                Text {
++                                                    anchors.horizontalCenter: parent.horizontalCenter
++                                                    text: (Math.round(forecastDayRow.modelData.maxTemp) >= 0 ? "+" : "") + Math.round(forecastDayRow.modelData.maxTemp) + "\u00B0"
++                                                    color: Colors.overBackground
++                                                    font.family: Config.theme.font
++                                                    font.pixelSize: Styling.fontSize(0)
++                                                    font.weight: Font.Bold
++                                                }
++
++                                                // Min temperature
++                                                Text {
++                                                    anchors.horizontalCenter: parent.horizontalCenter
++                                                    text: (Math.round(forecastDayRow.modelData.minTemp) >= 0 ? "+" : "") + Math.round(forecastDayRow.modelData.minTemp) + "\u00B0"
++                                                    color: Colors.outline
++                                                    font.family: Config.theme.font
++                                                    font.pixelSize: Styling.fontSize(0)
++                                                    font.weight: Font.Normal
++                                                }
+                                             }
+ 
+-                                            MouseArea {
+-                                                anchors.fill: parent
+-                                                hoverEnabled: true
+-                                                cursorShape: Qt.PointingHandCursor
+-                                                onEntered: weatherBtn.buttonHovered = true
+-                                                onExited: weatherBtn.buttonHovered = false
+-                                                onClicked: WeatherService.debugWeatherCode = weatherBtn.modelData.code
++                                            // Separator between days (not after last)
++                                            Separator {
++                                                vert: true
++                                                visible: forecastDayRow.index < 4
++                                                anchors.verticalCenter: parent.verticalCenter
++                                                height: forecastDay.height - 16
+                                             }
++                                        }
++                                    }
++                                }
++                            }
++                        }
++
++                        // Debug panel (below weather widget)
++                        Item {
++                            id: debugPanel
++                            width: weatherWidget.width
++                            height: WeatherService.debugMode ? debugContent.implicitHeight : 0
++                            clip: true
++                            visible: height > 0
++
++                            ColumnLayout {
++                                id: debugContent
++                                anchors.fill: parent
++                                spacing: 4
+ 
+-                                            StyledToolTip {
+-                                                visible: weatherBtn.buttonHovered
+-                                                tooltipText: weatherBtn.modelData.name
++                                // Time slider pane
++                                StyledRect {
++                                    variant: "pane"
++                                    Layout.fillWidth: true
++                                    Layout.preferredHeight: 36
++
++                                    StyledSlider {
++                                        id: sliderContent
++                                        anchors.fill: parent
++                                        anchors.margins: 12
++                                        icon: Icons.clock
++                                        value: WeatherService.debugHour / 24
++                                        tooltipText: {
++                                            var hour = Math.floor(WeatherService.debugHour);
++                                            var minutes = Math.round((WeatherService.debugHour - hour) * 60);
++                                            return hour.toString().padStart(2, '0') + ":" + minutes.toString().padStart(2, '0');
++                                        }
++                                        onValueChanged: WeatherService.debugHour = value * 24
++                                    }
++                                }
++
++                                // Weather type selector pane
++                                StyledRect {
++                                    id: weatherSelector
++                                    variant: "pane"
++                                    Layout.fillWidth: true
++                                    Layout.preferredHeight: 64 + 8
++
++                                    readonly property int buttonPadding: 4
++                                    readonly property int buttonSpacing: 2
++
++                                    readonly property var weatherTypes: [
++                                        {
++                                            code: 0,
++                                            icon: "☀️",
++                                            name: "Clear"
++                                        },
++                                        {
++                                            code: 1,
++                                            icon: "🌤️",
++                                            name: "Mainly clear"
++                                        },
++                                        {
++                                            code: 2,
++                                            icon: "⛅",
++                                            name: "Partly cloudy"
++                                        },
++                                        {
++                                            code: 3,
++                                            icon: "☁️",
++                                            name: "Overcast"
++                                        },
++                                        {
++                                            code: 45,
++                                            icon: "🌫️",
++                                            name: "Fog"
++                                        },
++                                        {
++                                            code: 51,
++                                            icon: "🌦️",
++                                            name: "Drizzle"
++                                        },
++                                        {
++                                            code: 61,
++                                            icon: "🌧️",
++                                            name: "Rain"
++                                        },
++                                        {
++                                            code: 65,
++                                            icon: "🌧️",
++                                            name: "Heavy rain"
++                                        },
++                                        {
++                                            code: 71,
++                                            icon: "❄️",
++                                            name: "Snow"
++                                        },
++                                        {
++                                            code: 75,
++                                            icon: "❄️",
++                                            name: "Heavy snow"
++                                        },
++                                        {
++                                            code: 95,
++                                            icon: "⛈️",
++                                            name: "Thunder"
++                                        },
++                                        {
++                                            code: 96,
++                                            icon: "🌩️",
++                                            name: "Hail"
++                                        }
++                                    ]
++
++                                    readonly property int columns: 6
++                                    readonly property int rows: Math.ceil(weatherTypes.length / columns)
++
++                                    Grid {
++                                        id: weatherButtonsGrid
++                                        anchors.fill: parent
++                                        anchors.margins: weatherSelector.buttonPadding
++                                        columns: weatherSelector.columns
++                                        rowSpacing: weatherSelector.buttonSpacing
++                                        columnSpacing: weatherSelector.buttonSpacing
++
++                                        Repeater {
++                                            model: weatherSelector.weatherTypes
++
++                                            delegate: StyledRect {
++                                                id: weatherBtn
++                                                required property var modelData
++                                                required property int index
++
++                                                readonly property bool isSelected: WeatherService.debugWeatherCode === modelData.code
++                                                readonly property int row: Math.floor(index / weatherSelector.columns)
++                                                readonly property int col: index % weatherSelector.columns
++                                                readonly property bool isFirstCol: col === 0
++                                                readonly property bool isLastCol: col === weatherSelector.columns - 1
++                                                readonly property bool isFirstRow: row === 0
++                                                readonly property bool isLastRow: row === weatherSelector.rows - 1
++                                                property bool buttonHovered: false
++
++                                                readonly property real defaultRadius: Styling.radius(0)
++                                                readonly property real selectedRadius: Styling.radius(0) / 2
++
++                                                readonly property real gridWidth: weatherButtonsGrid.width
++                                                readonly property real gridHeight: weatherButtonsGrid.height
++
++                                                variant: isSelected ? "primary" : (buttonHovered ? "focus" : "internalbg")
++                                                enableShadow: false
++                                                width: (gridWidth - (weatherSelector.columns - 1) * weatherSelector.buttonSpacing) / weatherSelector.columns
++                                                height: (gridHeight - (weatherSelector.rows - 1) * weatherSelector.buttonSpacing) / weatherSelector.rows
++
++                                                topLeftRadius: isSelected ? (isFirstCol && isFirstRow ? defaultRadius : selectedRadius) : defaultRadius
++                                                topRightRadius: isSelected ? (isLastCol && isFirstRow ? defaultRadius : selectedRadius) : defaultRadius
++                                                bottomLeftRadius: isSelected ? (isFirstCol && isLastRow ? defaultRadius : selectedRadius) : defaultRadius
++                                                bottomRightRadius: isSelected ? (isLastCol && isLastRow ? defaultRadius : selectedRadius) : defaultRadius
++
++                                                Text {
++                                                    anchors.centerIn: parent
++                                                    text: weatherBtn.modelData.icon
++                                                    font.pixelSize: 14
++                                                }
++
++                                                MouseArea {
++                                                    anchors.fill: parent
++                                                    hoverEnabled: true
++                                                    cursorShape: Qt.PointingHandCursor
++                                                    onEntered: weatherBtn.buttonHovered = true
++                                                    onExited: weatherBtn.buttonHovered = false
++                                                    onClicked: WeatherService.debugWeatherCode = weatherBtn.modelData.code
++                                                }
++
++                                                StyledToolTip {
++                                                    visible: weatherBtn.buttonHovered
++                                                    tooltipText: weatherBtn.modelData.name
++                                                }
+                                             }
+                                         }
+                                     }
+@@ -600,22 +606,22 @@ Item {
+                         }
+                     }
+                 }
+-            }
+ 
+-            // Pomodoro Wrapper StyledRect
+-            StyledRect {
+-                id: pomodoroWrapper
+-                variant: "popup"
+-                radius: Styling.radius(8)
+-                enableShadow: false
+-                width: 300 + 16 // Match weather popup width
+-                height: pomodoroWidget.height + 16
+-
+-                Pomodoro {
+-                    id: pomodoroWidget
+-                    anchors.centerIn: parent
+-                    width: 300
+-                    onRequestPopupOpen: clockPopup.open()
++                // Pomodoro Wrapper StyledRect
++                StyledRect {
++                    id: pomodoroWrapper
++                    variant: "popup"
++                    radius: Styling.radius(8)
++                    enableShadow: false
++                    width: 300 + 16 // Match weather popup width
++                    height: pomodoroWidget.height + 16
++
++                    Pomodoro {
++                        id: pomodoroWidget
++                        anchors.centerIn: parent
++                        width: 300
++                        onRequestPopupOpen: clockPopup.open()
++                    }
+                 }
+             }
+         }
+diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
+index 528a20b3..14d1eaf1 100644
+--- a/modules/globals/GlobalStates.qml
++++ b/modules/globals/GlobalStates.qml
+@@ -560,6 +560,58 @@ Singleton {
+         }
+     }
+ 
++    // ═══════════════════════════════════════════════════════════════
++    // BAR FLYOUT STATE (generic frame-attached popouts)
++    // ═══════════════════════════════════════════════════════════════
++    // With "contain bar" on, a bar widget's popout is not a floating pill next
++    // to the bar but part of the frame itself, so it has to be drawn in
++    // UnifiedShellPanel's surface rather than in a PopupWindow of its own (see
++    // BarFlyout). The widget stays where it is and hands its content over as a
++    // Component; these hold which widget owns the flyout right now and where it
++    // should sprout from. One at a time, shell-wide.
++    //
++    // `barFlyoutOpen` is the only thing cleared on close — owner, content and
++    // anchor are kept so the panel still has something to draw while it
++    // retracts.
++    property bool barFlyoutOpen: false
++    // The BarPopout instance that owns the flyout; identity only, so a widget
++    // can tell whether the open flyout is its own.
++    property var barFlyoutOwner: null
++    // Component supplying the panel's contents, instantiated inside the flyout.
++    property var barFlyoutContent: null
++    property string barFlyoutScreenName: ""
++    // Centre of the bar button along the bar axis, in panel coordinates
++    // (y for a left/right bar, x for a top/bottom one).
++    property real barFlyoutAnchor: 0
++    property int barFlyoutPadding: 8
++
++    function openBarFlyout(owner, content, screenName: string, anchor: real, padding: int): void {
++        barFlyoutOwner = owner;
++        barFlyoutContent = content;
++        barFlyoutScreenName = screenName;
++        barFlyoutAnchor = anchor;
++        barFlyoutPadding = padding;
++        barFlyoutOpen = true;
++    }
++
++    function closeBarFlyout(): void {
++        barFlyoutOpen = false;
++    }
++
++    // ═══════════════════════════════════════════════════════════════
++    // BLUETOOTH FLYOUT STATE
++    // ═══════════════════════════════════════════════════════════════
++    // The flyout is drawn by UnifiedShellPanel (so it merges into the frame the
++    // way the notch does), but toggled from the bar's BluetoothIndicator, so the
++    // open state and the anchor position live here.
++    property bool bluetoothPanelVisible: false
++    property string bluetoothPanelScreenName: ""
++    // Position of the bar button's leading edge along the bar axis, in panel
++    // coordinates (y for a left/right bar, x for a top/bottom one).
++    property real bluetoothPanelAnchor: 0
++    // Set by the flyout while the pointer is over it.
++    property bool bluetoothPanelHovered: false
++
+     // ═══════════════════════════════════════════════════════════════
+     // ASSISTANT SIDEBAR STATE
+     // ═══════════════════════════════════════════════════════════════
+diff --git a/modules/services/BluetoothDevice.qml b/modules/services/BluetoothDevice.qml
+index 8c8055b8..009ad6ad 100644
+--- a/modules/services/BluetoothDevice.qml
++++ b/modules/services/BluetoothDevice.qml
+@@ -15,30 +15,55 @@ QtObject {
+     property bool batteryAvailable: battery >= 0
+     property bool connecting: false
+ 
++    // True from the moment a connect/disconnect is issued until its own info read
++    // lands. The shared info queue keeps polling every device every few seconds,
++    // and `bluetoothctl info` still reports the pre-action state until the command
++    // actually takes effect — so without this a queued poll overwrites the row
++    // mid-action, which is what made a disconnect flash back to "Connected" and a
++    // connect drop out of "Connecting…" back to "Paired".
++    property bool actionInFlight: false
++
+     signal infoUpdated()
+ 
+     // Connect (auto-trust new devices)
++    //
++    // Both branches run the command through runAsync so this always has a real
++    // promise to chain onto. Going via BluetoothService.connectDevice() here
++    // returned undefined — it is declared void — so `.catch` on it threw and the
++    // `.finally` refresh never ran, leaving the row stale until the shared info
++    // queue got around to this device. Paired devices are trusted, so that was
++    // every reconnect.
+     function connect() {
+         connecting = true;
+-        let p;
+-        if (!trusted) {
+-            // Trust first, then connect
+-            p = BluetoothService.runAsync(["bluetoothctl", "trust", address]).then(() => {
+-                return BluetoothService.runAsync(["bluetoothctl", "connect", address]);
+-            });
+-        } else {
+-            p = BluetoothService.connectDevice(address);
+-        }
++        actionInFlight = true;
++
++        const runConnect = () => BluetoothService.runAsync(["bluetoothctl", "connect", address]);
++        const p = trusted ? runConnect() : BluetoothService.runAsync(["bluetoothctl", "trust", address]).then(runConnect);
+ 
+-        return p.catch(e => {
++        // Deliberately not .finally() — this QML engine's Promise doesn't
++        // implement it, and calling it throws, which is precisely what stopped
++        // the refresh from ever running and left rows stale for seconds.
++        return p.then(root.settleAfterAction, e => {
+             console.error(`Failed to connect to ${address}: ${e}`);
+-        }).finally(() => {
+-            connecting = false;
+-            updateInfo();
++            root.settleAfterAction();
+         });
+     }
+ 
++    // Read this device's own state immediately rather than waiting its turn
++    // behind every scan result in the shared info queue. updateInfo() clears
++    // `connecting`; updateStatus() refreshes the "N connected" header count.
++    function settleAfterAction() {
++        // Released first so this read — the authoritative one — isn't skipped.
++        actionInFlight = false;
++        root.updateInfo();
++        BluetoothService.updateStatus();
++    }
++
+     function updateInfo() {
++        // Queue-driven polls must not clobber an action still in flight.
++        if (actionInFlight)
++            return;
++
+         return BluetoothService.runAsync(["bluetoothctl", "info", address]).then(text => {
+             Qt.callLater(() => {
+                 const lines = text.split("\n");
+@@ -48,7 +73,6 @@ QtObject {
+                         root.paired = trimmed.includes("yes");
+                     } else if (trimmed.startsWith("Connected:")) {
+                         root.connected = trimmed.includes("yes");
+-                        if (root.connected) root.connecting = false;
+                     } else if (trimmed.startsWith("Trusted:")) {
+                         root.trusted = trimmed.includes("yes");
+                     } else if (trimmed.startsWith("Icon:")) {
+@@ -60,6 +84,9 @@ QtObject {
+                         }
+                     }
+                 }
++                // Unconditionally, not just when the connect succeeded — a
++                // failed attempt used to leave the row stuck on "Connecting…".
++                root.connecting = false;
+                 root.infoUpdated();
+             });
+         }).catch(e => {
+@@ -67,8 +94,18 @@ QtObject {
+         });
+     }
+ 
++    // Mirrors connect(): issue the command, then read this device's own state
++    // straight back. `connected` is dropped optimistically so the row re-styles
++    // on the click rather than a second later — the info read that follows is
++    // the authority and will put it back if the disconnect actually failed.
+     function disconnect() {
+-        BluetoothService.disconnectDevice(address);
++        connected = false;
++        actionInFlight = true;
++
++        return BluetoothService.runAsync(["bluetoothctl", "disconnect", address]).then(root.settleAfterAction, e => {
++            console.error(`Failed to disconnect ${address}: ${e}`);
++            root.settleAfterAction();
++        });
+     }
+ 
+     function pair() {
+@@ -80,6 +117,22 @@ QtObject {
+     }
+ 
+     function forget() {
+-        BluetoothService.removeDevice(address);
++        actionInFlight = true;
++
++        return BluetoothService.removeDevice(address).then(() => {
++            // Cleared only once BlueZ has actually dropped the bond. These have to
++            // be cleared at all because updateDevices() deliberately keeps paired
++            // and connected devices, so a forgotten one would otherwise linger —
++            // but clearing them up front made a *failed* forget look like it had
++            // worked: the row vanished while the device stayed paired.
++            actionInFlight = false;
++            paired = false;
++            connected = false;
++            trusted = false;
++        }, e => {
++            // Still paired — put the row back the way BlueZ actually has it.
++            actionInFlight = false;
++            root.updateInfo();
++        });
+     }
+ }
+diff --git a/modules/services/BluetoothService.qml b/modules/services/BluetoothService.qml
+index de25678a..c47a5c65 100644
+--- a/modules/services/BluetoothService.qml
++++ b/modules/services/BluetoothService.qml
+@@ -163,22 +163,37 @@ Singleton {
+         setEnabled(!enabled);
+     }
+ 
++    // BlueZ ties discovery to the D-Bus client that asked for it, and bluetoothctl
++    // invoked with arguments sets the discovery filter and exits immediately — so a
++    // one-shot `scan on` starts nothing that outlives the command, and no device is
++    // ever found. Discovery has to be held open by a process that stays alive.
++    //
++    // `exec` so the PID is bluetoothctl itself and stopping this actually stops the
++    // scan; output to /dev/null so an undrained pipe can't stall it mid-window.
++    readonly property int scanWindowSecs: 30
++
++    property var scanProcess: Process {
++        id: scanProcess
++        command: ["bash", "-c", `exec bluetoothctl --timeout ${root.scanWindowSecs} scan on >/dev/null 2>&1`]
++        running: false
++        onExited: root.discovering = false
++    }
++
+     function startDiscovery(): void {
+-        if (enabled && !SuspendManager.isSuspending) {
+-            discovering = true;
+-            runAsync(["bluetoothctl", "scan", "on"]).then(() => {
+-                scanTimer.restart();
+-            }).catch(e => {
+-                discovering = false;
+-            });
+-        }
++        if (!enabled || SuspendManager.isSuspending)
++            return;
++
++        // Repeat calls while a window is already open are a no-op, not a restart.
++        discovering = true;
++        if (!scanProcess.running)
++            scanProcess.running = true;
+     }
+ 
+     function stopDiscovery(): void {
+         discovering = false;
+-        runAsync(["bluetoothctl", "scan", "off"]).then(() => {
+-            scanTimer.stop();
+-        }).catch(e => {});
++        scanTimer.stop();
++        if (scanProcess.running)
++            scanProcess.running = false;
+     }
+ 
+     function connectDevice(address: string): void {
+@@ -215,13 +230,37 @@ Singleton {
+         runAsync(["bluetoothctl", "trust", address]).catch(e => {});
+     }
+ 
+-    function removeDevice(address: string): void {
++    // Forgetting has to undo three things, in order, or it silently doesn't stick:
++    // a *trusted* device is re-bonded by the running agent the moment it
++    // reconnects, and an active link can block the removal outright — so a plain
++    // `remove` on connected headphones leaves them paired. bluetoothctl signals
++    // these failures by exit code only, and the previous silent catch swallowed
++    // them, which is why a failed forget still looked like it worked.
++    //
++    // Returns the chain so the caller can tell success from failure.
++    function removeDevice(address: string) {
+         isUpdating = true;
+-        runAsync(["bluetoothctl", "remove", address]).then(() => {
+-            updateDevices();
+-            isUpdating = false;
+-        }).catch(e => {
+-            isUpdating = false;
++
++        const finish = () => {
++            root.updateDevices();
++            root.updateStatus();
++            root.isUpdating = false;
++        };
++
++        return runAsync(["bluetoothctl", "untrust", address]).then(null, e => {
++            console.warn(`Bluetooth: untrust ${address} failed: ${e}`);
++        }).then(() => {
++            // A device that isn't connected reports an error here; that's fine,
++            // there was simply nothing to drop.
++            return runAsync(["bluetoothctl", "disconnect", address]).then(null, e => {});
++        }).then(() => {
++            return runAsync(["bluetoothctl", "remove", address]);
++        }).then(() => {
++            finish();
++        }, e => {
++            console.error(`Bluetooth: remove ${address} failed: ${e}`);
++            finish();
++            throw e;
+         });
+     }
+ 
+@@ -315,7 +354,11 @@ Singleton {
+             }
+         }
+         onExited: (exitCode, exitStatus) => {
+-            const text = getDevicesProcess.buffer;
++            // bluetoothctl colours paired/connected entries in `devices` (plain
++            // ones come through bare), so the SGR prefix made startsWith("Device ")
++            // fail for exactly the devices that matter and appended a reset escape
++            // to their names. `info` and `show` are not coloured; this listing is.
++            const text = getDevicesProcess.buffer.replace(/\x1B\[[0-9;]*[A-Za-z]/g, "");
+             getDevicesProcess.buffer = "";
+             
+             Qt.callLater(() => {
+@@ -332,13 +375,27 @@ Singleton {
+                 }
+ 
+                 const rDevices = root.devices;
+-                
+-                // 1. Remove gone devices
+-                for (let i = rDevices.length - 1; i >= 0; i--) {
+-                    const rd = rDevices[i];
+-                    if (!deviceDataList.find(d => d.address === rd.address)) {
+-                        rDevices.splice(i, 1);
+-                        rd.destroy();
++
++                // An empty parse almost always means the command lost a race rather
++                // than the adapter genuinely forgetting everything, and acting on it
++                // would destroy every device object at once.
++                const trustworthy = deviceDataList.length > 0 || rDevices.length === 0;
++
++                // 1. Remove gone devices.
++                //
++                // Paired and connected devices are kept regardless: BlueZ drops
++                // unpaired entries from its cache constantly while a scan runs, and
++                // a paired device briefly missing from one poll used to destroy its
++                // object — taking the row with it. Those must always stay listed.
++                if (trustworthy) {
++                    for (let i = rDevices.length - 1; i >= 0; i--) {
++                        const rd = rDevices[i];
++                        if (rd.paired || rd.connected)
++                            continue;
++                        if (!deviceDataList.find(d => d.address === rd.address)) {
++                            rDevices.splice(i, 1);
++                            rd.destroy();
++                        }
+                     }
+                 }
+                 
+diff --git a/modules/services/WeatherService.qml b/modules/services/WeatherService.qml
+index 9eceffa4..fdb36830 100644
+--- a/modules/services/WeatherService.qml
++++ b/modules/services/WeatherService.qml
+@@ -8,7 +8,7 @@ Singleton {
+     id: root
+ 
+     // Current weather data
+-    property string weatherSymbol: ""
++    readonly property string weatherSymbol: getWeatherCodeEmoji(weatherCode, isNightNow)
+     property real currentTemp: 0
+     property real maxTemp: 0
+     property real minTemp: 0
+@@ -69,6 +69,30 @@ Singleton {
+         onTriggered: root.updateWeather()
+     }
+ 
++    // Day/night flag for icon selection. Kept on its own always-running timer:
++    // sunPositionTimer only ticks while a panel is open, and currentHour feeds
++    // var-typed blend objects that re-signal on every update.
++    property bool isNightNow: false
++
++    function updateDayNight() {
++        var now = new Date();
++        var hour = now.getHours() + now.getMinutes() / 60;
++        var sunriseH = sunrise.length > 0 ? parseTime(sunrise) : 6.0;
++        var sunsetH = sunset.length > 0 ? parseTime(sunset) : 18.0;
++        root.isNightNow = !(hour >= sunriseH && hour <= sunsetH);
++    }
++
++    onSunriseChanged: updateDayNight()
++    onSunsetChanged: updateDayNight()
++
++    property Timer dayNightTimer: Timer {
++        interval: 300000  // 5 minutes
++        running: !SuspendManager.isSuspending
++        repeat: true
++        triggeredOnStart: true
++        onTriggered: root.updateDayNight()
++    }
++
+     property Timer sunPositionTimer: Timer {
+         interval: 60000  // 1 minute
+         running: !SuspendManager.isSuspending && (GlobalStates.dashboardOpen || GlobalStates.launcherOpen || GlobalStates.overviewOpen)
+@@ -173,7 +197,8 @@ Singleton {
+     readonly property string effectiveTimeOfDay: debugMode ? debugTimeOfDay : timeOfDay
+     readonly property bool effectiveIsDay: debugMode ? debugIsDay : realIsDay
+     readonly property int effectiveWeatherCode: debugMode ? debugWeatherCode : weatherCode
+-    readonly property string effectiveWeatherSymbol: debugMode ? getWeatherCodeEmoji(debugWeatherCode) : weatherSymbol
++    readonly property bool effectiveIsNight: debugMode ? !debugIsDay : isNightNow
++    readonly property string effectiveWeatherSymbol: getWeatherCodeEmoji(effectiveWeatherCode, effectiveIsNight)
+     readonly property string effectiveWeatherDescription: debugMode ? getWeatherDescription(debugWeatherCode) : weatherDescription
+ 
+     // Weather effect types based on code
+@@ -321,13 +346,15 @@ Singleton {
+         }
+     }
+ 
+-    function getWeatherCodeEmoji(code) {
++    // night: swap the sun-bearing glyphs for their after-dark equivalents.
++    // Unicode has no moon-behind-cloud emoji, so cloudy codes fall back to plain cloud.
++    function getWeatherCodeEmoji(code, night) {
+         if (code === 0)
+-            return "☀️";
++            return night ? "🌙" : "☀️";
+         if (code === 1)
+-            return "🌤️";
++            return night ? "🌙" : "🌤️";
+         if (code === 2)
+-            return "⛅";
++            return night ? "☁️" : "⛅";
+         if (code === 3)
+             return "☁️";
+         if (code === 45)
+@@ -335,7 +362,7 @@ Singleton {
+         if (code === 48)
+             return "🌨️";
+         if (code >= 51 && code <= 53)
+-            return "🌦️";
++            return night ? "🌧️" : "🌦️";
+         if (code === 55)
+             return "🌧️";
+         if (code >= 56 && code <= 57)
+@@ -347,7 +374,7 @@ Singleton {
+         if (code >= 71 && code <= 77)
+             return "❄️";
+         if (code >= 80 && code <= 81)
+-            return "🌦️";
++            return night ? "🌧️" : "🌦️";
+         if (code === 82)
+             return "🌧️";
+         if (code >= 85 && code <= 86)
+@@ -442,7 +469,6 @@ Singleton {
+                 }
+                 root.forecast = forecastData;
+ 
+-                root.weatherSymbol = getWeatherCodeEmoji(root.weatherCode);
+                 root.weatherDescription = getWeatherDescription(root.weatherCode);
+                 root.calculateSunPosition();
+                 root.dataAvailable = true;
+@@ -519,6 +545,7 @@ Singleton {
+     Component.onCompleted: {
+         var now = new Date();
+         currentHour = now.getHours() + now.getMinutes() / 60;
++        updateDayNight();
+         _initialized = true;
+     }
+ }
+diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
+index 028c2dce..413165a3 100644
+--- a/modules/shell/UnifiedShellPanel.qml
++++ b/modules/shell/UnifiedShellPanel.qml
+@@ -45,7 +45,12 @@ PanelWindow {
+ 
+     // Whether we need to capture full-screen input for click-outside detection.
+     // True when notch modules are open OR any FocusGrab is active (e.g., BarPopups).
+-    readonly property bool needsFullScreenInput: notchContent.screenNotchOpen || FocusGrabManager.hasActiveGrab || (assistantSidebar.active && assistantSidebar.wantsFocus)
++    //
++    // The attached bar flyout has no FocusGrab of its own, so it is named here
++    // directly - and shell-wide rather than per-screen, because a FocusGrab is
++    // cleared by a click on any monitor and clicking away from the flyout has to
++    // dismiss it the same way.
++    readonly property bool needsFullScreenInput: notchContent.screenNotchOpen || FocusGrabManager.hasActiveGrab || (assistantSidebar.active && assistantSidebar.wantsFocus) || GlobalStates.barFlyoutOpen
+ 
+     readonly property bool barEnabled: {
+         if (!Config.barReady) return false;
+@@ -151,6 +156,12 @@ PanelWindow {
+         // Full-screen capture when any module/popup is open
+         item: unifiedPanel.needsFullScreenInput ? fullScreenMask : null
+         regions: [
++            Region {
++                item: bluetoothFlyout.active ? bluetoothFlyout.hitbox : null
++            },
++            Region {
++                item: barFlyout.active ? barFlyout.hitbox : null
++            },
+             Region {
+                 item: barContent.visible ? barContent.barHitbox : null
+             },
+@@ -192,6 +203,10 @@ PanelWindow {
+ 
+         onClicked: {
+             FocusGrabManager.clearTopGrab();
++            // The attached bar flyout is drawn in this surface rather than a
++            // window of its own, so it has no FocusGrab to clear - the backdrop
++            // is what closes it.
++            GlobalStates.closeBarFlyout();
+             if (assistantSidebar.active && assistantSidebar.wantsFocus) {
+                 assistantSidebar.wantsFocus = false;
+             }
+@@ -224,6 +239,63 @@ PanelWindow {
+             z: 2
+             visible: unifiedPanel.barEnabled
+         }
++        // Sits between frame and bar so it reads as the frame bulging outward.
++        // Takes the frame's own side thickness so the two fills meet with no seam.
++        BluetoothFlyout {
++            id: bluetoothFlyout
++            anchors.fill: parent
++            targetScreen: unifiedPanel.targetScreen
++            barPosition: unifiedPanel.barPosition
++            attached: unifiedPanel.containBar
++            frameInset: {
++                // Attached: the frame's own band on the bar's side, so the two
++                // fills butt together exactly.
++                if (unifiedPanel.containBar) {
++                    switch (unifiedPanel.barPosition) {
++                    case "right":
++                        return frameContent.rightThickness;
++                    case "top":
++                        return frameContent.topThickness;
++                    case "bottom":
++                        return frameContent.bottomThickness;
++                    default:
++                        return frameContent.leftThickness;
++                    }
++                }
++
++                // Floating: the frame is only a thin edge band and the bar is a
++                // row of separate pills, so clear the edge, the pills and the
++                // margin they sit in. Mirrors AssistantSidebar's own offsets.
++                const vertical = unifiedPanel.barPosition === "left" || unifiedPanel.barPosition === "right";
++                const edge = (Config.bar?.frameEnabled ?? false) ? (Config.bar?.frameThickness ?? 6) : 0;
++                const barSize = vertical ? unifiedPanel.barTargetWidth : unifiedPanel.barTargetHeight;
++                return edge + unifiedPanel.barOuterMargin + barSize;
++            }
++            z: 1
++        }
++        // Generic frame-attached popout for the bar's own widgets (clock,
++        // controls, battery/power profiles, layout). Same surface and same
++        // inset as the bluetooth flyout, for the same reason; the contents come
++        // from whichever widget opened it.
++        BarFlyout {
++            id: barFlyout
++            anchors.fill: parent
++            targetScreen: unifiedPanel.targetScreen
++            barPosition: unifiedPanel.barPosition
++            frameInset: {
++                switch (unifiedPanel.barPosition) {
++                case "right":
++                    return frameContent.rightThickness;
++                case "top":
++                    return frameContent.topThickness;
++                case "bottom":
++                    return frameContent.bottomThickness;
++                default:
++                    return frameContent.leftThickness;
++                }
++            }
++            z: 1
++        }
+ 
+         DockContent {
+             id: dockContent
+diff --git a/modules/theme/Icons.qml b/modules/theme/Icons.qml
+index 3333506c..362151ca 100644
+--- a/modules/theme/Icons.qml
++++ b/modules/theme/Icons.qml
+@@ -266,4 +266,43 @@ QtObject {
+     readonly property string thermometer: temperature
+     readonly property string windowsLogo: terminalWindow
+     readonly property string frameCorners: crop
++
++    // Maps BlueZ's Icon property (freedesktop icon names like "audio-headset")
++    // onto the icon font. Shared so the bar's Bluetooth widgets can't drift apart
++    // on what a keyboard or a gamepad looks like.
++    function bluetoothDeviceIcon(bluezIcon: string): string {
++        const icon = bluezIcon ?? "";
++        if (icon.includes("audio-headset") || icon.includes("headphone"))
++            return headphones;
++        if (icon.includes("input-keyboard"))
++            return keyboard;
++        if (icon.includes("input-mouse"))
++            return mouse;
++        if (icon.includes("phone"))
++            return phone;
++        if (icon.includes("watch"))
++            return watch;
++        if (icon.includes("input-gaming") || icon.includes("gamepad"))
++            return gamepad;
++        if (icon.includes("printer"))
++            return printer;
++        if (icon.includes("camera"))
++            return camera;
++        if (icon.includes("audio-speakers") || icon.includes("speaker"))
++            return speaker;
++        return bluetooth;
++    }
++
++    // Battery glyph for a whole-percent level.
++    function batteryLevelIcon(percent: int): string {
++        if (percent > 80)
++            return batteryFull;
++        if (percent > 60)
++            return batteryHigh;
++        if (percent > 40)
++            return batteryMedium;
++        if (percent > 20)
++            return batteryLow;
++        return batteryEmpty;
++    }
+ }

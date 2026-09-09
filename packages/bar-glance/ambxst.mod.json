@@ -1,10 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
   "manifestVersion": 1,
-  "id": "drpezzer.bluetooth-widget",
-  "name": "Bluetooth widget",
+  "id": "drpezzer.bar-glance",
+  "name": "Bar at a Glance",
   "version": "1.0.0",
-  "description": "A Bluetooth indicator in the bar with a frame-attached flyout: power toggle, scanning, connect/disconnect/pair/trust/forget per device, plus a battery readout for connected devices. Hides the tray icon duty from blueman.",
+  "description": "More of your system readable straight from the bar. With contain-bar on, the clock, controls, battery/power-profile and layout popouts grow out of the frame instead of floating as pills. A Bluetooth indicator gets a frame-attached flyout with power, scanning, connect/pair/trust/forget per device, and a battery readout for connected devices. The weather glyph switches to moon and night variants after sunset.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -16,13 +16,12 @@
       "6f9e93cb81767ff14c4867c349fc176d8d9e6697"
     ]
   },
-  "dependencies": [
-    "drpezzer.bar-popouts"
-  ],
+  "dependencies": [],
   "conflicts": [],
   "commands": [],
   "permissions": [
-    "Controls Bluetooth adapters and devices through Quickshell.Bluetooth (BlueZ)"
+    "Controls Bluetooth adapters and devices through Quickshell.Bluetooth (BlueZ)",
+    "Reads sunrise and sunset from the weather service to pick day or night glyphs"
   ],
   "operations": [
     {
@@ -47,6 +46,11 @@
     },
     {
       "type": "overlay",
+      "source": "payload/modules/components/BarPopout.qml",
+      "target": "modules/components/BarPopout.qml"
+    },
+    {
+      "type": "overlay",
       "source": "payload/modules/services/BluetoothBattery.qml",
       "target": "modules/services/BluetoothBattery.qml"
     },
@@ -56,8 +60,13 @@
       "target": "modules/services/BluetoothControl.qml"
     },
     {
+      "type": "overlay",
+      "source": "payload/modules/shell/BarFlyout.qml",
+      "target": "modules/shell/BarFlyout.qml"
+    },
+    {
       "type": "patch",
-      "source": "patches/bluetooth-widget.patch"
+      "source": "patches/bar-glance.patch"
     }
   ]
 }

@@ -30,6 +30,7 @@ the shell fails to start within eight seconds Ambxst rolls back on its own.
 | [tinted-icons](packages/tinted-icons) | Two switches under Tint Icons: True Matugen Icons (primary-family lightness ramp, Iconicul's method) and True Monochrome |
 | [steamdeck-mode](packages/steamdeck-mode) | Quick Controls button that turns the PC into a Steam Deck streaming host: Sunshine + MoonDeck Buddy, a dedicated headless output, dark desk with a password overlay |
 | [mpris-player-fixes](packages/mpris-player-fixes) | Browser-player fixes: no seek bar pinned at the end, a Zen icon, YouTube thumbnails as cover art, plus a companion userscript |
+| [bar-glance](packages/bar-glance) | Frame-attached popouts for clock, controls, battery and layout, a Bluetooth widget with flyout and battery readout, and night weather glyphs |
 
 More are on the way as they are ported from a long-running personal fork.
 
