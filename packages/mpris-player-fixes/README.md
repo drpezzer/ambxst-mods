@@ -32,22 +32,24 @@ ambxst mods enable drpezzer.mpris-player-fixes
 ambxst reload
 ```
 
-## The browser half: a userscript for YouTube
+## The browser half: a userscript
 
-YouTube's single-page navigation stops re-pushing position state after the
-first video, so Firefox and Zen drop `mpris:length` and `Position` and the
-playhead sticks at 0 until you pause and play. That is a browser-side gap and
-no shell change can close it, so this package ships a tiny userscript that
-re-pushes `setPositionState()` on every `timeupdate` and page navigation.
+Firefox and Zen only publish `mpris:length` and a live `Position` while the
+page keeps `navigator.mediaSession` position state populated, and most
+single-page sites (YouTube, YouTube Music, SoundCloud, Twitch, ...) stop doing
+that after the first navigation, so the playhead sticks at 0 until you pause
+and play. That is a browser-side gap no shell change can close, so this
+package ships a tiny userscript that follows whichever `<video>` or `<audio>`
+is playing on any site and re-pushes `setPositionState()` on every tick.
 
 1. Install [Violentmonkey](https://violentmonkey.github.io/) in Firefox or Zen.
 2. Open this link; Violentmonkey will offer to install it:
 
    https://raw.githubusercontent.com/drpezzer/ambxst-mods/main/packages/mpris-player-fixes/extras/youtube-mpris-position.user.js
 
-It only matches `youtube.com` and `music.youtube.com`. Other sites with the
-same problem still show a stuck playhead until their page pushes position
-state itself.
+It runs on every site, ignores muted media so autoplaying page backgrounds
+never register as players, and only ever sets position state and playback
+state, never the title or artwork a site already provides.
 
 ## What it changes
 
@@ -60,6 +62,8 @@ state itself.
 Works with Ambxst `>=1.3.0`. No new config keys.
 
 ## Changelog
+
+- **1.1.1** — the userscript works on every site, not just YouTube.
 
 - **1.1.0** — ships the Zen icon and the YouTube userscript.
 - **1.0.0** — first packaged release.
