@@ -15,8 +15,9 @@ into Ambxst, restyled to a minimal composition in Ambxst's own palette.
 - Clock, date, avatar (`~/.face.icon`, as set from Ambxst's avatar picker), a
   fortune quote bottom-left, and a now-playing line up top. The vitals use
   Caelestia's compiled services, coloured to match Ambxst's metrics panel.
-- The clock, date and quote decode into place: each glyph cycles through
-  katakana and settles left to right. The clock re-scrambles on every minute.
+- The clock, date and quote decode into place as the composition reveals:
+  each glyph cycles through katakana and settles left to right. It is a
+  transition, not a tick; the clock's minute changes are plain.
 - The clock follows Ambxst's own 12/24-hour setting (`bar.use12hFormat`).
 
 Two new keys in `lockscreen.json`:
@@ -53,6 +54,9 @@ which locks without asking for a password on the way out.
 
 ## Changelog
 
+- **1.1.2** — the scramble is a reveal transition only; real twelve-hour
+  clock (Qt's `h` needs an am/pm token to be twelve-hour, so the string is
+  built from the hour and minute values).
 - **1.1.0** — katakana scramble on the clock, date and quote; the clock follows
   Ambxst's 12/24-hour setting; renamed to Caelestia Style Lockscreen.
 - **1.0.0** — first packaged release.

@@ -2,8 +2,10 @@ import QtQuick
 
 // LockText that decodes into place: every glyph cycles through katakana and
 // settles left to right over `revealDuration`. Set `source`, not `text`; the
-// displayed `text` is owned by the animation. Runs whenever `source` changes,
-// so the clock re-scrambles each minute and the quote decodes when it lands.
+// displayed `text` is owned by the animation. It is a transition, not a tick:
+// the decode runs once when the text first becomes visible (the quote lands
+// after the reveal, so its first arrival counts), and later changes such as
+// the clock's minute update swap the text plainly.
 LockText {
     id: root
 
@@ -19,15 +21,21 @@ LockText {
     property string glyphs: "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン"
 
     property real _startedAt: 0
+    property bool _decoded: false
 
     text: ""
 
-    onSourceChanged: restart()
+    onSourceChanged: {
+        if (_decoded)
+            text = source;
+        else
+            restart();
+    }
     onActiveChanged: restart()
     Component.onCompleted: restart()
 
     function restart(): void {
-        if (source === "" || !active) {
+        if (source === "" || !active || _decoded) {
             ticker.stop();
             text = source;
             return;
@@ -53,6 +61,7 @@ LockText {
         if (progress >= 1) {
             text = source;
             ticker.stop();
+            _decoded = true;
         }
     }
 
