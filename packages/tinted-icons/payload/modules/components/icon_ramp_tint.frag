@@ -1,5 +1,5 @@
-#version 440
 // Icon ramp tint for the Ambxst tinted-icons mod.
+#version 440
 // Luminance-mapped palette tint, ported from Iconicul by dvrkxed
 // (https://codeberg.org/dvrkxed/iconicul, MIT). The pixel's Lab lightness is
 // remapped onto the palette's lightness range, the palette anchors are blended
@@ -18,6 +18,10 @@ layout(std140, binding = 0) uniform buf {
     float paletteSize;
     float texWidth;
     float texHeight;
+    // 1.0 keeps neutral source pixels neutral (greys stay grey at the new
+    // lightness); 0.0 gives every pixel the ramp's full chroma, for symbolic
+    // white glyphs like tray icons that would otherwise stay white.
+    float neutralKeep;
 } ubuf;
 
 const float SOFTNESS = 8.0;          // Gaussian sigma in Lab L units
@@ -108,7 +112,7 @@ void main() {
     // Keep the source pixel's own neutrality: greys stay grey at the new lightness.
     float chroma = length(src.yz);
     float chromaFactor = clamp(chroma / REFERENCE_CHROMA, 0.0, 1.0);
-    outLab.yz *= chromaFactor;
+    outLab.yz *= mix(1.0, chromaFactor, clamp(ubuf.neutralKeep, 0.0, 1.0));
 
     vec3 rgb = labToSrgb(outLab);
     fragColor = vec4(rgb * tex.a, tex.a) * ubuf.qt_Opacity;

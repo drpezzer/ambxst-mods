@@ -45,6 +45,8 @@ lightness is remapped onto the ramp's lightness range, the ramp anchors are
 blended with a Gaussian window, and the result's chroma is scaled by how
 saturated the source pixel was, so anti-aliased greys stay quiet. The ramp is
 `background → primaryContainer → inversePrimary → primary → primaryFixed`.
+Neutral pixels stay neutral in the dock, launcher and workspace pills; the
+tray disables that because its icons are symbolic white glyphs.
 
 Stock *Tint Icons* blends the whole 26-colour palette by RGB distance, which
 posterises multicolour icons. Feeding a lightness mapping the whole palette
@@ -54,7 +56,7 @@ makes it read as a retheme.
 
 ## What it changes
 
-- New: `modules/components/icon_ramp_tint.frag` and its compiled `.qsb`.
+- New: `modules/components/icon_ramp_tint.frag` / `.vert` and their compiled `.qsb` files.
 - `modules/components/Tinted.qml` — the ramp palette, the new shader, and the
   `monochrome` / `tintColor` properties. The existing `fullTint`, which the
   launcher logo uses, is untouched.
@@ -67,6 +69,9 @@ makes it read as a retheme.
 Works with Ambxst `>=1.3.0`.
 
 ## Changelog
+
+- **2.0.1** — tray icons get the ramp's full hue: they are mostly symbolic
+  white glyphs, which the neutral-preserving default left white.
 
 - **2.0.0** — the tint is now a primary-family lightness ramp (Iconicul's
   method); the flat single-colour mode moved behind a *True Monochrome* switch.

@@ -26,14 +26,15 @@ index ec7003db..0ba2a237 100644
      "animDuration": 300,
      "shadowOpacity": 0.5,
 diff --git a/modules/bar/systray/SysTrayItem.qml b/modules/bar/systray/SysTrayItem.qml
-index 0b725b1a..8c53813e 100644
+index 0b725b1a..a16311cf 100644
 --- a/modules/bar/systray/SysTrayItem.qml
 +++ b/modules/bar/systray/SysTrayItem.qml
-@@ -169,6 +169,7 @@ MouseArea {
+@@ -169,6 +169,8 @@ MouseArea {
      Tinted {
          sourceItem: trayIcon
          anchors.fill: trayIcon
 +        monochrome: Config.theme.trueMonochromeTint
++        neutralKeep: 0.0
      }
  
      StyledToolTip {
@@ -60,10 +61,10 @@ index 48f68cdd..29b0a729 100644
                      }
                  }
 diff --git a/modules/components/Tinted.qml b/modules/components/Tinted.qml
-index 7144741f..1d7d510f 100644
+index 7144741f..1bf3dad8 100644
 --- a/modules/components/Tinted.qml
 +++ b/modules/components/Tinted.qml
-@@ -8,19 +8,21 @@ Item {
+@@ -8,19 +8,25 @@ Item {
      id: root
      property var sourceItem: null  // The icon item to tint
      property bool fullTint: false  // If true, apply solid primary color instead of shader
@@ -74,6 +75,10 @@ index 7144741f..1d7d510f 100644
 +    // its own brightness reads as black.
 +    property bool monochrome: false
 +    property color tintColor: Styling.srItem("overprimary")
++    // Ramp tint only: 1.0 keeps neutral source pixels neutral (greys stay grey
++    // at the new lightness), 0.0 gives every pixel the ramp's full hue. The
++    // tray sets 0.0 because its symbolic white glyphs would otherwise stay white.
++    property real neutralKeep: 1.0
  
 -    // Subset of colors for optimization (consistent with TintedWallpaper.qml)
 +    // Lightness ramp the icon is rethemed through, dark to light, all from the
@@ -96,7 +101,7 @@ index 7144741f..1d7d510f 100644
      ]
  
      // Palette generation for the shader
-@@ -84,19 +86,20 @@ Item {
+@@ -84,19 +90,20 @@ Item {
                  function onVisibleChanged() { if (root.visible) internalSource.scheduleUpdate(); }
              }
  
@@ -123,11 +128,15 @@ index 7144741f..1d7d510f 100644
                  anchors.fill: parent
                  
                  property var source: internalSource
-@@ -106,7 +109,7 @@ Item {
+@@ -104,9 +111,10 @@ Item {
+                 property real paletteSize: root.optimizedPalette.length
+                 property real texWidth: root.width
                  property real texHeight: root.height
++                property real neutralKeep: root.neutralKeep
  
-                 vertexShader: "../widgets/dashboard/wallpapers/palette.vert.qsb"
+-                vertexShader: "../widgets/dashboard/wallpapers/palette.vert.qsb"
 -                fragmentShader: "../widgets/dashboard/wallpapers/palette.frag.qsb"
++                vertexShader: "icon_ramp_tint.vert.qsb"
 +                fragmentShader: "icon_ramp_tint.frag.qsb"
              }
          }

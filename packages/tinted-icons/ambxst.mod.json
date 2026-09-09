@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.tinted-icons",
   "name": "Tinted icons",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Rethemes tinted app icons in the tray, dock, workspaces and launcher through a lightness ramp of the theme's primary family, so every icon lands in one hue with its shading intact (method ported from Iconicul by dvrkxed). A True Monochrome switch under Theme > Tint Icons flattens them to a single colour instead. The active workspace and selected launcher entry swap to the primary colour.",
   "license": "MIT",
   "author": "drpezzer",
