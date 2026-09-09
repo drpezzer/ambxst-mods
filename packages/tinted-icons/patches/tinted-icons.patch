@@ -1,24 +1,50 @@
+diff --git a/config/Config.qml b/config/Config.qml
+index 4e4834ee..32fecdbc 100644
+--- a/config/Config.qml
++++ b/config/Config.qml
+@@ -141,6 +141,9 @@ Singleton {
+             property string monoFont: "Iosevka Nerd Font Mono"
+             property int monoFontSize: 14
+             property bool tintIcons: false
++            // Tinted icons drawn in one theme colour with their own shading kept
++            // (see Tinted.monochrome). Only takes effect while tintIcons is on.
++            property bool monochromeTint: false
+             property bool enableCorners: true
+             property int animDuration: 300
+             property real shadowOpacity: 0.5
+diff --git a/config/defaults/theme.js b/config/defaults/theme.js
+index ec7003db..445feaf3 100644
+--- a/config/defaults/theme.js
++++ b/config/defaults/theme.js
+@@ -9,6 +9,7 @@ var data = {
+     "monoFont": "Iosevka Nerd Font Mono",
+     "monoFontSize": 14,
+     "tintIcons": false,
++    "monochromeTint": false,
+     "enableCorners": true,
+     "animDuration": 300,
+     "shadowOpacity": 0.5,
 diff --git a/modules/bar/systray/SysTrayItem.qml b/modules/bar/systray/SysTrayItem.qml
-index 0b725b1a..87cef512 100644
+index 0b725b1a..8ea99f53 100644
 --- a/modules/bar/systray/SysTrayItem.qml
 +++ b/modules/bar/systray/SysTrayItem.qml
 @@ -169,6 +169,7 @@ MouseArea {
      Tinted {
          sourceItem: trayIcon
          anchors.fill: trayIcon
-+        fullTint: true
++        monochrome: Config.theme.monochromeTint
      }
  
      StyledToolTip {
 diff --git a/modules/bar/workspaces/Workspaces.qml b/modules/bar/workspaces/Workspaces.qml
-index 48f68cdd..9956a579 100644
+index 48f68cdd..f993d59b 100644
 --- a/modules/bar/workspaces/Workspaces.qml
 +++ b/modules/bar/workspaces/Workspaces.qml
 @@ -528,6 +528,8 @@ Item {
                          Tinted {
                              sourceItem: mainAppIcon
                              anchors.fill: mainAppIcon
-+                            fullTint: true
++                            monochrome: Config.theme.monochromeTint
 +                            tintColor: ((monitor && monitor.activeWorkspace ? monitor.activeWorkspace.id : undefined) == button.workspaceValue) ? Styling.srItem("primary") : Styling.srItem("overprimary")
                          }
                      }
@@ -27,56 +53,170 @@ index 48f68cdd..9956a579 100644
                          Tinted {
                              sourceItem: mainAppIconVert
                              anchors.fill: mainAppIconVert
-+                            fullTint: true
++                            monochrome: Config.theme.monochromeTint
 +                            tintColor: ((monitor && monitor.activeWorkspace ? monitor.activeWorkspace.id : undefined) == buttonVert.workspaceValue) ? Styling.srItem("primary") : Styling.srItem("overprimary")
                          }
                      }
                  }
 diff --git a/modules/components/Tinted.qml b/modules/components/Tinted.qml
-index 7144741f..c2f8cd63 100644
+index 7144741f..a52f22c1 100644
 --- a/modules/components/Tinted.qml
 +++ b/modules/components/Tinted.qml
-@@ -8,6 +8,7 @@ Item {
+@@ -8,6 +8,12 @@ Item {
      id: root
      property var sourceItem: null  // The icon item to tint
      property bool fullTint: false  // If true, apply solid primary color instead of shader
++    // Monochrome tint: colourise the icon in a single hue while keeping its own
++    // shading, so glyph detail survives. Unlike fullTint it does not flatten the
++    // icon to a silhouette first, which is why fullTint stays untouched for the
++    // launcher logo: a dark logo colourised at its own brightness reads as black.
++    property bool monochrome: false
 +    property color tintColor: Styling.srItem("overprimary")
  
      // Subset of colors for optimization (consistent with TintedWallpaper.qml)
      readonly property var optimizedPalette: [
-@@ -89,9 +90,9 @@ Item {
-                 visible: root.fullTint
+@@ -84,19 +90,20 @@ Item {
+                 function onVisibleChanged() { if (root.visible) internalSource.scheduleUpdate(); }
+             }
+ 
+-            // Full tint fallback (solid color)
++            // Full tint fallback (solid color), or monochrome tint keeping the
++            // icon's own brightness
+             MultiEffect {
+-                visible: root.fullTint
++                visible: root.fullTint || root.monochrome
                  anchors.fill: parent
                  source: internalSource
 -                brightness: 1.0
-+                brightness: 0.0
++                brightness: root.fullTint ? 1.0 : 0.0
                  colorization: 1.0
 -                colorizationColor: Styling.srItem("overprimary")
 +                colorizationColor: root.tintColor
              }
  
              // Shader-based tint
+             ShaderEffect {
+-                visible: !root.fullTint
++                visible: !root.fullTint && !root.monochrome
+                 anchors.fill: parent
+                 
+                 property var source: internalSource
 diff --git a/modules/dock/DockAppButton.qml b/modules/dock/DockAppButton.qml
-index 3132417b..b0414b24 100644
+index 3132417b..5d41bf2f 100644
 --- a/modules/dock/DockAppButton.qml
 +++ b/modules/dock/DockAppButton.qml
 @@ -110,6 +110,7 @@ Button {
                      Tinted {
                          sourceItem: appIcon
                          anchors.fill: appIcon
-+                        fullTint: true
++                        monochrome: Config.theme.monochromeTint
                      }
                  }
  
+diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
+index 528a20b3..1a03d9fd 100644
+--- a/modules/globals/GlobalStates.qml
++++ b/modules/globals/GlobalStates.qml
+@@ -231,6 +231,7 @@ Singleton {
+     readonly property var _simpleThemeProps: [
+         "roundness", "oledMode", "lightMode", "font", "fontSize", "monoFont", "monoFontSize",
+         "tintIcons", "enableCorners", "animDuration",
++        "monochromeTint",
+         "shadowOpacity", "shadowColor", "shadowXOffset", "shadowYOffset", "shadowBlur"
+     ]
+     readonly property var _srVariantProps: [
+diff --git a/modules/widgets/dashboard/controls/ThemePanel.qml b/modules/widgets/dashboard/controls/ThemePanel.qml
+index e622dff3..3ccae7f1 100644
+--- a/modules/widgets/dashboard/controls/ThemePanel.qml
++++ b/modules/widgets/dashboard/controls/ThemePanel.qml
+@@ -402,6 +402,78 @@ Item {
+                                 }
+                             }
+ 
++                            // Monochrome Tint toggle: single-colour icons that keep their shading.
++                            // Only meaningful while Tint Icons is on, so it follows that switch.
++                            RowLayout {
++                                Layout.fillWidth: true
++                                spacing: 8
++                                enabled: Config.theme.tintIcons
++                                opacity: enabled ? 1 : 0.5
++
++                                Text {
++                                    text: "Monochrome Tint"
++                                    font.family: Config.theme.font
++                                    font.pixelSize: Styling.fontSize(0)
++                                    color: Colors.overBackground
++                                    Layout.fillWidth: true
++                                }
++
++                                Switch {
++                                    id: monochromeTintSwitch
++                                    checked: Config.theme.monochromeTint
++
++                                    readonly property bool configValue: Config.theme.monochromeTint
++
++                                    onConfigValueChanged: {
++                                        if (checked !== configValue) {
++                                            checked = configValue;
++                                        }
++                                    }
++
++                                    onCheckedChanged: {
++                                        if (checked !== Config.theme.monochromeTint) {
++                                            GlobalStates.markThemeChanged();
++                                            Config.theme.monochromeTint = checked;
++                                        }
++                                    }
++
++                                    indicator: Rectangle {
++                                        implicitWidth: 40
++                                        implicitHeight: 20
++                                        x: monochromeTintSwitch.leftPadding
++                                        y: parent.height / 2 - height / 2
++                                        radius: height / 2
++                                        color: monochromeTintSwitch.checked ? Styling.srItem("overprimary") : Colors.surfaceBright
++                                        border.color: monochromeTintSwitch.checked ? Styling.srItem("overprimary") : Colors.outline
++
++                                        Behavior on color {
++                                            enabled: Config.animDuration > 0
++                                            ColorAnimation {
++                                                duration: Config.animDuration / 2
++                                            }
++                                        }
++
++                                        Rectangle {
++                                            x: monochromeTintSwitch.checked ? parent.width - width - 2 : 2
++                                            y: 2
++                                            width: parent.height - 4
++                                            height: width
++                                            radius: width / 2
++                                            color: monochromeTintSwitch.checked ? Colors.background : Colors.overSurfaceVariant
++
++                                            Behavior on x {
++                                                enabled: Config.animDuration > 0
++                                                NumberAnimation {
++                                                    duration: Config.animDuration / 2
++                                                    easing.type: Easing.OutCubic
++                                                }
++                                            }
++                                        }
++                                    }
++                                    background: null
++                                }
++                            }
++
+                             // Enable Corners toggle
+                             RowLayout {
+                                 Layout.fillWidth: true
 diff --git a/modules/widgets/launcher/LauncherView.qml b/modules/widgets/launcher/LauncherView.qml
-index 9af6e933..c8c654a9 100644
+index 9af6e933..2bd3271f 100644
 --- a/modules/widgets/launcher/LauncherView.qml
 +++ b/modules/widgets/launcher/LauncherView.qml
 @@ -751,6 +751,16 @@ Rectangle {
                              Tinted {
                                  anchors.fill: parent
                                  sourceItem: appIconImage
-+                                fullTint: true
++                                monochrome: Config.theme.monochromeTint
 +                                tintColor: {
 +                                    if (isExpanded) {
 +                                        return Styling.srItem("pane");
