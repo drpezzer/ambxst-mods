@@ -1,0 +1,282 @@
+diff --git a/config/Config.qml b/config/Config.qml
+index 4e4834ee..1fc9e687 100644
+--- a/config/Config.qml
++++ b/config/Config.qml
+@@ -924,6 +924,13 @@ Singleton {
+ 
+         adapter: JsonAdapter {
+             property string position: "bottom"
++            // Connector name of the screen the lockscreen composition is drawn
++            // on, e.g. "DP-3". Empty follows the focused monitor, which at boot
++            // and on idle autolock is wherever the pointer happens to be.
++            property string screen: ""
++            // Lock once per login session as soon as the shell is ready, for
++            // setups that autologin without a password.
++            property bool lockOnStart: false
+         }
+     }
+ 
+diff --git a/config/defaults/lockscreen.js b/config/defaults/lockscreen.js
+index b06cbea9..ef0ee336 100644
+--- a/config/defaults/lockscreen.js
++++ b/config/defaults/lockscreen.js
+@@ -1,5 +1,15 @@
+ .pragma library
+ 
+ var data = {
+-    "position": "bottom"
++    "position": "bottom",
++    // Screen the lockscreen composition is drawn on, by connector name (e.g.
++    // "DP-3"). Empty means "whichever screen has focus", which is unreliable at
++    // boot, when Hyprland's IPC has not resolved a focused monitor yet. Ignored
++    // when the named screen is not connected.
++    "screen": "",
++    // Lock as soon as the shell is ready, once per login session. For setups
++    // that autologin without a password, so the boot does not land on an
++    // unlocked desktop. Cannot cover the moment before the shell starts, when
++    // the compositor is already up.
++    "lockOnStart": false
+ }
+diff --git a/modules/components/CircularSeekBar.qml b/modules/components/CircularSeekBar.qml
+index e246f012..7e089b9c 100644
+--- a/modules/components/CircularSeekBar.qml
++++ b/modules/components/CircularSeekBar.qml
+@@ -23,6 +23,9 @@ Item {
+     property bool enabled: true
+     property bool dashed: false      // Enable dashed style for progress
+     property bool dashedActive: false// Animate dashes (breathing/marquee)
++    property bool showHandle: true   // Off for read-only gauges (nothing to drag)
++    property bool showJunctionDot: false // Bead over the seam where the wave meets the track
++    property real junctionDotSize: lineWidth * 1.6
+     
+     // Wavy properties kept for compatibility (ignored in Shape version)
+     property bool wavy: false
+@@ -306,7 +309,7 @@ Item {
+         
+         // 3. Handle (Line)
+         ShapePath {
+-            strokeColor: Colors.overBackground
++            strokeColor: root.showHandle ? Colors.overBackground : "transparent"
+             strokeWidth: root.animatedHandleWidth
+             strokeStyle: ShapePath.SolidLine
+             capStyle: ShapePath.RoundCap
+@@ -326,4 +329,19 @@ Item {
+             }
+         }
+     }
++
++    // 4. Junction dot - sits on the track radius at the current value, hiding
++    // the seam where a wavy progress arc (which ends wherever its crest happens
++    // to fall) meets the flat track.
++    Rectangle {
++        visible: root.showJunctionDot
++
++        width: root.junctionDotSize
++        height: width
++        radius: width / 2
++        color: root.accentColor
++
++        x: (root.width / 2) + root.radius * Math.cos(root.currentAngleRad) - width / 2
++        y: (root.height / 2) + root.radius * Math.sin(root.currentAngleRad) - height / 2
++    }
+ }
+diff --git a/shell.qml b/shell.qml
+index 888996d3..788b3294 100644
+--- a/shell.qml
++++ b/shell.qml
+@@ -5,6 +5,8 @@
+ 
+ import QtQuick
+ import Quickshell
++import Quickshell.Hyprland
++import Quickshell.Io
+ import Quickshell.Wayland
+ import qs.modules.bar
+ import qs.modules.bar.workspaces
+@@ -20,6 +22,7 @@ import qs.modules.frame
+ import qs.modules.components
+ import qs.modules.desktop
+ import qs.modules.lockscreen
++import qs.modules.lockscreen.cae.lock
+ import qs.modules.dock
+ import qs.modules.globals
+ import qs.modules.shell
+@@ -164,13 +167,167 @@ ShellRoot {
+         }
+     }
+ 
+-    // Secure WlSessionLock lockscreen
++    // Secure WlSessionLock lockscreen (ported Caelestia surface)
+     WlSessionLock {
+         id: sessionLock
+-        locked: GlobalStates.lockscreenVisible
++
++        // LockSurface emits this to start its unlock animation; the surface
++        // clears `locked` itself once the outro finishes.
++        signal unlock
++
++        onLockedChanged: {
++            if (!locked && GlobalStates.lockscreenVisible)
++                GlobalStates.lockscreenVisible = false;
++            if (!locked)
++                lockShot.discard(); // don't leave a desktop grab sitting in RAM
++        }
+ 
+         // Surface auto-created per screen
+-        LockScreen {}
++        LockSurface {
++            lock: sessionLock
++            pam: lockPam
++            cardScreenName: lockShot.focusedScreen
++        }
++    }
++
++    // Kept outside WlSessionLock: its default property is the surface
++    // component, so any extra child there would be consumed as the surface.
++    //
++    // Driven imperatively rather than by a binding on `locked`: the unlock
++    // animation ends in a PropertyAction writing `locked = false`, which would
++    // destroy a binding and leave the lock permanently disarmed.
++    Connections {
++        target: GlobalStates
++
++        function onLockscreenVisibleChanged(): void {
++            if (GlobalStates.lockscreenVisible)
++                lockShot.capture(); // locks once the screenshots land
++            else if (sessionLock.locked)
++                sessionLock.unlock();
++        }
++    }
++
++    Process {
++        id: cleanup
++
++        command: ["sh", "-c", `rm -f '${lockShot.dir}'/*.png`]
++    }
++
++    Pam {
++        id: lockPam
++
++        lock: sessionLock
++    }
++
++    // Grabs the desktop just before the lock engages, so the lockscreen has a
++    // real image to blur in and out of.
++    //
++    // A ScreencopyView cannot do this job: the compositor refuses capture once
++    // locked, and a view created with the lock surface has no content for its
++    // first frames, so both ends of the animation uncover black instead of the
++    // desktop. Level-0 PNGs in parallel cost ~100ms for three monitors, versus
++    // ~1s at default compression.
++    Process {
++        id: lockShot
++
++        readonly property string dir: `${Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"}/ambxst-lock`
++
++        // Monitor the pointer was on when the lock engaged, used only when no
++        // configured screen is available. Frozen at lock time rather than bound,
++        // so the composition cannot hop outputs if the pointer moves while
++        // locked. Empty means "show it everywhere", the safe fallback - which is
++        // also what Hyprland reports at boot, its IPC connecting lazily.
++        property string focusedFallback: ""
++
++        // Screen the composition is drawn on.
++        //
++        // config/lockscreen.json's `screen` wins whenever that output is
++        // connected: at boot Hyprland's focused monitor is whichever one it
++        // happened to settle on, which is not necessarily the main display.
++        // Falling back to focus keeps it sane when the configured screen is
++        // unplugged or switched off.
++        //
++        // Bound rather than resolved once inside capture(), because a lock can
++        // fire before config/lockscreen.json has loaded - a boot-time lock does
++        // so by seconds - and a value read then would be the empty default and
++        // strand the composition on the pointer's monitor for the whole session.
++        // Bound, it corrects itself the moment the config lands.
++        readonly property string focusedScreen: {
++            const connected = Quickshell.screens.map(s => s.name);
++            const preferred = Config.lockscreen.screen ?? "";
++            return connected.includes(preferred) ? preferred : focusedFallback;
++        }
++
++        function capture(): void {
++            focusedFallback = Hyprland.focusedMonitor?.name ?? "";
++
++            const names = Quickshell.screens.map(s => `'${s.name}'`).join(" ");
++            command = ["sh", "-c", `mkdir -p '${dir}'; for m in ${names}; do grim -l 0 -o "$m" '${dir}'/"$m".png & done; wait`];
++            running = true;
++        }
++
++        function discard(): void {
++            cleanup.running = true;
++        }
++
++        // Lock even if the capture failed; a missing screenshot is a cosmetic
++        // problem, not locking is a security one.
++        onExited: sessionLock.locked = true
++    }
++
++    // Locks the session as soon as the shell is ready, so a passwordless
++    // autologin does not land on an unlocked desktop.
++    //
++    // Armed off Config.lockscreenReady rather than a delay: the config carries
++    // both this flag and the screen the composition belongs on, and neither is
++    // known for the first second or so of a cold start. A `sleep N` in a
++    // launcher unit is the same idea with a guessed constant, and a guess that
++    // comes up short on a slow boot puts the lock on the wrong monitor.
++    //
++    // This cannot cover the gap before the shell itself starts - the compositor
++    // is up, and painting, for a moment first. Closing that needs a lock raised
++    // by the compositor, or an authenticated login.
++    Process {
++        id: bootLock
++
++        // Once per compositor session, not once per shell start: quickshell
++        // rebuilds the scene on every hot reload and `ambxst reload` restarts the
++        // process outright, and re-locking on each of those would be unusable.
++        //
++        // Keyed on the compositor instance rather than just the presence of a
++        // marker, because $XDG_RUNTIME_DIR outlives a logout for any user with
++        // lingering enabled - a plain marker would then survive into the next
++        // login and silently skip the lock, which is the wrong way for this to
++        // fail. The signature changes whenever the compositor restarts, so a
++        // fresh graphical session always arms. Stale markers are swept on the way
++        // past; the tmpfs clears them at reboot regardless.
++        readonly property string marker: `${lockShot.dir}/booted-${Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "session"}`
++
++        command: ["sh", "-c", `mkdir -p '${lockShot.dir}' && if [ -e '${marker}' ]; then echo skip; else rm -f '${lockShot.dir}'/booted-*; : >'${marker}'; echo lock; fi`]
++
++        stdout: StdioCollector {
++            onStreamFinished: {
++                if (text.trim() === "lock")
++                    GlobalStates.lockscreenVisible = true;
++            }
++        }
++
++        function arm(): void {
++            if (Config.lockscreenReady && Config.lockscreen.lockOnStart)
++                running = true;
++        }
++
++        Component.onCompleted: arm()
++    }
++
++    // Sibling rather than a child of bootLock: Process has no default property,
++    // so a Connections nested inside it fails the whole shell to load.
++    Connections {
++        target: Config
++
++        function onLockscreenReadyChanged(): void {
++            bootLock.arm();
++        }
+     }
+ 
+     CompositorConfig {
+@@ -291,6 +448,7 @@ ShellRoot {
+                 let _ = CaffeineClient.inhibit;
+                 _ = IdleService.lockCmd; // Force init
+                 _ = GlobalShortcuts.appId; // Force init (IPC pipe listener)
++                _ = Hyprland.focusedMonitor; // Force init (lazy, empty on first access)
+                 _ = WallpaperCommandService; // Force init (IPC wallpaper.set subscriber)
+                 _ = PresetCommandService;    // Force init (IPC preset.load subscriber)
+                 // PresetsService.initialize() is normally triggered lazily
