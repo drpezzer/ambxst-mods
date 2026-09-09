@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.multi-monitor-fixes",
   "name": "Multi-monitor fixes",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Monitor hotplug without a shell reload: panels unregister by the screen name latched at creation (Quickshell reassigns a dying window's screen to a survivor), Visibilities ignores stale unregisters, the wallpaper-manager role is handed to a surviving screen, the notch no longer strands an invisible view on unfocused screens, fullscreen detection sees games on the special workspace an output has open, and ~15 screen.name bindings are null-guarded during teardown.",
   "license": "MIT",
   "author": "drpezzer",

@@ -673,10 +673,10 @@ index 028c2dce..ff18a385 100644
  
      // Full-screen mask item (used when modules/popups are open)
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-index cdf136e7..a23989d0 100644
+index cdf136e7..00decebe 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 +++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-@@ -47,38 +47,43 @@ PanelWindow {
+@@ -47,32 +47,38 @@ PanelWindow {
  
      readonly property var optimizedPalette: ["background", "overBackground", "shadow", "surface", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primary", "secondary", "tertiary", "red", "lightRed", "green", "lightGreen", "blue", "lightBlue", "yellow", "lightYellow", "cyan", "lightCyan", "magenta", "lightMagenta"]
  
@@ -720,35 +720,7 @@ index cdf136e7..a23989d0 100644
          when: GlobalStates.wallpaperManager !== null && GlobalStates.wallpaperManager !== wallpaper
      }
  
-     property string colorPresetsDir: Quickshell.env("HOME") + "/.config/ambxst/colors"
-     property string officialColorPresetsDir: decodeURIComponent(Qt.resolvedUrl("../../../../assets/colors").toString().replace("file://", ""))
--
-     onColorPresetsDirChanged: console.log("Color Presets Directory:", colorPresetsDir)
-     property list<string> colorPresets: []
-     onColorPresetsChanged: console.log("Color Presets Updated:", colorPresets)
-@@ -217,10 +222,11 @@ PanelWindow {
- 
-         console.log("Generating lockscreen frame for:", filePath);
- 
-+        var scriptPath = decodeURIComponent(Qt.resolvedUrl("../../../../scripts/lockwall.py").toString().replace("file://", ""));
-         // QUICKSHELL-GIT: var dataPath = Quickshell.cacheDir;
-         var dataPath = Quickshell.env("HOME") + "/.cache/ambxst";
- 
--        lockscreenWallpaperScript.command = ["ambxst", "lockwall", filePath, dataPath];
-+        lockscreenWallpaperScript.command = ["python3", scriptPath, filePath, dataPath];
- 
-         lockscreenWallpaperScript.running = true;
-     }
-@@ -532,7 +538,7 @@ PanelWindow {
-         // Store the current active path so updateMpvRuntime knows which one to use
-         wallpaper.mpvShaderPath = currentShaderPath;
- 
--        var cmd = ["ambxst", "writeshader", mpvShaderDir, currentShaderPath, shaderContent];
-+        var cmd = ["python3", "-c", "import sys, os, pathlib; " + "d = pathlib.Path(sys.argv[1]); " + "d.mkdir(parents=True, exist_ok=True); " + "[f.unlink() for f in d.iterdir() if f.is_file()]; " + "pathlib.Path(sys.argv[2]).write_text(sys.argv[3]); " + "print('Wrote shader to ' + sys.argv[2]); " + "legacy_dir = os.path.dirname(sys.argv[1]); " + "[pathlib.Path(legacy_dir, f).unlink(missing_ok=True) for f in ['mpv_tint_0.glsl', 'mpv_tint_1.glsl', 'mpv_tint.glsl']]", mpvShaderDir, currentShaderPath, shaderContent];
- 
-         mpvShaderWriter.command = cmd;
-         mpvShaderWriter.running = true;
-@@ -648,49 +654,127 @@ PanelWindow {
+@@ -648,17 +654,48 @@ PanelWindow {
          }
      }
  
@@ -780,7 +752,6 @@ index cdf136e7..a23989d0 100644
  
          GlobalStates.wallpaperManager = wallpaper;
  
--        // Verify wallpapers.json exists, create with fallback if not
 +        // Carry that state across so the wallpaper stays on screen while the
 +        // promoted instance rescans, instead of blanking to "" for a beat.
 +        //
@@ -802,48 +773,25 @@ index cdf136e7..a23989d0 100644
 +        // so the scan below is allowed to arm.
 +        _wallpaperDirInitialized = false;
 +
-+        // Verificar si existe wallpapers.json, si no, crear con fallback
+         // Verify wallpapers.json exists, create with fallback if not
          checkWallpapersJson.running = true;
  
--        // Initial scans - color presets are needed for the wallpapers tab SchemeSelector.
-+        // Initial scans - do these once after config is loaded
-         scanColorPresets();
-+        // Start directory monitoring
-         presetsWatcher.reload();
-         officialPresetsWatcher.reload();
--        // Load initial wallpaper config - triggers onWallPathChanged which does the actual scan
-+        // Load initial wallpaper config - this will trigger onWallPathChanged which does the actual scan
+@@ -669,6 +706,11 @@ PanelWindow {
+         // Load initial wallpaper config - triggers onWallPathChanged which does the actual scan
          wallpaperConfig.reload();
  
--        // Lockscreen frame and MPV shader generation deferred 5s after boot to reduce peak memory.
 +        // On promotion wallPath is usually already loaded, so onWallPathChanged
 +        // will not fire again; arm the scan directly. initWallpaperScan is
 +        // idempotent, so the startup path costs nothing.
 +        initWallpaperScan(wallpaperConfig.adapter ? wallpaperConfig.adapter.wallPath : "");
 +
-+        // Generate lockscreen frame for initial wallpaper after a short delay
+         // Lockscreen frame and MPV shader generation deferred 5s after boot to reduce peak memory.
          Qt.callLater(function () {
              if (currentWallpaper) {
--                lockscreenFrameTimer.start();
-+                generateLockscreenFrame(currentWallpaper);
-             }
-+            // Force shader generation on startup if enabled
-             if (tintEnabled) {
-                 updateMpvShader();
-             }
+@@ -680,6 +722,59 @@ PanelWindow {
          });
      }
  
--    // Deferred lockscreen frame generation to avoid blocking boot
--    Timer {
--        id: lockscreenFrameTimer
--        interval: 5000
--        running: false
--        repeat: false
--        onTriggered: {
--            if (currentWallpaper) {
--                generateLockscreenFrame(currentWallpaper);
--            }
 +    // Arm directory watching, the wallpaper scan and thumbnail generation.
 +    // Guarded so it only ever runs once, and only for the managing instance.
 +    function initWallpaperScan(path) {
@@ -875,7 +823,7 @@ index cdf136e7..a23989d0 100644
 +            // Another instance already registered, skip initialization
 +            _wallpaperDirInitialized = true;
 +            return;
-         }
++        }
 +
 +        becomeWallpaperManager();
 +    }
@@ -895,10 +843,12 @@ index cdf136e7..a23989d0 100644
 +            heir.becomeWallpaperManager(wallpaper);
 +        else
 +            GlobalStates.wallpaperManager = null;
-     }
- 
-     FileView {
-@@ -764,22 +848,7 @@ PanelWindow {
++    }
++
+     // Deferred lockscreen frame generation to avoid blocking boot
+     Timer {
+         id: lockscreenFrameTimer
+@@ -764,22 +859,7 @@ PanelWindow {
                      console.log("Config wallPath updated:", wallPath);
  
                      // Initialize scanning on first valid wallPath load
@@ -922,39 +872,6 @@ index cdf136e7..a23989d0 100644
                  }
              }
          }
-@@ -853,11 +922,12 @@ PanelWindow {
-         }
-     }
- 
--        // Proceso para generar thumbnails de videos
-+    // Proceso para generar thumbnails de videos
-     Process {
-         id: thumbnailGeneratorScript
-         running: false
--        command: ["ambxst", "thumbs", Quickshell.env("HOME") + "/.cache/ambxst" + "/wallpapers.json", Quickshell.env("HOME") + "/.cache/ambxst", fallbackDir]
-+        // QUICKSHELL-GIT: command: ["python3", decodeURIComponent(Qt.resolvedUrl("../../../../scripts/thumbgen.py").toString().replace("file://", "")), Quickshell.cacheDir + "/wallpapers.json", Quickshell.cacheDir, fallbackDir]
-+        command: ["python3", decodeURIComponent(Qt.resolvedUrl("../../../../scripts/thumbgen.py").toString().replace("file://", "")), Quickshell.env("HOME") + "/.cache/ambxst" + "/wallpapers.json", Quickshell.env("HOME") + "/.cache/ambxst", fallbackDir]
- 
-         stdout: StdioCollector {
-             onStreamFinished: {
-@@ -1017,7 +1087,7 @@ PanelWindow {
-         }
-     }
- 
--    // Directory watcher for user color presets.
-+    // Directory watcher for user color presets
-     FileView {
-         id: presetsWatcher
-         path: colorPresetsDir
-@@ -1030,7 +1100,7 @@ PanelWindow {
-         }
-     }
- 
--    // Directory watcher for official color presets.
-+    // Directory watcher for official color presets
-     FileView {
-         id: officialPresetsWatcher
-         path: officialColorPresetsDir
 diff --git a/modules/widgets/overview/OverviewPopup.qml b/modules/widgets/overview/OverviewPopup.qml
 index 6ad80557..539e7671 100644
 --- a/modules/widgets/overview/OverviewPopup.qml

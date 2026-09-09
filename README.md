@@ -31,6 +31,7 @@ the shell fails to start within eight seconds Ambxst rolls back on its own.
 | [steamdeck-mode](packages/steamdeck-mode) | Quick Controls button that turns the PC into a Steam Deck streaming host: Sunshine + MoonDeck Buddy, a dedicated headless output, dark desk with a password overlay. *Not yet fully verified on 1.3.* |
 | [mpris-player-fixes](packages/mpris-player-fixes) | Browser-player fixes: no seek bar pinned at the end, a Zen icon, YouTube thumbnails as cover art, plus a companion userscript |
 | [bar-glance](packages/bar-glance) | Frame-attached popouts for clock, controls, battery and layout, a Bluetooth widget with flyout and battery readout, and night weather glyphs |
+| [multi-monitor-fixes](packages/multi-monitor-fixes) | Monitor hotplug without a reload, wallpaper-manager handoff, notch and fullscreen-detection fixes for multi-screen setups |
 
 More are on the way as they are ported from a long-running personal fork.
 
