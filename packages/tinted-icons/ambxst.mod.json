@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.tinted-icons",
   "name": "Tinted icons",
-  "version": "1.1.0",
-  "description": "Adds a Monochrome Tint switch under Theme > Tint Icons: tinted app icons in the tray, dock, workspaces and launcher are drawn in one theme colour while keeping their own shading, and the active workspace and selected launcher entry swap to the primary colour. Off by default; the stock palette tint is unchanged.",
+  "version": "1.2.0",
+  "description": "Makes Tint Icons draw app icons in the tray, dock, workspaces and launcher as single-colour glyphs that keep their own shading, instead of the stock palette remap. The active workspace and the selected launcher entry swap to the primary colour.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -20,8 +20,7 @@
   "conflicts": [],
   "commands": [],
   "permissions": [
-    "Adds the theme.monochromeTint key to theme.json",
-    "Changes how app icons are rendered in the bar, dock and launcher when the switch is on"
+    "Changes how app icons are rendered in the bar, dock and launcher while Tint Icons is on"
   ],
   "operations": [
     {
