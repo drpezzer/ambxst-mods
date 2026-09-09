@@ -110,44 +110,13 @@ index 2ad87376..33876037 100644
          id: mouseArea
          anchors.fill: parent
 diff --git a/modules/widgets/dashboard/widgets/QuickControls.qml b/modules/widgets/dashboard/widgets/QuickControls.qml
-index bc4a6acc..4e79e67b 100644
+index bc4a6acc..eb167351 100644
 --- a/modules/widgets/dashboard/widgets/QuickControls.qml
 +++ b/modules/widgets/dashboard/widgets/QuickControls.qml
-@@ -102,27 +102,59 @@ StyledRect {
-                     Layout.preferredWidth: 48
-                     Layout.preferredHeight: 48
-                     iconName: Icons.nightLight
--                    isActive: NightLightClient.active
--                    tooltipText: NightLightClient.active ? "Night Light: On" : "Night Light: Off"
--                    onClicked: NightLightClient.toggle()
-+                    isActive: NightLightService.active
-+                    tooltipText: NightLightService.active ? "Night Light: On" : "Night Light: Off"
-+                    onClicked: NightLightService.toggle()
+@@ -124,6 +124,38 @@ StyledRect {
+                     tooltipText: GameModeClient.toggled ? "Game Mode: On" : "Game Mode: Off"
+                     onClicked: GameModeClient.toggle()
                  }
- 
-                 ControlButton {
-                     Layout.preferredWidth: 48
-                     Layout.preferredHeight: 48
-                     iconName: Icons.caffeine
--                    isActive: CaffeineClient.inhibit
--                    tooltipText: CaffeineClient.inhibit ? "Caffeine: On" : "Caffeine: Off"
--                    onClicked: CaffeineClient.toggle()
-+                    isActive: CaffeineService.inhibit
-+                    tooltipText: CaffeineService.inhibit ? "Caffeine: On" : "Caffeine: Off"
-+                    onClicked: CaffeineService.toggleInhibit()
-                 }
- 
-                 ControlButton {
-                     Layout.preferredWidth: 48
-                     Layout.preferredHeight: 48
-                     iconName: Icons.gameMode
--                    isActive: GameModeClient.toggled
--                    tooltipText: GameModeClient.toggled ? "Game Mode: On" : "Game Mode: Off"
--                    onClicked: GameModeClient.toggle()
-+                    isActive: GameModeService.toggled
-+                    tooltipText: GameModeService.toggled ? "Game Mode: On" : "Game Mode: Off"
-+                    onClicked: GameModeService.toggle()
-+                }
 +
 +                ControlButton {
 +                    Layout.preferredWidth: 48
@@ -179,9 +148,10 @@ index bc4a6acc..4e79e67b 100644
 +                        else
 +                            SteamDeckService.toggle();
 +                    }
-                 }
++                }
              }
          }
+         
 diff --git a/shell.qml b/shell.qml
 index 888996d3..a83ac7d3 100644
 --- a/shell.qml

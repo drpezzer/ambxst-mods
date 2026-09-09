@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.steamdeck-mode",
   "name": "Steamdeck Mode",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "One button in Quick Controls turns the PC into a Steam Deck streaming host: after a 15s grace countdown it starts Sunshine and MoonDeck Buddy, gives the Deck a dedicated headless output named 'sunshine', blanks the physical monitors and covers them with a password overlay that shows what the Deck is playing. Turning it off tears everything back down.",
   "license": "MIT",
   "author": "drpezzer",
