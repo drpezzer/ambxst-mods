@@ -1,0 +1,34 @@
+diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
+index 028c2dce..910af1a2 100644
+--- a/modules/shell/UnifiedShellPanel.qml
++++ b/modules/shell/UnifiedShellPanel.qml
+@@ -151,6 +151,12 @@ PanelWindow {
+         // Full-screen capture when any module/popup is open
+         item: unifiedPanel.needsFullScreenInput ? fullScreenMask : null
+         regions: [
++            Region {
++                item: starlightFlyout.queueActive ? starlightFlyout.hotzone : null
++            },
++            Region {
++                item: (starlightFlyout.active || starlightFlyout.renderVisible) ? starlightFlyout.hitbox : null
++            },
+             Region {
+                 item: barContent.visible ? barContent.barHitbox : null
+             },
+@@ -224,6 +230,16 @@ PanelWindow {
+             z: 2
+             visible: unifiedPanel.barEnabled
+         }
++        // Starlight render-queue flyout (LOCAL PATCH): top-right, frame-merged
++        // like the bluetooth flyout; exists only while topaz-starlight has a
++        // queue on disk, reveals on hovering the corner.
++        StarlightFlyout {
++            id: starlightFlyout
++            anchors.fill: parent
++            targetScreen: unifiedPanel.targetScreen
++            frameInset: frameContent.topThickness
++            z: 1
++        }
+ 
+         DockContent {
+             id: dockContent

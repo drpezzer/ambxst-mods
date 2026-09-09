@@ -1,0 +1,1032 @@
+diff --git a/modules/bar/Bar.qml b/modules/bar/Bar.qml
+index 4aa42403..1424d138 100644
+--- a/modules/bar/Bar.qml
++++ b/modules/bar/Bar.qml
+@@ -39,14 +39,26 @@ PanelWindow {
+         item: barContent.barHitbox
+     }
+ 
++    // Latched at creation -- see UnifiedShellPanel for why `screen.name` must
++    // never be read at teardown: an unplugged output leaves `screen` pointing at
++    // a surviving one, so unregistering by it wipes a live screen's entry.
++    property string registeredScreenName: ""
++
+     Component.onCompleted: {
+-        Visibilities.registerBar(screen.name, barContent);
+-        Visibilities.registerBarPanel(screen.name, panel);
++        registeredScreenName = screen ? screen.name : "";
++        if (!registeredScreenName)
++            return;
++
++        Visibilities.registerBar(registeredScreenName, barContent);
++        Visibilities.registerBarPanel(registeredScreenName, panel);
+     }
+ 
+     Component.onDestruction: {
+-        Visibilities.unregisterBar(screen.name);
+-        Visibilities.unregisterBarPanel(screen.name);
++        if (!registeredScreenName)
++            return;
++
++        Visibilities.unregisterBar(registeredScreenName, barContent);
++        Visibilities.unregisterBarPanel(registeredScreenName, panel);
+     }
+ 
+     BarContent {
+diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
+index b9e57ca7..ca979ca4 100644
+--- a/modules/bar/BarContent.qml
++++ b/modules/bar/BarContent.qml
+@@ -68,7 +68,7 @@ Item {
+ 
+     // Check if notch hover is active (for synchronized reveal when bar is at same side)
+     // NOTE: We access Visibilities.notchPanels directly because UnifiedShellPanel registers itself as the panel ref
+-    readonly property var notchPanelRef: Visibilities.notchPanels[screen.name]
++    readonly property var notchPanelRef: Visibilities.notchPanels[screen?.name ?? ""]
+     readonly property string notchPosition: (Config.notchPosition !== undefined ? Config.notchPosition : "top")
+     readonly property bool notchHoverActive: {
+         if (barPosition !== notchPosition)
+@@ -89,7 +89,7 @@ Item {
+     }
+ 
+     // Check if notch is open (dashboard, powermenu, etc.)
+-    readonly property var screenVisibilities: Visibilities.getForScreen(screen.name)
++    readonly property var screenVisibilities: Visibilities.getForScreen(screen?.name ?? "")
+     readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
+ 
+     // Radius logic for "Squished" style
+@@ -360,7 +360,7 @@ Item {
+                         spacing: 4
+ 
+                         // Obtener referencia al notch de esta pantalla
+-                        readonly property var notchContainer: Visibilities.getNotchForScreen(root.screen.name)
++                        readonly property var notchContainer: Visibilities.getNotchForScreen(root.screen?.name ?? "")
+ 
+                         LauncherButton {
+                             id: launcherButton
+diff --git a/modules/dock/DockContent.qml b/modules/dock/DockContent.qml
+index a6b31db3..5c258617 100644
+--- a/modules/dock/DockContent.qml
++++ b/modules/dock/DockContent.qml
+@@ -71,7 +71,7 @@ Item {
+     readonly property int edgeSideMargin: isDefault ? 0 : dockMargin
+ 
+     // Reference to the bar panel on this screen
+-    readonly property var barPanelRef: Visibilities.barPanels[screen.name]
++    readonly property var barPanelRef: Visibilities.barPanels[screen?.name ?? ""]
+     readonly property bool barPinned: {
+         if (barPanelRef && typeof barPanelRef.pinned !== 'undefined') {
+             return barPanelRef.pinned;
+@@ -519,7 +519,7 @@ Item {
+                         }
+ 
+                         onClicked: {
+-                            let visibilities = Visibilities.getForScreen(root.screen.name);
++                            let visibilities = Visibilities.getForScreen(root.screen?.name ?? "");
+                             if (visibilities) {
+                                 visibilities.overview = !visibilities.overview;
+                             }
+@@ -653,7 +653,7 @@ Item {
+                         }
+ 
+                         onClicked: {
+-                            let visibilities = Visibilities.getForScreen(root.screen.name);
++                            let visibilities = Visibilities.getForScreen(root.screen?.name ?? "");
+                             if (visibilities) {
+                                 visibilities.overview = !visibilities.overview;
+                             }
+diff --git a/modules/frame/ScreenFrameContent.qml b/modules/frame/ScreenFrameContent.qml
+index a4c725b8..6e98303c 100644
+--- a/modules/frame/ScreenFrameContent.qml
++++ b/modules/frame/ScreenFrameContent.qml
+@@ -21,8 +21,8 @@ Item {
+     readonly property string barPos: Config.bar?.position ?? "top"
+     readonly property string notchPos: Config.notchPosition ?? "top"
+     
+-    readonly property var barPanel: Visibilities.barPanels[targetScreen.name]
+-    readonly property var dockPanel: Visibilities.dockPanels[targetScreen.name]
++    readonly property var barPanel: Visibilities.barPanels[targetScreen?.name ?? ""]
++    readonly property var dockPanel: Visibilities.dockPanels[targetScreen?.name ?? ""]
+     
+     // Effective Reveal States
+     readonly property bool barReveal: barPanel ? barPanel.reveal : true
+@@ -34,7 +34,7 @@ Item {
+     readonly property bool dockHovered: dockPanel ? (dockPanel.reveal && (dockPanel.activeWindowFullscreen || dockPanel.keepHidden || !dockPanel.pinned)) : false
+ 
+     // Sidebar State
+-    readonly property bool sidebarActive: GlobalStates.assistantVisible && targetScreen.name === GlobalStates.assistantScreenName
++    readonly property bool sidebarActive: GlobalStates.assistantVisible && targetScreen?.name === GlobalStates.assistantScreenName
+     readonly property bool sidebarPinned: GlobalStates.assistantPinned
+     readonly property int sidebarWidth: GlobalStates.assistantWidth
+     readonly property string sidebarPosition: GlobalStates.assistantPosition
+diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
+index 528a20b3..e7d535e9 100644
+--- a/modules/globals/GlobalStates.qml
++++ b/modules/globals/GlobalStates.qml
+@@ -10,6 +10,33 @@ Singleton {
+     id: root
+ 
+     property var wallpaperManager: null
++
++    // Every live Wallpaper instance, one per connected screen.
++    //
++    // The first one to load takes the `wallpaperManager` role and owns scanning,
++    // matugen and thumbnails for the whole shell; the rest mirror its state. That
++    // role therefore has to survive its own screen being unplugged, so this list
++    // exists to find an heir. Without it, disconnecting the monitor that happened
++    // to hold the role left `wallpaperManager` null and every other screen with a
++    // wallpaper that could no longer rescan or re-theme.
++    property var wallpaperInstances: []
++
++    function registerWallpaper(instance) {
++        if (!instance || wallpaperInstances.indexOf(instance) !== -1)
++            return;
++        wallpaperInstances = wallpaperInstances.concat([instance]);
++    }
++
++    function unregisterWallpaper(instance) {
++        wallpaperInstances = wallpaperInstances.filter(w => w && w !== instance);
++    }
++
++    // The instance that should take the manager role when the current one dies.
++    function nextWallpaperHeir(excluding) {
++        const live = wallpaperInstances.filter(w => w && w !== excluding);
++        return live.length > 0 ? live[0] : null;
++    }
++
+     property string avatarCacheBuster: ""
+ 
+     function pickUserAvatar() {
+@@ -147,6 +174,8 @@ Singleton {
+ 
+     function getNotchOpen(screenName) {
+         let visibilities = Visibilities.getForScreen(screenName);
++        if (!visibilities)
++            return false;
+         return visibilities.launcher || visibilities.dashboard || visibilities.overview || visibilities.presets;
+     }
+ 
+diff --git a/modules/notch/NotchContent.qml b/modules/notch/NotchContent.qml
+index 3c7d32c9..2633fe8d 100644
+--- a/modules/notch/NotchContent.qml
++++ b/modules/notch/NotchContent.qml
+@@ -23,8 +23,8 @@ Item {
+     property bool unifiedEffectActive: false
+ 
+     // Get this screen's visibility state
+-    readonly property var screenVisibilities: Visibilities.getForScreen(screen.name)
+-    readonly property bool isScreenFocused: AxctlService.focusedMonitor && AxctlService.focusedMonitor.name === screen.name
++    readonly property var screenVisibilities: Visibilities.getForScreen(screen?.name ?? "")
++    readonly property bool isScreenFocused: AxctlService.focusedMonitor && AxctlService.focusedMonitor.name === screen?.name
+ 
+     // Monitor reference and refrence to toplevels on monitor
+     readonly property var compositorMonitor: AxctlService.monitorFor(screen)
+@@ -38,7 +38,7 @@ Item {
+     readonly property string notchPosition: Config.notchPosition !== undefined ? Config.notchPosition : "top"
+ 
+     // Get the bar panel for this screen to check its state
+-    readonly property var barPanelRef: Visibilities.barPanels[screen.name]
++    readonly property var barPanelRef: Visibilities.barPanels[screen?.name ?? ""]
+ 
+     // Check if bar is pinned (use bar state directly)
+     readonly property bool barPinned: {
+@@ -166,7 +166,7 @@ Item {
+     Loader {
+         id: persistentDashboardViewLoader
+         active: false
+-        sourceComponent: Component { DashboardView { visible: false; screenName: root.screen.name } }
++        sourceComponent: Component { DashboardView { visible: false; screenName: root.screen?.name ?? "" } }
+     }
+ 
+     // Persistent power menu view
+@@ -411,96 +411,79 @@ Item {
+         }
+     }
+ 
++    // Park one of the persistent views into this screen's notch stack.
++    //
++    // The push has to be deferred -- the Loader needs a turn to build its item
++    // -- and the module can be switched back off before that turn arrives.
++    // That is exactly what Visibilities.clearAll() does when the focused
++    // monitor changes while a module is open: this screen's flag goes false in
++    // the same event loop turn it went true. The close then ran against a stack
++    // still at depth 1, so it popped nothing, and the deferred push landed
++    // afterwards and stuck there for good.
++    //
++    // The loaders park their views `visible: false`, so a stuck view paints
++    // nothing while still driving the notch's implicit size -- a 900x392
++    // launcher-shaped hole, invisible until a notification forced the notch to
++    // reveal on that screen. Re-checking the module inside the deferred call is
++    // what makes the push cancellable.
++    function pushNotchView(loader, moduleName) {
++        loader.active = true;
++        Qt.callLater(() => {
++            if (!screenVisibilities || !screenVisibilities[moduleName])
++                return;
++            if (!loader.item)
++                return;
++
++            notchContainer.stackView.push(loader.item);
++            Qt.callLater(() => {
++                if (notchContainer.stackView.currentItem) {
++                    notchContainer.stackView.currentItem.forceActiveFocus();
++                }
++            });
++        });
++    }
++
++    // Unwind to the default view. pop(null) takes the stack all the way back to
++    // its initial item, so a stack that somehow got more than one view deep
++    // cannot strand one on top.
++    function popNotchView() {
++        if (notchContainer.stackView.depth > 1) {
++            notchContainer.stackView.pop(null);
++        }
++        notchContainer.isShowingDefault = true;
++        notchContainer.isShowingNotifications = false;
++    }
++
+     // Listen for dashboard and powermenu state changes
+     Connections {
+         target: screenVisibilities
+ 
+         function onLauncherChanged() {
+-            if (screenVisibilities.launcher) {
+-                persistentLauncherViewLoader.active = true;
+-                Qt.callLater(() => {
+-                    if (persistentLauncherViewLoader.item) {
+-                        notchContainer.stackView.push(persistentLauncherViewLoader.item);
+-                        Qt.callLater(() => {
+-                            if (notchContainer.stackView.currentItem) {
+-                                notchContainer.stackView.currentItem.forceActiveFocus();
+-                            }
+-                        });
+-                    }
+-                });
+-            } else {
+-                if (notchContainer.stackView.depth > 1) {
+-                    notchContainer.stackView.pop();
+-                    notchContainer.isShowingDefault = true;
+-                    notchContainer.isShowingNotifications = false;
+-                }
+-            }
++            if (screenVisibilities.launcher)
++                root.pushNotchView(persistentLauncherViewLoader, "launcher");
++            else
++                root.popNotchView();
+         }
+ 
+         function onDashboardChanged() {
+-            if (screenVisibilities.dashboard) {
+-                persistentDashboardViewLoader.active = true;
+-                Qt.callLater(() => {
+-                    if (persistentDashboardViewLoader.item) {
+-                        notchContainer.stackView.push(persistentDashboardViewLoader.item);
+-                        Qt.callLater(() => {
+-                            if (notchContainer.stackView.currentItem) {
+-                                notchContainer.stackView.currentItem.forceActiveFocus();
+-                            }
+-                        });
+-                    }
+-                });
+-            } else {
+-                if (notchContainer.stackView.depth > 1) {
+-                    notchContainer.stackView.pop();
+-                    notchContainer.isShowingDefault = true;
+-                    notchContainer.isShowingNotifications = false;
+-                }
+-            }
++            if (screenVisibilities.dashboard)
++                root.pushNotchView(persistentDashboardViewLoader, "dashboard");
++            else
++                root.popNotchView();
+         }
+ 
+         function onPowermenuChanged() {
+-            if (screenVisibilities.powermenu) {
+-                persistentPowerMenuViewLoader.active = true;
+-                Qt.callLater(() => {
+-                    if (persistentPowerMenuViewLoader.item) {
+-                        notchContainer.stackView.push(persistentPowerMenuViewLoader.item);
+-                        Qt.callLater(() => {
+-                            if (notchContainer.stackView.currentItem) {
+-                                notchContainer.stackView.currentItem.forceActiveFocus();
+-                            }
+-                        });
+-                    }
+-                });
+-            } else {
+-                if (notchContainer.stackView.depth > 1) {
+-                    notchContainer.stackView.pop();
+-                    notchContainer.isShowingDefault = true;
+-                    notchContainer.isShowingNotifications = false;
+-                }
+-            }
++            if (screenVisibilities.powermenu)
++                root.pushNotchView(persistentPowerMenuViewLoader, "powermenu");
++            else
++                root.popNotchView();
+         }
+ 
+         function onToolsChanged() {
+-            if (screenVisibilities.tools) {
+-                persistentToolsMenuViewLoader.active = true;
+-                Qt.callLater(() => {
+-                    if (persistentToolsMenuViewLoader.item) {
+-                        notchContainer.stackView.push(persistentToolsMenuViewLoader.item);
+-                        Qt.callLater(() => {
+-                            if (notchContainer.stackView.currentItem) {
+-                                notchContainer.stackView.currentItem.forceActiveFocus();
+-                            }
+-                        });
+-                    }
+-                });
+-            } else {
+-                if (notchContainer.stackView.depth > 1) {
+-                    notchContainer.stackView.pop();
+-                    notchContainer.isShowingDefault = true;
+-                    notchContainer.isShowingNotifications = false;
+-                }
+-            }
++            if (screenVisibilities.tools)
++                root.pushNotchView(persistentToolsMenuViewLoader, "tools");
++            else
++                root.popNotchView();
+         }
+     }
+ 
+diff --git a/modules/notch/NotchWindow.qml b/modules/notch/NotchWindow.qml
+index 5a80e6bd..c3b9019b 100644
+--- a/modules/notch/NotchWindow.qml
++++ b/modules/notch/NotchWindow.qml
+@@ -50,14 +50,26 @@ PanelWindow {
+         item: notchContent.notchHitbox
+     }
+ 
++    // Latched at creation -- see UnifiedShellPanel for why `screen.name` must
++    // never be read at teardown: an unplugged output leaves `screen` pointing at
++    // a surviving one, so unregistering by it wipes a live screen's entry.
++    property string registeredScreenName: ""
++
+     Component.onCompleted: {
+-        Visibilities.registerNotchPanel(screen.name, notchPanel);
+-        Visibilities.registerNotch(screen.name, notchContent.notchContainerRef);
++        registeredScreenName = screen ? screen.name : "";
++        if (!registeredScreenName)
++            return;
++
++        Visibilities.registerNotchPanel(registeredScreenName, notchPanel);
++        Visibilities.registerNotch(registeredScreenName, notchContent.notchContainerRef);
+     }
+ 
+     Component.onDestruction: {
+-        Visibilities.unregisterNotchPanel(screen.name);
+-        Visibilities.unregisterNotch(screen.name);
++        if (!registeredScreenName)
++            return;
++
++        Visibilities.unregisterNotchPanel(registeredScreenName, notchPanel);
++        Visibilities.unregisterNotch(registeredScreenName, notchContent.notchContainerRef);
+     }
+ 
+     NotchContent {
+diff --git a/modules/services/Visibilities.qml b/modules/services/Visibilities.qml
+index ee97b092..40a21883 100644
+--- a/modules/services/Visibilities.qml
++++ b/modules/services/Visibilities.qml
+@@ -21,43 +21,16 @@ Singleton {
+     property bool playerMenuOpen: false
+     readonly property var moduleNames: ["launcher", "dashboard", "overview", "powermenu", "tools", "presets"]
+ 
+-    // BarPopup registry keyed by groupId. Each entry is a list of
+-    // currently-open BarPopup instances belonging to that group.
+-    // BarPopup.open() registers itself and asks the registry to close
+-    // anything else already in its group, giving the bar flyouts the
+-    // mutually-exclusive behavior expected of a menu bar.
+-    property var barPopupGroups: ({})
+-
+-    function registerBarPopup(popup) {
+-        if (!popup || !popup.groupId) return;
+-        const groups = Object.assign({}, barPopupGroups);
+-        const list = groups[popup.groupId] || [];
+-        for (let i = 0; i < list.length; i++) {
+-            if (list[i] !== popup && list[i] !== null && list[i].visible) {
+-                list[i].close();
+-            }
+-        }
+-        groups[popup.groupId] = list.concat([popup]);
+-        barPopupGroups = groups;
+-    }
+-
+-    function unregisterBarPopup(popup) {
+-        if (!popup || !popup.groupId) return;
+-        const groups = Object.assign({}, barPopupGroups);
+-        const list = (groups[popup.groupId] || []).filter(p => p !== popup && p !== null);
+-        if (list.length === 0) {
+-            delete groups[popup.groupId];
+-        } else {
+-            groups[popup.groupId] = list;
+-        }
+-        barPopupGroups = groups;
+-    }
+-
+     function setContextMenu(menu) {
+         contextMenu = menu;
+     }
+ 
+     function getForScreen(screenName) {
++        // A screen being torn down reports an empty name; creating an entry for
++        // it would leave a junk "" key in the registry forever.
++        if (!screenName)
++            return null;
++
+         if (!screens[screenName]) {
+             screens[screenName] = screenPropertiesComponent.createObject(root, {
+                 screenName: screenName
+@@ -73,6 +46,23 @@ Singleton {
+         return getForScreen(AxctlService.focusedMonitor.name);
+     }
+ 
++    // True when `owner` is not the object currently registered under `key`, i.e.
++    // this is a stale unregister that must be ignored.
++    //
++    // Quickshell reassigns a window's `screen` to a surviving output when the
++    // one it was on is unplugged, so a panel torn down by a monitor
++    // disconnect reports the WRONG screen name. Before this guard, unplugging
++    // any monitor deleted a live monitor's registration instead of its own,
++    // leaving the survivor with no bar/dock/notch panel registered -- which is
++    // what made windows spill under the bar until `ambxst reload`.
++    //
++    // Callers that pass no owner keep the old unconditional behaviour.
++    function _isStaleUnregister(map, key, owner) {
++        if (owner === undefined || owner === null)
++            return false;
++        return map[key] !== owner;
++    }
++
+     // Helper to clone map and trigger update
+     function _updateMap(map, key, value) {
+         var newMap = {};
+@@ -91,7 +81,9 @@ Singleton {
+         panels = _updateMap(panels, screenName, panel);
+     }
+ 
+-    function unregisterPanel(screenName) {
++    function unregisterPanel(screenName, owner) {
++        if (_isStaleUnregister(panels, screenName, owner))
++            return;
+         panels = _updateMap(panels, screenName, null);
+     }
+ 
+@@ -99,7 +91,9 @@ Singleton {
+         bars = _updateMap(bars, screenName, barContainer);
+     }
+ 
+-    function unregisterBar(screenName) {
++    function unregisterBar(screenName, owner) {
++        if (_isStaleUnregister(bars, screenName, owner))
++            return;
+         bars = _updateMap(bars, screenName, null);
+     }
+ 
+@@ -111,7 +105,9 @@ Singleton {
+         barPanels = _updateMap(barPanels, screenName, barPanel);
+     }
+ 
+-    function unregisterBarPanel(screenName) {
++    function unregisterBarPanel(screenName, owner) {
++        if (_isStaleUnregister(barPanels, screenName, owner))
++            return;
+         barPanels = _updateMap(barPanels, screenName, null);
+     }
+ 
+@@ -123,7 +119,9 @@ Singleton {
+         notches = _updateMap(notches, screenName, notchContainer);
+     }
+ 
+-    function unregisterNotch(screenName) {
++    function unregisterNotch(screenName, owner) {
++        if (_isStaleUnregister(notches, screenName, owner))
++            return;
+         notches = _updateMap(notches, screenName, null);
+     }
+ 
+@@ -135,7 +133,9 @@ Singleton {
+         notchPanels = _updateMap(notchPanels, screenName, notchPanel);
+     }
+ 
+-    function unregisterNotchPanel(screenName) {
++    function unregisterNotchPanel(screenName, owner) {
++        if (_isStaleUnregister(notchPanels, screenName, owner))
++            return;
+         notchPanels = _updateMap(notchPanels, screenName, null);
+     }
+ 
+@@ -147,7 +147,9 @@ Singleton {
+         docks = _updateMap(docks, screenName, dockContainer);
+     }
+ 
+-    function unregisterDock(screenName) {
++    function unregisterDock(screenName, owner) {
++        if (_isStaleUnregister(docks, screenName, owner))
++            return;
+         docks = _updateMap(docks, screenName, null);
+     }
+ 
+@@ -159,7 +161,9 @@ Singleton {
+         dockPanels = _updateMap(dockPanels, screenName, dockPanel);
+     }
+ 
+-    function unregisterDockPanel(screenName) {
++    function unregisterDockPanel(screenName, owner) {
++        if (_isStaleUnregister(dockPanels, screenName, owner))
++            return;
+         dockPanels = _updateMap(dockPanels, screenName, null);
+     }
+ 
+@@ -227,7 +231,7 @@ Singleton {
+             return;
+ 
+         const screenProps = getForScreen(screenName);
+-        if (moduleNames.indexOf(currentActiveModule) !== -1) {
++        if (screenProps && moduleNames.indexOf(currentActiveModule) !== -1) {
+             screenProps[currentActiveModule] = true;
+         }
+     }
+diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
+index 028c2dce..ff18a385 100644
+--- a/modules/shell/UnifiedShellPanel.qml
++++ b/modules/shell/UnifiedShellPanel.qml
+@@ -2,6 +2,7 @@ import QtQuick
+ import QtQuick.Effects
+ import Quickshell
+ import Quickshell.Wayland
++import Quickshell.Hyprland
+ import qs.modules.bar
+ import qs.modules.bar.workspaces
+ import qs.modules.notch
+@@ -50,7 +51,7 @@ PanelWindow {
+     readonly property bool barEnabled: {
+         if (!Config.barReady) return false;
+         const list = Config.bar.screenList;
+-        return (!list || list.length === 0 || list.indexOf(targetScreen.name) !== -1);
++        return (!list || list.length === 0 || list.indexOf(targetScreen?.name ?? "") !== -1);
+     }
+ 
+     readonly property bool dockEnabled: {
+@@ -58,7 +59,7 @@ PanelWindow {
+         if (!(Config.dock.enabled ?? false) || (Config.dock.theme ?? "default") === "integrated")
+             return false;
+         const list = Config.dock.screenList;
+-        return (!list || list.length === 0 || list.indexOf(targetScreen.name) !== -1);
++        return (!list || list.length === 0 || list.indexOf(targetScreen?.name ?? "") !== -1);
+     }
+ 
+     readonly property alias barPosition: barContent.barPosition
+@@ -89,12 +90,33 @@ PanelWindow {
+     readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
+ 
+     readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
++
++    // The special workspace this output currently has pulled up, or 0 for none.
++    //
++    // axctl has no field for it: its monitor payload carries only
++    // `active_workspace` (the normal one), and `workspace list` marks a special
++    // workspace `is_active` only when it holds focus, not when it is merely on
++    // screen. Hyprland does report it per monitor, so it comes from there.
++    readonly property int openSpecialWorkspaceId: {
++        const name = targetScreen ? targetScreen.name : "";
++        if (!name)
++            return 0;
++
++        const mons = Hyprland.monitors ? Hyprland.monitors.values : [];
++        for (let i = 0; i < mons.length; i++) {
++            if (mons[i].name === name)
++                return mons[i].lastIpcObject?.specialWorkspace?.id ?? 0;
++        }
++        return 0;
++    }
++
+     readonly property bool hasFullscreenWindow: {
+         if (!compositorMonitor)
+             return false;
+ 
+         const activeWorkspaceId = compositorMonitor.activeWorkspace.id;
+         const monId = compositorMonitor.id;
++        const specialId = unifiedPanel.openSpecialWorkspaceId;
+ 
+         // Check active toplevel first (fast path)
+         const toplevel = ToplevelManager.activeToplevel;
+@@ -120,22 +142,42 @@ PanelWindow {
+     readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
+     readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
+ 
++    // The screen this panel registered itself under, latched at creation.
++    //
++    // NOT read from `screen` at teardown: when an output is unplugged Quickshell
++    // reassigns the window's `screen` to a surviving one, so `screen.name` in
++    // Component.onDestruction names the WRONG monitor. Unregistering by that
++    // name deleted a live monitor's entry and left the unplugged one behind, so
++    // the surviving screen's bar/dock/notch/frame lost the panel they resolve
++    // their reveal and pinned state from -- windows then spilled under the bar
++    // until `ambxst reload` rebuilt the shell.
++    property string registeredScreenName: ""
++
+     Component.onCompleted: {
+-        Visibilities.registerBarPanel(screen.name, unifiedPanel);
+-        Visibilities.registerNotchPanel(screen.name, unifiedPanel);
+-        Visibilities.registerDockPanel(screen.name, dockContent);
+-        Visibilities.registerBar(screen.name, barContent);
+-        Visibilities.registerNotch(screen.name, notchContent.notchContainerRef);
+-        Visibilities.registerDock(screen.name, dockContent);
++        registeredScreenName = targetScreen ? targetScreen.name : "";
++        if (!registeredScreenName)
++            return;
++
++        Visibilities.registerBarPanel(registeredScreenName, unifiedPanel);
++        Visibilities.registerNotchPanel(registeredScreenName, unifiedPanel);
++        Visibilities.registerDockPanel(registeredScreenName, dockContent);
++        Visibilities.registerBar(registeredScreenName, barContent);
++        Visibilities.registerNotch(registeredScreenName, notchContent.notchContainerRef);
++        Visibilities.registerDock(registeredScreenName, dockContent);
+     }
+ 
++    // Each unregister passes the object it registered, so a stale or
++    // misdirected call can only ever remove this panel's own entry.
+     Component.onDestruction: {
+-        Visibilities.unregisterBarPanel(screen.name);
+-        Visibilities.unregisterNotchPanel(screen.name);
+-        Visibilities.unregisterDockPanel(screen.name);
+-        Visibilities.unregisterBar(screen.name);
+-        Visibilities.unregisterNotch(screen.name);
+-        Visibilities.unregisterDock(screen.name);
++        if (!registeredScreenName)
++            return;
++
++        Visibilities.unregisterBarPanel(registeredScreenName, unifiedPanel);
++        Visibilities.unregisterNotchPanel(registeredScreenName, unifiedPanel);
++        Visibilities.unregisterDockPanel(registeredScreenName, dockContent);
++        Visibilities.unregisterBar(registeredScreenName, barContent);
++        Visibilities.unregisterNotch(registeredScreenName, notchContent.notchContainerRef);
++        Visibilities.unregisterDock(registeredScreenName, dockContent);
+     }
+ 
+     // Full-screen mask item (used when modules/popups are open)
+diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
+index cdf136e7..a23989d0 100644
+--- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
++++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
+@@ -47,38 +47,43 @@ PanelWindow {
+ 
+     readonly property var optimizedPalette: ["background", "overBackground", "shadow", "surface", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primary", "secondary", "tertiary", "red", "lightRed", "green", "lightGreen", "blue", "lightBlue", "yellow", "lightYellow", "cyan", "lightCyan", "magenta", "lightMagenta"]
+ 
+-    // Sync state from the primary wallpaper manager to secondary instances
++    // Sync state from the primary wallpaper manager to secondary instances.
++    //
++    // `value` is evaluated even while `when` is false, so each one needs its own
++    // null fallback: during a hot reload or a monitor unplug the manager is
++    // briefly null, and an unguarded deref threw a TypeError per binding per
++    // screen. The fallbacks are never actually applied -- `when` gates that --
++    // they only keep the expression from throwing.
+     Binding {
+         target: wallpaper
+         property: "wallpaperPaths"
+-        value: GlobalStates.wallpaperManager.wallpaperPaths
++        value: GlobalStates.wallpaperManager ? GlobalStates.wallpaperManager.wallpaperPaths : []
+         when: GlobalStates.wallpaperManager !== null && GlobalStates.wallpaperManager !== wallpaper
+     }
+ 
+     Binding {
+         target: wallpaper
+         property: "currentIndex"
+-        value: GlobalStates.wallpaperManager.currentIndex
++        value: GlobalStates.wallpaperManager ? GlobalStates.wallpaperManager.currentIndex : 0
+         when: GlobalStates.wallpaperManager !== null && GlobalStates.wallpaperManager !== wallpaper
+     }
+ 
+     Binding {
+         target: wallpaper
+         property: "subfolderFilters"
+-        value: GlobalStates.wallpaperManager.subfolderFilters
++        value: GlobalStates.wallpaperManager ? GlobalStates.wallpaperManager.subfolderFilters : []
+         when: GlobalStates.wallpaperManager !== null && GlobalStates.wallpaperManager !== wallpaper
+     }
+ 
+     Binding {
+         target: wallpaper
+         property: "initialLoadCompleted"
+-        value: GlobalStates.wallpaperManager.initialLoadCompleted
++        value: GlobalStates.wallpaperManager ? GlobalStates.wallpaperManager.initialLoadCompleted : false
+         when: GlobalStates.wallpaperManager !== null && GlobalStates.wallpaperManager !== wallpaper
+     }
+ 
+     property string colorPresetsDir: Quickshell.env("HOME") + "/.config/ambxst/colors"
+     property string officialColorPresetsDir: decodeURIComponent(Qt.resolvedUrl("../../../../assets/colors").toString().replace("file://", ""))
+-
+     onColorPresetsDirChanged: console.log("Color Presets Directory:", colorPresetsDir)
+     property list<string> colorPresets: []
+     onColorPresetsChanged: console.log("Color Presets Updated:", colorPresets)
+@@ -217,10 +222,11 @@ PanelWindow {
+ 
+         console.log("Generating lockscreen frame for:", filePath);
+ 
++        var scriptPath = decodeURIComponent(Qt.resolvedUrl("../../../../scripts/lockwall.py").toString().replace("file://", ""));
+         // QUICKSHELL-GIT: var dataPath = Quickshell.cacheDir;
+         var dataPath = Quickshell.env("HOME") + "/.cache/ambxst";
+ 
+-        lockscreenWallpaperScript.command = ["ambxst", "lockwall", filePath, dataPath];
++        lockscreenWallpaperScript.command = ["python3", scriptPath, filePath, dataPath];
+ 
+         lockscreenWallpaperScript.running = true;
+     }
+@@ -532,7 +538,7 @@ PanelWindow {
+         // Store the current active path so updateMpvRuntime knows which one to use
+         wallpaper.mpvShaderPath = currentShaderPath;
+ 
+-        var cmd = ["ambxst", "writeshader", mpvShaderDir, currentShaderPath, shaderContent];
++        var cmd = ["python3", "-c", "import sys, os, pathlib; " + "d = pathlib.Path(sys.argv[1]); " + "d.mkdir(parents=True, exist_ok=True); " + "[f.unlink() for f in d.iterdir() if f.is_file()]; " + "pathlib.Path(sys.argv[2]).write_text(sys.argv[3]); " + "print('Wrote shader to ' + sys.argv[2]); " + "legacy_dir = os.path.dirname(sys.argv[1]); " + "[pathlib.Path(legacy_dir, f).unlink(missing_ok=True) for f in ['mpv_tint_0.glsl', 'mpv_tint_1.glsl', 'mpv_tint.glsl']]", mpvShaderDir, currentShaderPath, shaderContent];
+ 
+         mpvShaderWriter.command = cmd;
+         mpvShaderWriter.running = true;
+@@ -648,49 +654,127 @@ PanelWindow {
+         }
+     }
+ 
+-    Component.onCompleted: {
+-        // Only the first Wallpaper instance should manage scanning
+-        // Other instances (for other screens) share the same data via GlobalStates
+-        if (GlobalStates.wallpaperManager !== null) {
+-            // Another instance already registered, skip initialization
+-            _wallpaperDirInitialized = true;
+-            return;
++    // Take over shell-wide wallpaper duties: scanning, colour presets, matugen
++    // and thumbnails. Split out of Component.onCompleted so an instance can also
++    // be promoted mid-session, when the screen holding the role is unplugged.
++    function becomeWallpaperManager(previous) {
++        // Snapshot the outgoing manager BEFORE the role moves. Every instance
++        // mirrors the manager through Bindings whose `when` flips the instant
++        // GlobalStates.wallpaperManager changes, and a deactivated Binding
++        // restores the property's pre-binding default -- so read first, assign
++        // after, or the state is already gone.
++        let adopted = null;
++        if (previous && previous !== wallpaper) {
++            adopted = {
++                paths: previous.wallpaperPaths,
++                index: previous.currentIndex,
++                filters: previous.subfolderFilters,
++                loaded: previous.initialLoadCompleted
++            };
+         }
+ 
+         GlobalStates.wallpaperManager = wallpaper;
+ 
+-        // Verify wallpapers.json exists, create with fallback if not
++        // Carry that state across so the wallpaper stays on screen while the
++        // promoted instance rescans, instead of blanking to "" for a beat.
++        //
++        // Only ever upgrades: adopting an outgoing manager that was itself
++        // mid-scan must not clear state this instance already has, or the
++        // handover blanks the very wallpaper it exists to preserve.
++        if (adopted) {
++            if (adopted.paths && adopted.paths.length > 0)
++                wallpaperPaths = adopted.paths;
++            if (adopted.index >= 0)
++                currentIndex = adopted.index;
++            if (adopted.filters)
++                subfolderFilters = adopted.filters;
++            if (adopted.loaded)
++                initialLoadCompleted = true;
++        }
++
++        // A promoted instance deferred its own init and set this true; clear it
++        // so the scan below is allowed to arm.
++        _wallpaperDirInitialized = false;
++
++        // Verificar si existe wallpapers.json, si no, crear con fallback
+         checkWallpapersJson.running = true;
+ 
+-        // Initial scans - color presets are needed for the wallpapers tab SchemeSelector.
++        // Initial scans - do these once after config is loaded
+         scanColorPresets();
++        // Start directory monitoring
+         presetsWatcher.reload();
+         officialPresetsWatcher.reload();
+-        // Load initial wallpaper config - triggers onWallPathChanged which does the actual scan
++        // Load initial wallpaper config - this will trigger onWallPathChanged which does the actual scan
+         wallpaperConfig.reload();
+ 
+-        // Lockscreen frame and MPV shader generation deferred 5s after boot to reduce peak memory.
++        // On promotion wallPath is usually already loaded, so onWallPathChanged
++        // will not fire again; arm the scan directly. initWallpaperScan is
++        // idempotent, so the startup path costs nothing.
++        initWallpaperScan(wallpaperConfig.adapter ? wallpaperConfig.adapter.wallPath : "");
++
++        // Generate lockscreen frame for initial wallpaper after a short delay
+         Qt.callLater(function () {
+             if (currentWallpaper) {
+-                lockscreenFrameTimer.start();
++                generateLockscreenFrame(currentWallpaper);
+             }
++            // Force shader generation on startup if enabled
+             if (tintEnabled) {
+                 updateMpvShader();
+             }
+         });
+     }
+ 
+-    // Deferred lockscreen frame generation to avoid blocking boot
+-    Timer {
+-        id: lockscreenFrameTimer
+-        interval: 5000
+-        running: false
+-        repeat: false
+-        onTriggered: {
+-            if (currentWallpaper) {
+-                generateLockscreenFrame(currentWallpaper);
+-            }
++    // Arm directory watching, the wallpaper scan and thumbnail generation.
++    // Guarded so it only ever runs once, and only for the managing instance.
++    function initWallpaperScan(path) {
++        if (!path || _wallpaperDirInitialized || GlobalStates.wallpaperManager !== wallpaper)
++            return;
++
++        _wallpaperDirInitialized = true;
++
++        // Set up directory watcher
++        directoryWatcher.path = path;
++        directoryWatcher.reload();
++
++        // Perform initial wallpaper scan
++        var cmd = ["find", path, "-name", ".*", "-prune", "-o", "-type", "f", "(", "-name", "*.jpg", "-o", "-name", "*.jpeg", "-o", "-name", "*.png", "-o", "-name", "*.webp", "-o", "-name", "*.tif", "-o", "-name", "*.tiff", "-o", "-name", "*.gif", "-o", "-name", "*.mp4", "-o", "-name", "*.webm", "-o", "-name", "*.mov", "-o", "-name", "*.avi", "-o", "-name", "*.mkv", ")", "-print"];
++        scanWallpapers.command = cmd;
++        scanWallpapers.running = true;
++        wallpaper.scanSubfolders();
++
++        // Start thumbnail generation
++        delayedThumbnailGen.start();
++    }
++
++    Component.onCompleted: {
++        GlobalStates.registerWallpaper(wallpaper);
++
++        // Only the first Wallpaper instance should manage scanning
++        // Other instances (for other screens) share the same data via GlobalStates
++        if (GlobalStates.wallpaperManager !== null) {
++            // Another instance already registered, skip initialization
++            _wallpaperDirInitialized = true;
++            return;
+         }
++
++        becomeWallpaperManager();
++    }
++
++    // Hand the manager role to a surviving screen when this one is unplugged.
++    // Without this the role died with the monitor: `wallpaperManager` went null
++    // and every remaining screen kept a static wallpaper it could no longer
++    // rescan, re-theme or drive matugen from.
++    Component.onDestruction: {
++        GlobalStates.unregisterWallpaper(wallpaper);
++
++        if (GlobalStates.wallpaperManager !== wallpaper)
++            return;
++
++        const heir = GlobalStates.nextWallpaperHeir(wallpaper);
++        if (heir)
++            heir.becomeWallpaperManager(wallpaper);
++        else
++            GlobalStates.wallpaperManager = null;
+     }
+ 
+     FileView {
+@@ -764,22 +848,7 @@ PanelWindow {
+                     console.log("Config wallPath updated:", wallPath);
+ 
+                     // Initialize scanning on first valid wallPath load
+-                    if (!wallpaper._wallpaperDirInitialized && GlobalStates.wallpaperManager === wallpaper) {
+-                        wallpaper._wallpaperDirInitialized = true;
+-
+-                        // Set up directory watcher
+-                        directoryWatcher.path = wallPath;
+-                        directoryWatcher.reload();
+-
+-                        // Perform initial wallpaper scan
+-                        var cmd = ["find", wallPath, "-name", ".*", "-prune", "-o", "-type", "f", "(", "-name", "*.jpg", "-o", "-name", "*.jpeg", "-o", "-name", "*.png", "-o", "-name", "*.webp", "-o", "-name", "*.tif", "-o", "-name", "*.tiff", "-o", "-name", "*.gif", "-o", "-name", "*.mp4", "-o", "-name", "*.webm", "-o", "-name", "*.mov", "-o", "-name", "*.avi", "-o", "-name", "*.mkv", ")", "-print"];
+-                        scanWallpapers.command = cmd;
+-                        scanWallpapers.running = true;
+-                        wallpaper.scanSubfolders();
+-
+-                        // Start thumbnail generation
+-                        delayedThumbnailGen.start();
+-                    }
++                    wallpaper.initWallpaperScan(wallPath);
+                 }
+             }
+         }
+@@ -853,11 +922,12 @@ PanelWindow {
+         }
+     }
+ 
+-        // Proceso para generar thumbnails de videos
++    // Proceso para generar thumbnails de videos
+     Process {
+         id: thumbnailGeneratorScript
+         running: false
+-        command: ["ambxst", "thumbs", Quickshell.env("HOME") + "/.cache/ambxst" + "/wallpapers.json", Quickshell.env("HOME") + "/.cache/ambxst", fallbackDir]
++        // QUICKSHELL-GIT: command: ["python3", decodeURIComponent(Qt.resolvedUrl("../../../../scripts/thumbgen.py").toString().replace("file://", "")), Quickshell.cacheDir + "/wallpapers.json", Quickshell.cacheDir, fallbackDir]
++        command: ["python3", decodeURIComponent(Qt.resolvedUrl("../../../../scripts/thumbgen.py").toString().replace("file://", "")), Quickshell.env("HOME") + "/.cache/ambxst" + "/wallpapers.json", Quickshell.env("HOME") + "/.cache/ambxst", fallbackDir]
+ 
+         stdout: StdioCollector {
+             onStreamFinished: {
+@@ -1017,7 +1087,7 @@ PanelWindow {
+         }
+     }
+ 
+-    // Directory watcher for user color presets.
++    // Directory watcher for user color presets
+     FileView {
+         id: presetsWatcher
+         path: colorPresetsDir
+@@ -1030,7 +1100,7 @@ PanelWindow {
+         }
+     }
+ 
+-    // Directory watcher for official color presets.
++    // Directory watcher for official color presets
+     FileView {
+         id: officialPresetsWatcher
+         path: officialColorPresetsDir
+diff --git a/modules/widgets/overview/OverviewPopup.qml b/modules/widgets/overview/OverviewPopup.qml
+index 6ad80557..539e7671 100644
+--- a/modules/widgets/overview/OverviewPopup.qml
++++ b/modules/widgets/overview/OverviewPopup.qml
+@@ -28,7 +28,7 @@ PanelWindow {
+     WlrLayershell.keyboardFocus: overviewOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+ 
+     // Get this screen's visibility state
+-    readonly property var screenVisibilities: Visibilities.getForScreen(screen.name)
++    readonly property var screenVisibilities: Visibilities.getForScreen(screen?.name ?? "")
+     readonly property bool overviewOpen: screenVisibilities ? screenVisibilities.overview : false
+ 
+     visible: overviewOpen
+diff --git a/modules/widgets/presets/PresetsPopup.qml b/modules/widgets/presets/PresetsPopup.qml
+index 5afcc42b..db47939a 100644
+--- a/modules/widgets/presets/PresetsPopup.qml
++++ b/modules/widgets/presets/PresetsPopup.qml
+@@ -28,7 +28,7 @@ PanelWindow {
+     WlrLayershell.keyboardFocus: presetsOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+ 
+     // Get this screen's visibility state
+-    readonly property var screenVisibilities: Visibilities.getForScreen(screen.name)
++    readonly property var screenVisibilities: Visibilities.getForScreen(screen?.name ?? "")
+     readonly property bool presetsOpen: screenVisibilities ? screenVisibilities.presets : false
+ 
+     visible: presetsOpen
+diff --git a/shell.qml b/shell.qml
+index 888996d3..01a86836 100644
+--- a/shell.qml
++++ b/shell.qml
+@@ -90,7 +90,7 @@ ShellRoot {
+                 // Bar status for reservations
+                 barEnabled: {
+                     const list = (Config.bar && Config.bar.screenList !== undefined ? Config.bar.screenList : []);
+-                    return (!list || list.length === 0 || list.indexOf(screen.name) !== -1);
++                    return (!list || list.length === 0 || list.indexOf(screen?.name ?? "") !== -1);
+                 }
+                 barPosition: unifiedPanel.barPosition
+                 barPinned: unifiedPanel.pinned
+@@ -105,7 +105,7 @@ ShellRoot {
+                     const list = (Config.dock && Config.dock.screenList !== undefined ? Config.dock.screenList : []);
+                     if (!list || list.length === 0)
+                         return true;
+-                    return list.indexOf(screenShellContainer.modelData.name) !== -1;
++                    return list.indexOf(screenShellContainer.modelData?.name ?? "") !== -1;
+                 }
+                 dockPosition: unifiedPanel.dockPosition
+                 dockPinned: unifiedPanel.dockPinned
+@@ -116,7 +116,7 @@ ShellRoot {
+                 frameThickness: (Config.bar && Config.bar.frameThickness !== undefined ? Config.bar.frameThickness : 6)
+ 
+                 // Sidebar status for reservations
+-                sidebarEnabled: GlobalStates.assistantVisible && screenShellContainer.modelData.name === GlobalStates.assistantScreenName
++                sidebarEnabled: GlobalStates.assistantVisible && screenShellContainer.modelData?.name === GlobalStates.assistantScreenName
+                 sidebarPinned: GlobalStates.assistantPinned
+                 sidebarWidth: GlobalStates.assistantWidth
+                 sidebarPosition: GlobalStates.assistantPosition
+@@ -136,7 +136,7 @@ ShellRoot {
+ 
+         Loader {
+             id: overviewLoader
+-            active: ((Config.overview && Config.overview.enabled !== undefined ? Config.overview.enabled : true)) && SuspendManager.wakeReady && (Visibilities.getForScreen(modelData.name) ? Visibilities.getForScreen(modelData.name).overview : false)
++            active: ((Config.overview && Config.overview.enabled !== undefined ? Config.overview.enabled : true)) && SuspendManager.wakeReady && (Visibilities.getForScreen(modelData?.name ?? "")?.overview ?? false)
+             required property ShellScreen modelData
+             sourceComponent: OverviewPopup {
+                 screen: overviewLoader.modelData
+@@ -156,7 +156,7 @@ ShellRoot {
+ 
+         Loader {
+             id: presetsLoader
+-            active: SuspendManager.wakeReady && (Visibilities.getForScreen(modelData.name) ? Visibilities.getForScreen(modelData.name).presets : false)
++            active: SuspendManager.wakeReady && (Visibilities.getForScreen(modelData?.name ?? "")?.presets ?? false)
+             required property ShellScreen modelData
+             sourceComponent: PresetsPopup {
+                 screen: presetsLoader.modelData

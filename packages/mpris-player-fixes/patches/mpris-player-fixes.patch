@@ -1,0 +1,379 @@
+diff --git a/modules/components/PositionSlider.qml b/modules/components/PositionSlider.qml
+index 8f135b4d..cbb02f2c 100644
+--- a/modules/components/PositionSlider.qml
++++ b/modules/components/PositionSlider.qml
+@@ -20,7 +20,7 @@ Item {
+ 
+     property bool isPlaying: player?.playbackState === MprisPlaybackState.Playing
+     property real position: player?.position ?? 0.0
+-    property real length: player?.length ?? 1.0
++    property real length: player?.length ?? 0.0
+     property bool hasArtwork: (player?.trackArtUrl ?? "") !== ""
+     // property var playerColors: hasArtwork ? PlayerColors.getColorsForPlayer(player) : null
+ 
+diff --git a/modules/services/MprisController.qml b/modules/services/MprisController.qml
+index 0443fe95..4857a78f 100644
+--- a/modules/services/MprisController.qml
++++ b/modules/services/MprisController.qml
+@@ -52,28 +52,58 @@ Singleton {
+         }
+     }
+ 
+-    property bool _restored: false
+     Component.onCompleted: {
+         root.cachedDbusName = StateService.get("lastPlayerDbusName", "");
+-        root._restore();
++        if (StateService.initialized) {
++            root.loadLastPlayer();
++        }
+     }
+ 
+     Connections {
+         target: StateService
+-        function onInitializedChanged() {
+-            root._restore();
+-        }
+-    }
+-
+-    function _restore() {
+-        if (StateService.initialized && !root._restored) {
+-            root._restored = true;
++        function onStateLoaded() {
+             root.cachedDbusName = StateService.get("lastPlayerDbusName", "");
+             root.loadLastPlayer();
+         }
+     }
+ 
+     // --- Functions ---
++    // Firefox/Zen clears mpris:artUrl on every metadata change and only republishes it once the
++    // artwork has finished decoding, so YouTube tabs routinely sit with no art at all. The watch
++    // URL in xesam:url survives, so fall back to deriving the video thumbnail from it.
++    function artUrlFor(player) {
++        if (!player)
++            return "";
++
++        const art = player.trackArtUrl ?? "";
++        if (art !== "")
++            return art;
++
++        // mqdefault is the only 16:9 variant YouTube generates for every video. default,
++        // hqdefault and sddefault are 4:3 with letterbox bars baked into the image, which
++        // show up as black bands once the art is cropped into the cover disc, and
++        // hq720/maxresdefault 404 on anything that was never published above 480p.
++        // 320x180 is still oversampled for the 128px disc at scale 1.
++        const videoId = root.youtubeIdFor(player.metadata?.["xesam:url"] ?? "");
++        return videoId ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : "";
++    }
++
++    function youtubeIdFor(url) {
++        if (!url)
++            return "";
++
++        // youtube.com/watch?v=ID and music.youtube.com/watch?v=ID
++        let match = url.match(/[?&]v=([\w-]{11})(?:[^\w-]|$)/);
++        // youtu.be/ID
++        if (!match)
++            match = url.match(/youtu\.be\/([\w-]{11})(?:[^\w-]|$)/);
++        // youtube.com/{shorts,embed,live}/ID
++        if (!match)
++            match = url.match(/youtube\.com\/(?:shorts|embed|live)\/([\w-]{11})(?:[^\w-]|$)/);
++
++        return match ? match[1] : "";
++    }
++
+     function loadLastPlayer() {
+         if (!root.cachedDbusName) {
+             root.isInitializing = false;
+diff --git a/modules/theme/Icons.qml b/modules/theme/Icons.qml
+index 3333506c..8276ce5d 100644
+--- a/modules/theme/Icons.qml
++++ b/modules/theme/Icons.qml
+@@ -1,6 +1,7 @@
+ pragma Singleton
+ 
+ import QtQuick
++import Quickshell
+ 
+ QtObject {
+     // Icon font
+@@ -122,6 +123,10 @@ QtObject {
+     readonly property string player: ""
+     readonly property string spotify: "<font face='Symbols Nerd Font Mono'>󰓇</font>"
+     readonly property string firefox: "<font face='Symbols Nerd Font Mono'>󰈹</font>"
++    // Zen has no Nerd Font glyph, so embed the themed desktop icon inline. This needs a real
++    // file path: Quickshell.iconPath() returns an "image://icon/..." provider URL, which the
++    // rich text engine can't read (it goes through QImageReader, not QQuickImageProvider).
++    readonly property string zen: "<img src='file://" + Quickshell.env("HOME") + "/.local/share/icons/hicolor/scalable/apps/zen-browser.svg' width='19' height='19'>"
+     readonly property string chromium: "<font face='Symbols Nerd Font Mono'></font>"
+     readonly property string telegram: "<font face='Symbols Nerd Font Mono'></font>"
+ 
+diff --git a/modules/widgets/dashboard/widgets/FullPlayer.qml b/modules/widgets/dashboard/widgets/FullPlayer.qml
+index 08e36cd3..0553e91a 100644
+--- a/modules/widgets/dashboard/widgets/FullPlayer.qml
++++ b/modules/widgets/dashboard/widgets/FullPlayer.qml
+@@ -26,8 +26,24 @@ StyledRect {
+ 
+     property bool isPlaying: MprisController.activePlayer?.playbackState === MprisPlaybackState.Playing
+     property real position: MprisController.activePlayer?.position ?? 0.0
+-    property real length: MprisController.activePlayer?.length ?? 1.0
+-    property bool hasArtwork: (MprisController.activePlayer?.trackArtUrl ?? "") !== ""
++    property bool lengthSupported: MprisController.activePlayer?.lengthSupported ?? false
++    // Quickshell reports length === position when a player doesn't expose duration over
++    // MPRIS at all (e.g. Firefox never sends mpris:length), which would otherwise make
++    // the seek bar read as fully finished the instant playback starts.
++    property real _rawLength: lengthSupported ? (MprisController.activePlayer?.length ?? 0.0) : 0.0
++    property real _lastGoodLength: 0.0
++    property real length: {
++        if (_rawLength > _lastGoodLength * 0.5 || _lastGoodLength === 0.0)
++            return _rawLength;
++        return _lastGoodLength;
++    }
++    on_RawLengthChanged: {
++        if (_rawLength > _lastGoodLength)
++            _lastGoodLength = _rawLength;
++    }
++    // Resolved artwork, with a YouTube-thumbnail fallback for players that drop mpris:artUrl.
++    property string artSource: MprisController.artUrlFor(MprisController.activePlayer)
++    property bool hasArtwork: artSource !== ""
+     property string wallpaperPath: {
+         if (!GlobalStates.wallpaperManager) return "";
+         let path = GlobalStates.wallpaperManager.currentWallpaper;
+@@ -61,7 +77,7 @@ StyledRect {
+     function syncSeekBarPosition() {
+         if (!realSeekBar.isDragging && !player.isSeeking) {
+             if (player.hasActivePlayer) {
+-                realSeekBar.value = player.length > 0 ? player.position / player.length : 0;
++                realSeekBar.value = player.length > 0 ? Math.min(1.0, player.position / player.length) : 0;
+             } else {
+                 realSeekBar.value = 0;
+             }
+@@ -73,7 +89,6 @@ StyledRect {
+         interval: 1000
+         repeat: true
+         onTriggered: {
+-            syncSeekBarPosition();
+             MprisController.activePlayer?.positionChanged();
+         }
+     }
+@@ -83,6 +98,9 @@ StyledRect {
+         function onPositionChanged() {
+             syncSeekBarPosition();
+         }
++        function onTrackTitleChanged() {
++            player._lastGoodLength = 0.0;
++        }
+     }
+ 
+     Component.onCompleted: {
+@@ -92,6 +110,7 @@ StyledRect {
+     Connections {
+         target: MprisController
+         function onActivePlayerChanged() {
++            player._lastGoodLength = 0.0;
+             Qt.callLater(syncSeekBarPosition);
+         }
+     }
+@@ -111,7 +130,7 @@ StyledRect {
+         mipmap: true
+         id: backgroundArtBlurred
+         anchors.fill: parent
+-        source: (MprisController.activePlayer?.trackArtUrl ?? "") !== "" ? MprisController.activePlayer.trackArtUrl : player.wallpaperPath
++        source: player.artSource !== "" ? player.artSource : player.wallpaperPath
+         sourceSize: Qt.size(64, 64)
+         fillMode: Image.PreserveAspectCrop
+         visible: false
+@@ -140,7 +159,7 @@ StyledRect {
+         mipmap: true
+         id: backgroundArtFull
+         anchors.fill: parent
+-        source: (MprisController.activePlayer?.trackArtUrl ?? "") !== "" ? MprisController.activePlayer.trackArtUrl : player.wallpaperPath
++        source: player.artSource !== "" ? player.artSource : player.wallpaperPath
+         fillMode: Image.PreserveAspectCrop
+         visible: false
+         asynchronous: true
+@@ -212,7 +231,7 @@ StyledRect {
+                 startAngleDeg: 180
+                 spanAngleDeg: 180
+ 
+-                enabled: player.hasActivePlayer && (MprisController.activePlayer?.canSeek ?? false)
++                enabled: player.hasActivePlayer && player.lengthSupported && (MprisController.activePlayer?.canSeek ?? false)
+ 
+                 onValueEdited: newValue => {
+                     if (MprisController.activePlayer && MprisController.activePlayer.canSeek) {
+@@ -245,8 +264,10 @@ StyledRect {
+                         mipmap: true
+                         id: coverArt
+                         anchors.fill: parent
+-                        source: (MprisController.activePlayer?.trackArtUrl ?? "") !== "" ? MprisController.activePlayer.trackArtUrl : player.wallpaperPath
+-                        sourceSize: Qt.size(256, 256)
++                        source: player.artSource !== "" ? player.artSource : player.wallpaperPath
++                        // 16:9 sources decode to 512x288 here, so the disc still has enough
++                        // pixels to crop a square from at HiDPI.
++                        sourceSize: Qt.size(512, 512)
+                         fillMode: Image.PreserveAspectCrop
+                         asynchronous: true
+ 
+@@ -532,7 +553,7 @@ StyledRect {
+         // Duration Area
+         Text {
+             Layout.alignment: Qt.AlignHCenter
+-            text: player.hasActivePlayer ? (player.formatTime(player.position) + " / " + player.formatTime(player.length)) : "--:-- / --:--"
++            text: player.hasActivePlayer ? (player.formatTime(player.position) + " / " + (player.lengthSupported ? player.formatTime(player.length) : "--:--")) : "--:-- / --:--"
+             color: Colors.overBackground
+             font.pixelSize: Config.theme.fontSize - 2
+             font.family: Config.theme.font
+@@ -662,6 +683,10 @@ StyledRect {
+             return Icons.spotify;
+         if (dbusName.includes("chromium") || dbusName.includes("chrome") || desktopEntry.includes("chromium") || desktopEntry.includes("chrome"))
+             return Icons.chromium;
++        // Zen reuses Firefox's MPRIS bus name (org.mpris.MediaPlayer2.firefox.instance*), so it
++        // has to be matched on desktopEntry/identity ahead of the Firefox check below.
++        if (desktopEntry.includes("zen") || identity.includes("zen"))
++            return Icons.zen;
+         if (dbusName.includes("firefox") || desktopEntry.includes("firefox"))
+             return Icons.firefox;
+         if (dbusName.includes("telegram") || desktopEntry.includes("telegram") || identity.includes("telegram"))
+diff --git a/modules/widgets/dashboard/widgets/LockPlayer.qml b/modules/widgets/dashboard/widgets/LockPlayer.qml
+index cc1d673e..7374f5b3 100644
+--- a/modules/widgets/dashboard/widgets/LockPlayer.qml
++++ b/modules/widgets/dashboard/widgets/LockPlayer.qml
+@@ -14,8 +14,14 @@ StyledRect {
+ 
+     property bool isPlaying: MprisController.activePlayer?.playbackState === MprisPlaybackState.Playing
+     property real position: MprisController.activePlayer?.position ?? 0.0
+-    property real length: MprisController.activePlayer?.length ?? 1.0
+-    property bool hasArtwork: (MprisController.activePlayer?.trackArtUrl ?? "") !== ""
++    property bool lengthSupported: MprisController.activePlayer?.lengthSupported ?? false
++    // Quickshell reports length === position when a player doesn't expose duration over
++    // MPRIS at all (e.g. Firefox never sends mpris:length), which would otherwise make
++    // the seek bar read as fully finished the instant playback starts.
++    property real length: lengthSupported ? (MprisController.activePlayer?.length ?? 1.0) : 0.0
++    // Resolved artwork, with a YouTube-thumbnail fallback for players that drop mpris:artUrl.
++    property string artSource: MprisController.artUrlFor(MprisController.activePlayer)
++    property bool hasArtwork: artSource !== ""
+     property string wallpaperPath: {
+         if (!GlobalStates.wallpaperManager) return "";
+         let path = GlobalStates.wallpaperManager.currentWallpaper;
+@@ -47,7 +53,7 @@ StyledRect {
+             id: lockPlayerBgArt
+             sourceSize: Qt.size(64, 64)
+             anchors.fill: parent
+-            source: (MprisController.activePlayer?.trackArtUrl ?? "") !== "" ? MprisController.activePlayer.trackArtUrl : lockPlayer.wallpaperPath
++            source: lockPlayer.artSource !== "" ? lockPlayer.artSource : lockPlayer.wallpaperPath
+             fillMode: Image.PreserveAspectCrop
+             asynchronous: true
+             visible: false
+@@ -168,7 +174,7 @@ StyledRect {
+                     id: albumArt
+                     sourceSize: Qt.size(128, 128)
+                     anchors.fill: parent
+-                    source: (MprisController.activePlayer?.trackArtUrl ?? "") !== "" ? MprisController.activePlayer.trackArtUrl : lockPlayer.wallpaperPath
++                    source: lockPlayer.artSource !== "" ? lockPlayer.artSource : lockPlayer.wallpaperPath
+                     fillMode: Image.PreserveAspectCrop
+                     asynchronous: true
+                     visible: false
+@@ -421,6 +427,9 @@ StyledRect {
+                             return Icons.spotify;
+                         if (dbusName.includes("chromium") || dbusName.includes("chrome") || desktopEntry.includes("chromium") || desktopEntry.includes("chrome"))
+                             return Icons.chromium;
++                        // Zen reuses Firefox's MPRIS bus name, so match it on desktopEntry/identity first.
++                        if (desktopEntry.includes("zen") || identity.includes("zen"))
++                            return Icons.zen;
+                         if (dbusName.includes("firefox") || desktopEntry.includes("firefox"))
+                             return Icons.firefox;
+                         if (dbusName.includes("telegram") || desktopEntry.includes("telegram") || identity.includes("telegram"))
+@@ -491,6 +500,9 @@ StyledRect {
+                                 return Icons.spotify;
+                             if (dbusName.includes("chromium") || dbusName.includes("chrome") || desktopEntry.includes("chromium") || desktopEntry.includes("chrome"))
+                                 return Icons.chromium;
++                            // Zen reuses Firefox's MPRIS bus name, so match it on desktopEntry/identity first.
++                            if (desktopEntry.includes("zen") || identity.includes("zen"))
++                                return Icons.zen;
+                             if (dbusName.includes("firefox") || desktopEntry.includes("firefox"))
+                                 return Icons.firefox;
+                             if (dbusName.includes("telegram") || desktopEntry.includes("telegram") || identity.includes("telegram"))
+diff --git a/modules/widgets/defaultview/CompactPlayer.qml b/modules/widgets/defaultview/CompactPlayer.qml
+index 265b87e8..98d0775e 100644
+--- a/modules/widgets/defaultview/CompactPlayer.qml
++++ b/modules/widgets/defaultview/CompactPlayer.qml
+@@ -22,12 +22,29 @@ Item {
+         if (!player) {
+             positionSlider.value = 0;
+         }
++        _lastGoodLength = 0.0;
+     }
+ 
+     property bool isPlaying: player?.playbackState === MprisPlaybackState.Playing
+     property real position: player?.position ?? 0.0
+-    property real length: player?.length ?? 1.0
+-    property bool hasArtwork: (player?.trackArtUrl ?? "") !== ""
++    property bool lengthSupported: player?.lengthSupported ?? false
++    // Quickshell reports length === position when a player doesn't expose duration over
++    // MPRIS at all (e.g. Firefox never sends mpris:length), which would otherwise make
++    // the seek bar read as fully finished the instant playback starts.
++    property real _rawLength: lengthSupported ? (player?.length ?? 0.0) : 0.0
++    property real _lastGoodLength: 0.0
++    property real length: {
++        if (_rawLength > _lastGoodLength * 0.5 || _lastGoodLength === 0.0)
++            return _rawLength;
++        return _lastGoodLength;
++    }
++    on_RawLengthChanged: {
++        if (_rawLength > _lastGoodLength)
++            _lastGoodLength = _rawLength;
++    }
++    // Resolved artwork, with a YouTube-thumbnail fallback for players that drop mpris:artUrl.
++    property string artSource: MprisController.artUrlFor(player)
++    property bool hasArtwork: artSource !== ""
+     property string wallpaperPath: {
+         if (!GlobalStates.wallpaperManager) return "";
+         let path = GlobalStates.wallpaperManager.currentWallpaper;
+@@ -96,6 +113,10 @@ Item {
+             return Icons.spotify;
+         if (dbusName.includes("chromium") || dbusName.includes("chrome") || desktopEntry.includes("chromium") || desktopEntry.includes("chrome"))
+             return Icons.chromium;
++        // Zen reuses Firefox's MPRIS bus name (org.mpris.MediaPlayer2.firefox.instance*), so it
++        // has to be matched on desktopEntry/identity ahead of the Firefox check below.
++        if (desktopEntry.includes("zen") || identity.includes("zen"))
++            return Icons.zen;
+         if (dbusName.includes("firefox") || desktopEntry.includes("firefox"))
+             return Icons.firefox;
+         if (dbusName.includes("telegram") || desktopEntry.includes("telegram") || identity.includes("telegram"))
+@@ -108,9 +129,6 @@ Item {
+         interval: 1000
+         repeat: true
+         onTriggered: {
+-            if (!positionSlider.isDragging) {
+-                positionSlider.value = compactPlayer.length > 0 ? Math.min(1.0, compactPlayer.position / compactPlayer.length) : 0;
+-            }
+             compactPlayer.player?.positionChanged();
+         }
+     }
+@@ -122,6 +140,9 @@ Item {
+                 positionSlider.value = compactPlayer.length > 0 ? Math.min(1.0, compactPlayer.position / compactPlayer.length) : 0;
+             }
+         }
++        function onTrackTitleChanged() {
++            compactPlayer._lastGoodLength = 0.0;
++        }
+     }
+ 
+     StyledRect {
+@@ -162,7 +183,7 @@ Item {
+                 mipmap: true
+                 id: backgroundArt
+                 anchors.fill: parent
+-                source: (compactPlayer.player?.trackArtUrl ?? "") !== "" ? compactPlayer.player.trackArtUrl : compactPlayer.wallpaperPath
++                source: compactPlayer.artSource !== "" ? compactPlayer.artSource : compactPlayer.wallpaperPath
+                 sourceSize: Qt.size(64, 64)
+                 fillMode: Image.PreserveAspectCrop
+                 asynchronous: true
+@@ -239,7 +260,7 @@ Item {
+                         mipmap: true
+                         id: artworkImage
+                         anchors.fill: parent
+-                        source: (compactPlayer.player?.trackArtUrl ?? "") !== "" ? compactPlayer.player.trackArtUrl : compactPlayer.wallpaperPath
++                        source: compactPlayer.artSource !== "" ? compactPlayer.artSource : compactPlayer.wallpaperPath
+                         sourceSize: Qt.size(48, 48)
+                         fillMode: Image.PreserveAspectCrop
+                         asynchronous: true

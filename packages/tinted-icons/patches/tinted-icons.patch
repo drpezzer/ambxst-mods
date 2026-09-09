@@ -1,0 +1,91 @@
+diff --git a/modules/bar/systray/SysTrayItem.qml b/modules/bar/systray/SysTrayItem.qml
+index 0b725b1a..87cef512 100644
+--- a/modules/bar/systray/SysTrayItem.qml
++++ b/modules/bar/systray/SysTrayItem.qml
+@@ -169,6 +169,7 @@ MouseArea {
+     Tinted {
+         sourceItem: trayIcon
+         anchors.fill: trayIcon
++        fullTint: true
+     }
+ 
+     StyledToolTip {
+diff --git a/modules/bar/workspaces/Workspaces.qml b/modules/bar/workspaces/Workspaces.qml
+index 48f68cdd..9956a579 100644
+--- a/modules/bar/workspaces/Workspaces.qml
++++ b/modules/bar/workspaces/Workspaces.qml
+@@ -528,6 +528,8 @@ Item {
+                         Tinted {
+                             sourceItem: mainAppIcon
+                             anchors.fill: mainAppIcon
++                            fullTint: true
++                            tintColor: ((monitor && monitor.activeWorkspace ? monitor.activeWorkspace.id : undefined) == button.workspaceValue) ? Styling.srItem("primary") : Styling.srItem("overprimary")
+                         }
+                     }
+                 }
+@@ -665,6 +667,8 @@ Item {
+                         Tinted {
+                             sourceItem: mainAppIconVert
+                             anchors.fill: mainAppIconVert
++                            fullTint: true
++                            tintColor: ((monitor && monitor.activeWorkspace ? monitor.activeWorkspace.id : undefined) == buttonVert.workspaceValue) ? Styling.srItem("primary") : Styling.srItem("overprimary")
+                         }
+                     }
+                 }
+diff --git a/modules/components/Tinted.qml b/modules/components/Tinted.qml
+index 7144741f..c2f8cd63 100644
+--- a/modules/components/Tinted.qml
++++ b/modules/components/Tinted.qml
+@@ -8,6 +8,7 @@ Item {
+     id: root
+     property var sourceItem: null  // The icon item to tint
+     property bool fullTint: false  // If true, apply solid primary color instead of shader
++    property color tintColor: Styling.srItem("overprimary")
+ 
+     // Subset of colors for optimization (consistent with TintedWallpaper.qml)
+     readonly property var optimizedPalette: [
+@@ -89,9 +90,9 @@ Item {
+                 visible: root.fullTint
+                 anchors.fill: parent
+                 source: internalSource
+-                brightness: 1.0
++                brightness: 0.0
+                 colorization: 1.0
+-                colorizationColor: Styling.srItem("overprimary")
++                colorizationColor: root.tintColor
+             }
+ 
+             // Shader-based tint
+diff --git a/modules/dock/DockAppButton.qml b/modules/dock/DockAppButton.qml
+index 3132417b..b0414b24 100644
+--- a/modules/dock/DockAppButton.qml
++++ b/modules/dock/DockAppButton.qml
+@@ -110,6 +110,7 @@ Button {
+                     Tinted {
+                         sourceItem: appIcon
+                         anchors.fill: appIcon
++                        fullTint: true
+                     }
+                 }
+ 
+diff --git a/modules/widgets/launcher/LauncherView.qml b/modules/widgets/launcher/LauncherView.qml
+index 9af6e933..c8c654a9 100644
+--- a/modules/widgets/launcher/LauncherView.qml
++++ b/modules/widgets/launcher/LauncherView.qml
+@@ -751,6 +751,16 @@ Rectangle {
+                             Tinted {
+                                 anchors.fill: parent
+                                 sourceItem: appIconImage
++                                fullTint: true
++                                tintColor: {
++                                    if (isExpanded) {
++                                        return Styling.srItem("pane");
++                                    } else if (appLauncher.selectedIndex === index) {
++                                        return Styling.srItem("primary");
++                                    } else {
++                                        return Styling.srItem("overprimary");
++                                    }
++                                }
+                             }
+                         }
+ 
