@@ -1,5 +1,10 @@
 # Steamdeck Mode
 
+> **Status: not yet fully verified on Ambxst 1.3.** The mode ran daily on the
+> 1.1.5 fork it was built for; the 1.3 package composes and the button shows,
+> but a full up/down cycle with a Deck on the other end has not been re-run
+> yet. Install if you're happy to test; report anything odd.
+
 One button in the dashboard's Quick Controls turns the PC into a Steam Deck
 streaming host and back.
 
