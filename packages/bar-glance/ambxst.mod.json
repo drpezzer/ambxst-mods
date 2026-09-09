@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.bar-glance",
   "name": "Bar at a Glance",
-  "version": "1.0.1",
-  "description": "More of your system readable straight from the bar. With contain-bar on, the clock, controls, battery/power-profile and layout popouts grow out of the frame instead of floating as pills. A Bluetooth indicator gets a frame-attached flyout with power, scanning, connect/pair/trust/forget per device, and a battery readout for connected devices. The weather glyph switches to moon and night variants after sunset.",
+  "version": "1.1.0",
+  "description": "More of your system readable straight from the bar. With contain-bar on, the clock, controls, battery/power-profile and layout popouts grow out of the frame instead of floating as pills. A Bluetooth indicator opens a frame-attached flyout on hover or click, with power, scanning, connect/pair/trust/forget per device and a battery readout for connected devices; blueman's tray icon is hidden in its favour through a new bar.systrayExclude list. The weather glyph switches to moon and night variants after sunset.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -21,6 +21,7 @@
   "commands": [],
   "permissions": [
     "Controls Bluetooth adapters and devices through Quickshell.Bluetooth (BlueZ)",
+    "Adds bar.systrayExclude to bar.json, defaulting to [\"blueman\"], and hides matching tray icons",
     "Reads sunrise and sunset from the weather service to pick day or night glyphs"
   ],
   "operations": [

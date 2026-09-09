@@ -1,3 +1,31 @@
+diff --git a/config/Config.qml b/config/Config.qml
+index 4e4834ee..6a293c99 100644
+--- a/config/Config.qml
++++ b/config/Config.qml
+@@ -549,6 +549,11 @@ Singleton {
+             property bool containBar: false
+             property bool keepBarShadow: false
+             property bool keepBarBorder: false
++            // Tray items whose id/title matches any of these (case-insensitive
++            // substring) are hidden, for apps the shell already has a native
++            // widget for. blueman is hidden by default because the bar carries
++            // its own Bluetooth widget.
++            property list<string> systrayExclude: ["blueman"]
+         }
+     }
+ 
+diff --git a/config/defaults/bar.js b/config/defaults/bar.js
+index 7962cdde..056b5243 100644
+--- a/config/defaults/bar.js
++++ b/config/defaults/bar.js
+@@ -20,5 +20,6 @@ var data = {
+     "use12hFormat": false,
+     "containBar": false,
+     "keepBarShadow": false,
+-    "keepBarBorder": false
++    "keepBarBorder": false,
++    "systrayExclude": ["blueman"]
+ }
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
 index b9e57ca7..762dfe3f 100644
 --- a/modules/bar/BarContent.qml
@@ -1676,6 +1704,61 @@ index 1cad557d..6be1a9c4 100644
                  }
              }
          }
+diff --git a/modules/bar/systray/SysTray.qml b/modules/bar/systray/SysTray.qml
+index 83464b58..0392b197 100644
+--- a/modules/bar/systray/SysTray.qml
++++ b/modules/bar/systray/SysTray.qml
+@@ -3,6 +3,7 @@ import QtQuick.Layouts
+ import Quickshell.Services.SystemTray
+ import qs.modules.theme
+ import qs.modules.components
++import qs.config
+ 
+     StyledRect {
+     variant: "bg"
+@@ -25,6 +26,24 @@ import qs.modules.components
+     // Orientación derivada de la barra
+     property bool vertical: bar.orientation === "vertical"
+ 
++    // Tray items minus anything Config.bar.systrayExclude matches, so an app the
++    // shell has a native widget for doesn't also sit in the tray.
++    readonly property var trayItems: {
++        const items = SystemTray.items?.values ?? [];
++        const excluded = Config.bar?.systrayExclude ?? [];
++        if (!excluded || excluded.length === 0)
++            return items;
++
++        return items.filter(item => {
++            const id = (item?.id ?? "").toLowerCase();
++            const title = (item?.title ?? "").toLowerCase();
++            return !excluded.some(pattern => {
++                const needle = String(pattern).toLowerCase();
++                return needle.length > 0 && (id.includes(needle) || title.includes(needle));
++            });
++        });
++    }
++
+     // Hide completely when empty - check both orientations
+     readonly property bool hasItems: rowRepeater.count > 0 || columnRepeater.count > 0
+ 
+@@ -43,7 +62,7 @@ import qs.modules.components
+ 
+         Repeater {
+             id: rowRepeater
+-            model: SystemTray.items
++            model: root.trayItems
+ 
+             SysTrayItem {
+                 required property SystemTrayItem modelData
+@@ -62,7 +81,7 @@ import qs.modules.components
+ 
+         Repeater {
+             id: columnRepeater
+-            model: SystemTray.items
++            model: root.trayItems
+ 
+             SysTrayItem {
+                 required property SystemTrayItem modelData
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
 index 528a20b3..14d1eaf1 100644
 --- a/modules/globals/GlobalStates.qml

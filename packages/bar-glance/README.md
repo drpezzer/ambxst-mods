@@ -10,7 +10,10 @@ behind it.
   as stock.
 - **Bluetooth in the bar.** An indicator that opens a frame-attached flyout on
   hover or click: adapter power, scanning, and connect, disconnect, pair, trust
-  and forget per device. Right click opens `blueman-manager`.
+  and forget per device. Right click opens `blueman-manager`. blueman's own
+  tray icon is hidden so there is one Bluetooth icon in the bar; the new
+  `bar.systrayExclude` list in bar.json controls that and takes any other
+  tray ids you want gone.
   A second indicator shows the battery level of connected devices that report
   one (headsets, controllers, mice, keyboards).
 - **Weather that knows it's night.** The bar's weather glyph switches to moon
@@ -52,6 +55,8 @@ click anywhere outside it closes it.
 - `modules/bar/clock/Clock.qml`, `ControlsButton.qml`, `BatteryIndicator.qml`,
   `LayoutSelectorButton.qml` — popouts move from `BarPopup` to `BarPopout`.
 - `modules/bar/BarContent.qml` — the two Bluetooth indicators join the bar.
+- `modules/bar/systray/SysTray.qml`, `config/Config.qml`, `config/defaults/bar.js`
+  — the `bar.systrayExclude` filter, default `["blueman"]`.
 - `modules/services/BluetoothDevice.qml`, `BluetoothService.qml` — pairing,
   trust and battery plumbing.
 - `modules/services/WeatherService.qml` — day/night glyph selection on its own
@@ -60,4 +65,4 @@ click anywhere outside it closes it.
   `modules/theme/Icons.qml` — flyout state, the flyout surfaces and their
   input regions, and the Bluetooth device/battery glyph maps. Insertions only.
 
-Works with Ambxst `>=1.3.0`. No new config keys.
+Works with Ambxst `>=1.3.0`. One new config key: `bar.systrayExclude`.
