@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/settings.schema.json",
+  "version": 1,
+  "fields": [
+    {
+      "key": "enterAnimation",
+      "label": "Animate the shell in on start",
+      "description": "Fade the wallpaper in and grow the frame, bar and notch into place when the shell starts (boot or reload). Off makes everything appear at once, as stock.",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "key": "enterDuration",
+      "label": "Enter duration, milliseconds",
+      "description": "Base time E for the way in: the frame takes E, the bar, notch and dock start after 0.45 E and take E, the wallpaper fade takes 1.4 E.",
+      "type": "integer",
+      "default": 650,
+      "minimum": 0,
+      "maximum": 3000
+    },
+    {
+      "key": "leaveDuration",
+      "label": "Leave duration, milliseconds",
+      "description": "Base time L for the way out before a reload (via `ambxst run reload`, the cleanload IPC target, or the optional ambxst wrapper): bar, notch and dock take 0.85 L, the frame starts after 0.2 L and takes L, the wallpaper fade starts after 0.1 L and takes 1.4 L. Everything eases in and out.",
+      "type": "integer",
+      "default": 900,
+      "minimum": 0,
+      "maximum": 3000
+    },
+    {
+      "key": "veilEnabled",
+      "label": "Cover a cold kill with the veil helper",
+      "description": "Keep a tiny detached helper that, if the shell is killed without leaving first (a plain `ambxst reload` with no wrapper), shows the last wallpaper and frame and plays the leave animation itself, then holds the background colour until the new shell is up. Needs a reload to start or stop the helper.",
+      "type": "boolean",
+      "default": true
+    }
+  ]
+}

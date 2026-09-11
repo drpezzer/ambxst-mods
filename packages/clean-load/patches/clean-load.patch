@@ -1,0 +1,336 @@
+diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
+index b9e57ca7..07cfb278 100644
+--- a/modules/bar/BarContent.qml
++++ b/modules/bar/BarContent.qml
+@@ -28,6 +28,11 @@ Item {
+     property string barPosition: (Config.bar && Config.bar.position !== undefined && ["top", "bottom", "left", "right"].includes(Config.bar.position) ? Config.bar.position : "top")
+     property string orientation: barPosition === "left" || barPosition === "right" ? "vertical" : "horizontal"
+ 
++    // clean-load: slides the bar out past the screen edge (progress 0)
++    // and back into place (1), in step with the frame.
++    readonly property real enterX: orientation === "vertical" ? (barPosition === "left" ? -1 : 1) * (totalBarWidth + frameOffset) * (1 - ShellTransitions.chromeProgress) : 0
++    readonly property real enterY: orientation === "horizontal" ? (barPosition === "top" ? -1 : 1) * (totalBarHeight + frameOffset) * (1 - ShellTransitions.chromeProgress) : 0
++
+     // Auto-hide properties
+     onPinnedChanged: {
+         if (Config.bar && Config.bar.pinnedOnStartup !== pinned) {
+@@ -250,6 +255,9 @@ Item {
+         Item {
+             id: bar
+ 
++            // clean-load: drawn only once the chrome enter has begun.
++            visible: ShellTransitions.chromeProgress > 0
++
+             anchors {
+                 top: (root.barPosition === "top" || root.orientation === "vertical") ? parent.top : undefined
+                 bottom: (root.barPosition === "bottom" || root.orientation === "vertical") ? parent.bottom : undefined
+@@ -277,7 +285,7 @@ Item {
+             }
+ 
+             // Slide animation
+-            transform: Translate {
++            transform: [Translate { x: root.enterX; y: root.enterY }, Translate {
+                 x: {
+                     if (!root.shouldAutoHide)
+                         return 0;
+@@ -310,7 +318,7 @@ Item {
+                         easing.type: Easing.OutCubic
+                     }
+                 }
+-            }
++            }]
+ 
+             states: [
+                 State {
+diff --git a/modules/dock/DockContent.qml b/modules/dock/DockContent.qml
+index a6b31db3..33810555 100644
+--- a/modules/dock/DockContent.qml
++++ b/modules/dock/DockContent.qml
+@@ -192,6 +192,13 @@ Item {
+         Item {
+             id: dockContainer
+ 
++            // clean-load: drawn only once the chrome enter has begun.
++            // Before that the hit area is still settling from its first
++            // layout (parent height 0 -> screen height) and the reveal state
++            // from missing compositor data, and the slide offset alone does
++            // not cover that.
++            visible: ShellTransitions.chromeProgress > 0
++
+             // Corner size for default theme
+             readonly property int cornerSize: root.isDefault && Config.roundness > 0 ? Config.roundness + 4 : 0
+ 
+@@ -250,7 +257,12 @@ Item {
+             }
+ 
+             // Slide animation
+-            transform: Translate {
++            // clean-load: the first Translate slides the dock out past
++            // the screen edge while the shell enters or leaves.
++            transform: [Translate {
++                x: root.isVertical ? (root.isLeft ? -1 : 1) * (dockContainer.width + root.edgeSideMargin) * (1 - ShellTransitions.chromeProgress) : 0
++                y: root.isVertical ? 0 : (root.isBottom ? 1 : -1) * (dockContainer.height + root.edgeSideMargin) * (1 - ShellTransitions.chromeProgress)
++            }, Translate {
+                 x: root.isVertical ? (root.reveal ? 0 : (root.isLeft ? -(dockContainer.width + root.edgeSideMargin) : (dockContainer.width + root.edgeSideMargin))) : 0
+                 y: root.isBottom ? (root.reveal ? 0 : (dockContainer.height + root.edgeSideMargin)) : 0
+                 Behavior on x {
+@@ -267,7 +279,7 @@ Item {
+                         easing.type: Easing.OutCubic
+                     }
+                 }
+-            }
++            }]
+ 
+             // Full background container with masking (default theme)
+             Item {
+diff --git a/modules/frame/ScreenFrameContent.qml b/modules/frame/ScreenFrameContent.qml
+index a4c725b8..9f091bae 100644
+--- a/modules/frame/ScreenFrameContent.qml
++++ b/modules/frame/ScreenFrameContent.qml
+@@ -15,6 +15,13 @@ Item {
+     required property ShellScreen targetScreen
+     property bool hasFullscreenWindow: false
+ 
++    // clean-load: the reload veil redraws this frame after the shell is
++    // gone, so it needs the live geometry.
++    QtObject {
++        Component.onCompleted: ShellTransitions.registerFrame(root)
++        Component.onDestruction: ShellTransitions.unregisterFrame(root)
++    }
++
+     // State source: Singletons and Registry
+     readonly property bool frameEnabled: Config.bar?.frameEnabled ?? false
+     readonly property bool configContainBar: Config.bar?.containBar ?? false
+@@ -106,7 +113,8 @@ Item {
+         
+         let expansion = (configContainBar && barPos === side) ? barExpansion : 0;
+         if (sidebarPosition === side) expansion += sidebarExpansion;
+-        return Math.round(t) + expansion;
++        // clean-load: grow in from the screen edge on start.
++        return Math.round((Math.round(t) + expansion) * ShellTransitions.progress);
+     }
+ 
+     // --- Corner Logic ---
+@@ -119,7 +127,7 @@ Item {
+         return Styling.radius(4) * progress;
+     }
+     
+-    property real innerRadius: targetInnerRadius
++    property real innerRadius: targetInnerRadius * ShellTransitions.progress
+ 
+     // --- Visuals ---
+ 
+diff --git a/modules/notch/NotchContent.qml b/modules/notch/NotchContent.qml
+index 3c7d32c9..adda6b4c 100644
+--- a/modules/notch/NotchContent.qml
++++ b/modules/notch/NotchContent.qml
+@@ -37,6 +37,9 @@ Item {
+     readonly property string barPosition: (Config.bar && Config.bar.position !== undefined) ? Config.bar.position : "top"
+     readonly property string notchPosition: Config.notchPosition !== undefined ? Config.notchPosition : "top"
+ 
++    // clean-load: drops the notch in from the screen edge (progress 0 -> 1).
++    readonly property real enterY: (notchPosition === "top" ? -1 : 1) * (Math.max(notchContainer.height, 50) + 16) * (1 - ShellTransitions.chromeProgress)
++
+     // Get the bar panel for this screen to check its state
+     readonly property var barPanelRef: Visibilities.barPanels[screen.name]
+ 
+@@ -233,6 +236,8 @@ Item {
+         // Animation container for reveal/hide
+         Item {
+             id: notchAnimationContainer
++            // clean-load: drawn only once the chrome enter has begun.
++            visible: ShellTransitions.chromeProgress > 0
+             anchors.horizontalCenter: parent.horizontalCenter
+             anchors.top: root.notchPosition === "top" ? parent.top : undefined
+             anchors.bottom: root.notchPosition === "bottom" ? parent.bottom : undefined
+@@ -251,7 +256,7 @@ Item {
+             }
+ 
+             // Slide animation (slide up when hidden)
+-            transform: Translate {
++            transform: [Translate { y: root.enterY }, Translate {
+                 y: {
+                     if (root.reveal) return 0;
+                     if (root.notchPosition === "top")
+@@ -266,7 +271,7 @@ Item {
+                         easing.type: Easing.OutCubic
+                     }
+                 }
+-            }
++            }]
+ 
+             // Center notch
+             Notch {
+diff --git a/modules/services/GlobalShortcuts.qml b/modules/services/GlobalShortcuts.qml
+index ee1ce50f..0d7d5b73 100644
+--- a/modules/services/GlobalShortcuts.qml
++++ b/modules/services/GlobalShortcuts.qml
+@@ -74,6 +74,7 @@ QtObject {
+                 GlobalStates.screenshotToolVisible = true;
+                 break;
+             case "lockscreen": GlobalStates.lockscreenVisible = true; break;
++            case "reload": ShellTransitions.reload(); break; // clean-load: leave first, then `ambxst reload`
+             
+             // Media
+             case "media-seek-backward": seekActivePlayer(-mediaSeekStepMs); break;
+diff --git a/modules/shell/ReservationWindows.qml b/modules/shell/ReservationWindows.qml
+index 26da91a8..75c3b74d 100644
+--- a/modules/shell/ReservationWindows.qml
++++ b/modules/shell/ReservationWindows.qml
+@@ -2,6 +2,7 @@ import QtQuick
+ import Quickshell
+ import Quickshell.Wayland
+ import qs.config
++import qs.modules.services
+ 
+ Item {
+     id: root
+@@ -56,7 +57,7 @@ Item {
+         WlrLayershell.namespace: "ambxst:reservation:top"
+         
+         exclusiveZone: {
+-            if (!Config.barReady) return 0;
++            if (!Config.barReady || !ShellTransitions.reserve) return 0;
+             let zone = actualFrameSize;
+             if (barEnabled && barPosition === "top" && barPinned) {
+                 zone += barSize + barOuterMargin;
+@@ -88,7 +89,7 @@ Item {
+         WlrLayershell.namespace: "ambxst:reservation:bottom"
+ 
+         exclusiveZone: {
+-            if (!Config.barReady) return 0;
++            if (!Config.barReady || !ShellTransitions.reserve) return 0;
+             let zone = actualFrameSize;
+             if (barEnabled && barPosition === "bottom" && barPinned) {
+                 zone += barSize + barOuterMargin;
+@@ -120,7 +121,7 @@ Item {
+         WlrLayershell.namespace: "ambxst:reservation:left"
+ 
+         exclusiveZone: {
+-            if (!Config.barReady) return 0;
++            if (!Config.barReady || !ShellTransitions.reserve) return 0;
+             let zone = actualFrameSize;
+             if (barEnabled && barPosition === "left" && barPinned) {
+                 zone += barSize + barOuterMargin;
+@@ -156,7 +157,7 @@ Item {
+         WlrLayershell.namespace: "ambxst:reservation:right"
+ 
+         exclusiveZone: {
+-            if (!Config.barReady) return 0;
++            if (!Config.barReady || !ShellTransitions.reserve) return 0;
+             let zone = actualFrameSize;
+             if (barEnabled && barPosition === "right" && barPinned) {
+                 zone += barSize + barOuterMargin;
+diff --git a/modules/sidebar/AssistantSidebar.qml b/modules/sidebar/AssistantSidebar.qml
+index be201de3..8660b8cb 100644
+--- a/modules/sidebar/AssistantSidebar.qml
++++ b/modules/sidebar/AssistantSidebar.qml
+@@ -144,15 +144,22 @@ Item {
+         width: GlobalStates.assistantWidth + root.sidebarMargin
+         height: parent.height
+ 
++        // clean-load: the slide is driven by `slide` (0 hidden, 1 open) so
++        // only a change of `active` animates. With a Behavior on x, the first
++        // layout (parent.width 0 -> screen width) and the config-driven width
++        // change both animated x, and `visible` follows the animation, so the
++        // closed sidebar swept across the screen at every shell start.
++        property real slide: root.active ? 1 : 0
++
+         x: {
+             if (GlobalStates.assistantPosition === "left")
+-                return root.active ? 0 : -(width);
+-            return root.active ? parent.width - width : parent.width;
++                return -width + width * slide;
++            return parent.width - width * slide;
+         }
+ 
+         visible: root.active || slideAnimation.running
+ 
+-        Behavior on x {
++        Behavior on slide {
+             NumberAnimation {
+                 id: slideAnimation
+                 duration: Config.animDuration
+diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
+index cdf136e7..f889bd34 100644
+--- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
++++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
+@@ -3,6 +3,7 @@ import Quickshell
+ import Quickshell.Wayland
+ import Quickshell.Io
+ import qs.modules.globals
++import qs.modules.services
+ import qs.modules.theme
+ import qs.config
+ import "MpvShaderGenerator.js" as ShaderGenerator
+@@ -23,6 +24,13 @@ PanelWindow {
+ 
+     color: "transparent"
+ 
++    // clean-load: the reload veil shows this screen's wallpaper while
++    // the shell is down, so it needs to know which file that is.
++    QtObject {
++        Component.onCompleted: ShellTransitions.registerWallpaper(wallpaper)
++        Component.onDestruction: ShellTransitions.unregisterWallpaper(wallpaper)
++    }
++
+     property string wallpaperDir: wallpaperConfig.adapter.wallPath
+     property string fallbackDir: decodeURIComponent(Qt.resolvedUrl("../../../../assets/wallpapers_example").toString().replace("file://", ""))
+     property var wallpaperPaths: []
+@@ -1235,6 +1243,18 @@ PanelWindow {
+             anchors.fill: parent
+             source: wallpaper.effectiveWallpaper
+         }
++
++        // clean-load: a sheet in the theme background colour covers the
++        // wallpaper until the first image is on screen and fades away as the
++        // shell enters, and comes back down as it leaves. The singleton
++        // animates the value, staged against the frame and bar.
++        Rectangle {
++            id: entranceCurtain
++            anchors.fill: parent
++            color: Colors.background
++            opacity: ShellTransitions.curtain
++            visible: opacity > 0
++        }
+     }
+ 
+     component WallpaperImage: Item {
+@@ -1377,6 +1397,11 @@ PanelWindow {
+                     fillMode: Image.PreserveAspectCrop
+                     asynchronous: true
+                     smooth: true
++                    // clean-load: first decoded image lifts the curtain.
++                    onStatusChanged: {
++                        if (status === Image.Ready)
++                            ShellTransitions.wallpaperShown(wallpaper.currentScreenName);
++                    }
+                     sourceSize.width: wallpaper.width
+                     sourceSize.height: wallpaper.height
+                     layer.enabled: parent.tint
+@@ -1423,6 +1448,8 @@ PanelWindow {
+                     if (sourceFile) {
+                         console.log("Initial mpvpaper run for:", sourceFile);
+                         mpvpaperProcess.running = true;
++                        // clean-load: a video player counts as shown.
++                        ShellTransitions.wallpaperShown(wallpaper.currentScreenName);
+                         wallpaper.requestVideoSync();
+                     }
+                 }
+diff --git a/shell.qml b/shell.qml
+index 888996d3..9a3ac0d2 100644
+--- a/shell.qml
++++ b/shell.qml
+@@ -77,7 +77,11 @@ ShellRoot {
+             }
+ 
+             Loader {
+-                active: Config.theme.enableCorners && Config.roundness > 0
++                // clean-load: not before the theme has loaded (the
++                // default-enabled corners flashed as bare boxes at every
++                // screen corner for a moment), and only while the frame is in
++                // place, so they leave and arrive with it.
++                active: Config.themeReady && Config.theme.enableCorners && Config.roundness > 0 && ShellTransitions.reserve
+                 sourceComponent: ScreenCorners {
+                     screen: screenShellContainer.modelData
+                 }

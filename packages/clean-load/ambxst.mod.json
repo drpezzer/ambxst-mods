@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "drpezzer.clean-load",
+  "name": "Ambxst Clean Load",
+  "version": "1.0.0",
+  "description": "A clean way in and out of the shell. On every start the wallpaper fades in from the background colour while the frame, bar, notch and dock slide into place and the windows shrink to make room, all on one staged timeline. Reloading through `ambxst run reload` (or the optional `ambxst` wrapper in extras/) plays that in reverse first: chrome eases out, windows expand with it, wallpaper fades to black, and only then is the shell restarted. On Hyprland the compositor's window animation is matched to the frame for the duration. A tiny detached helper covers a cold kill the same way. Also fixes the AI sidebar sweeping across the screen at every start and the corner windows flashing before the theme loads. First boot polish is next.",
+  "license": "MIT",
+  "author": "drpezzer",
+  "authorUrl": "https://github.com/drpezzer",
+  "homepage": "https://github.com/drpezzer/ambxst-mods",
+  "compatibility": {
+    "api": 1,
+    "ambxst": ">=1.3.0 <2.0.0",
+    "testedBaseCommits": [
+      "af9f8ad4f42d7cd77f57a7c75f6a2a5d1fb59674"
+    ]
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "commands": [
+    "setsid"
+  ],
+  "permissions": [
+    "Spawns a second, detached Quickshell process (the veil) that listens on a socket in XDG_RUNTIME_DIR and draws wallpaper and frame surfaces while the shell is down",
+    "Runs `ambxst reload` itself when asked to reload through `ambxst run reload` or the cleanload IPC target",
+    "On Hyprland, retunes the windowsMove animation over hyprctl for the duration of a transition and restores it afterwards"
+  ],
+  "settings": {
+    "schema": "settings.json"
+  },
+  "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/ShellTransitions.qml",
+      "target": "modules/services/ShellTransitions.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/veil/Veil.qml",
+      "target": "modules/services/veil/Veil.qml"
+    },
+    {
+      "type": "patch",
+      "source": "patches/clean-load.patch"
+    }
+  ]
+}

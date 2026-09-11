@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# help: Ambxst wrapper: `ambxst reload` slides the shell out before restarting it (Ambxst Clean Load mod).
+#
+# Install as ~/.local/bin/ambxst (anything earlier in PATH than the real
+# binary). Every subcommand other than `reload` is passed straight through.
+#
+# `reload` first asks the running shell to leave (frame, bar, notch and dock
+# slide out, the windows follow, the wallpaper fades to the background colour),
+# waits for that to finish, and only then runs the real `ambxst reload`. If the
+# shell is not running, does not answer within a second, or is already leaving
+# (AMBXST_SHELL_LEAVING is set by the shell's own reload command), the real
+# reload runs at once, so this can never make a reload slower than stock by
+# more than the animation itself.
+set -u
+
+self=$(readlink -f "$0")
+real=""
+IFS=: read -ra dirs <<< "$PATH"
+for d in "${dirs[@]}"; do
+    cand="$d/ambxst"
+    [ -x "$cand" ] || continue
+    [ "$(readlink -f "$cand")" = "$self" ] && continue
+    real="$cand"
+    break
+done
+if [ -z "$real" ]; then
+    echo "ambxst wrapper: real ambxst binary not found in PATH" >&2
+    exit 127
+fi
+
+if [ "${1:-}" = "reload" ] && [ -z "${AMBXST_SHELL_LEAVING:-}" ]; then
+    # The daemon publishes the shell's Quickshell PID; that is the only stable
+    # way to address the instance (its id is random, its path changes per
+    # mod generation).
+    pidfile="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ambxst-qs.pid"
+    ms=""
+    if qspid=$(cat "$pidfile" 2>/dev/null) && [ -n "$qspid" ] && kill -0 "$qspid" 2>/dev/null; then
+        ms=$(timeout 1 qs ipc --pid "$qspid" call cleanload leave 2>/dev/null | tr -dc '0-9')
+    fi
+    if [ -n "$ms" ] && [ "$ms" -gt 0 ]; then
+        sleep "$(awk "BEGIN { print $ms / 1000 }")"
+    fi
+fi
+
+exec "$real" "$@"
