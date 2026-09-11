@@ -57,6 +57,7 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- **1.0.3** — verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - **1.0.2** — the Visibilities hunk no longer drops upstream 1.3's bar-popup
   grouping.
 

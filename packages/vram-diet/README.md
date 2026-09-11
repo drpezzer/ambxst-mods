@@ -79,6 +79,7 @@ Pure insertions and self-contained rewrites; the touched files are
 
 ## Changelog
 
+- 1.0.3: verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - 1.0.2: decode caps scale with the screen's device pixel ratio (HiDPI laptops); portability notes.
 - 1.0.1: 1024x1024 texture atlas (was sized to the screen).
 - 1.0.0: initial release. 827 -> 439 MiB on the setup above; frame edges pixel-identical to stock (zero differing pixels on all four edge strips), corner windows verified mapping at 28x28 with the frame on.

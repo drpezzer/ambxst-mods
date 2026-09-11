@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.bar-glance",
   "name": "Bar at a Glance",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "More of your system readable straight from the bar. With contain-bar on, the clock, controls, battery/power-profile and layout popouts grow out of the frame instead of floating as pills. A Bluetooth indicator opens a frame-attached flyout on hover or click, with power, scanning, connect/pair/trust/forget per device and a battery readout for connected devices; blueman's tray icon is hidden in its favour through a new bar.systrayExclude list. The weather glyph switches to moon and night variants after sunset.",
   "license": "MIT",
   "author": "drpezzer",
@@ -13,7 +13,8 @@
     "api": 1,
     "ambxst": ">=1.3.0 <2.0.0",
     "testedBaseCommits": [
-      "6f9e93cb81767ff14c4867c349fc176d8d9e6697"
+      "6f9e93cb81767ff14c4867c349fc176d8d9e6697",
+      "af9f8ad4f42d7cd77f57a7c75f6a2a5d1fb59674"
     ]
   },
   "dependencies": [],

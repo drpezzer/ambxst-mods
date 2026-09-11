@@ -66,3 +66,7 @@ click anywhere outside it closes it.
   input regions, and the Bluetooth device/battery glyph maps. Insertions only.
 
 Works with Ambxst `>=1.3.0`. One new config key: `bar.systrayExclude`.
+
+## Changelog
+
+- 1.1.1: verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.

@@ -63,6 +63,7 @@ Works with Ambxst `>=1.3.0`. No new config keys.
 
 ## Changelog
 
+- **1.1.3** — verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - **1.1.2** — the MprisController hunk no longer drops upstream 1.3's
   last-player restore on startup.
 

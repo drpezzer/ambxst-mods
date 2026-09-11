@@ -71,6 +71,7 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- **2.2.1** — verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - **2.2.0** — True Matugen Icons and True Monochrome no longer require
   Tint Icons to be on.
 
