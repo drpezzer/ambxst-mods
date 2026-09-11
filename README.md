@@ -33,6 +33,9 @@ the shell fails to start within eight seconds Ambxst rolls back on its own.
 | [bar-glance](packages/bar-glance) | Frame-attached popouts for clock, controls, battery and layout, a Bluetooth widget with flyout and battery readout, and night weather glyphs |
 | [multi-monitor-fixes](packages/multi-monitor-fixes) | Monitor hotplug without a reload, wallpaper-manager handoff, notch and fullscreen-detection fixes for multi-screen setups |
 | [audio-routing](packages/audio-routing) | Notch tab for per-app outputs, volumes and microphones, with EasyEffects as a first-class route |
+| [vram-diet](packages/vram-diet) | Cuts the shell's GPU memory footprint (827 to 439 MiB on a two-monitor 3440x1440 setup) with no visual change |
+| [mod-updater](packages/mod-updater) | Update checking for Settings > Mods: a Check for updates button, per-mod Update buttons, optional automatic checks and installs |
+| [custom-gtk-css](packages/custom-gtk-css) | Imports a `custom.css` from the generated GTK CSS so your own GTK overrides survive every palette regeneration |
 
 More are on the way as they are ported from a long-running personal fork.
 

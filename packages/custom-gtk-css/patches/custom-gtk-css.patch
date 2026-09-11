@@ -1,0 +1,25 @@
+diff --git a/modules/theme/GtkGenerator.qml b/modules/theme/GtkGenerator.qml
+index c1e737c6..21300896 100644
+--- a/modules/theme/GtkGenerator.qml
++++ b/modules/theme/GtkGenerator.qml
+@@ -57,6 +57,12 @@ QtObject {
+         css += `@define-color sidebar_border_color @window_bg_color;\n`
+         css += `@define-color sidebar_backdrop_color @window_bg_color;\n`
+ 
++        // custom-gtk-css mod: when a custom.css sits next to the generated
++        // gtk.css, the generated file ends with an @import of it, so user
++        // overrides live in a file this generator never rewrites. A later
++        // @define-color wins, so custom.css can also redefine the colours above.
++        const CUSTOM_CSS = "custom.css"
++
+         const home = Quickshell.env("HOME")
+         const gtk3Dir = home + "/.config/gtk-3.0"
+         const gtk4Dir = home + "/.config/gtk-4.0"
+@@ -67,6 +73,7 @@ QtObject {
+         const cmd = `
+             mkdir -p "${gtk3Dir}" "${gtk4Dir}" && \\
+             echo "${css}" | tee "${gtk3Dir}/gtk.css" "${gtk4Dir}/gtk.css" > /dev/null && \\
++            for d in "${gtk3Dir}" "${gtk4Dir}"; do if [ -f "$d/${CUSTOM_CSS}" ]; then printf '\\n@import url("%s");\\n' "${CUSTOM_CSS}" >> "$d/gtk.css"; fi; done && \\
+             gsettings set org.gnome.desktop.interface gtk-theme "" && \\
+             gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3 && \\
+             axctl darkmode ${darkMode ? "on" : "off"}
