@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/settings.schema.json",
+  "version": 1,
+  "fields": [
+    {
+      "key": "autoCheck",
+      "label": "Check for mod updates automatically",
+      "description": "Look for new versions of installed mods shortly after the shell starts and every few hours after that, and send a notification when any are found.",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "key": "autoInstall",
+      "label": "Install mod updates automatically",
+      "description": "When an automatic check finds updates, install them right away and notify you to restart Ambxst. Only applies while automatic checks are on.",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "key": "checkIntervalHours",
+      "label": "Hours between automatic checks",
+      "type": "integer",
+      "default": 6,
+      "minimum": 1,
+      "maximum": 168
+    }
+  ]
+}

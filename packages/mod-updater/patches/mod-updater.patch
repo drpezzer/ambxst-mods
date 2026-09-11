@@ -1,0 +1,166 @@
+diff --git a/modules/widgets/dashboard/controls/ModsPanel.qml b/modules/widgets/dashboard/controls/ModsPanel.qml
+index 31b40ca3..5ef0fbc4 100644
+--- a/modules/widgets/dashboard/controls/ModsPanel.qml
++++ b/modules/widgets/dashboard/controls/ModsPanel.qml
+@@ -116,6 +116,16 @@ Item {
+         "mods.unknown_fields": "Manifest keys this Ambxst does not know: %1",
+         "mods.untested_base": "%1. You can still enable it.",
+         "mods.update": "Update",
++        "mods.updates_auto_description": "Look for new versions of installed mods shortly after the shell starts and every few hours after that, and send a notification when any are found.",
++        "mods.updates_auto_install_description": "Install what an automatic check finds right away, then notify you to restart Ambxst.",
++        "mods.updates_auto_install_title": "Install mod updates automatically",
++        "mods.updates_auto_title": "Check for mod updates automatically",
++        "mods.updates_available": "Update to %1",
++        "mods.updates_check": "Check for updates",
++        "mods.updates_checking": "Checking…",
++        "mods.updates_install_all": "Install %1 updates",
++        "mods.updates_install_one": "Install 1 update",
++        "mods.updates_none": "All mods are up to date.",
+         "mods.working": "Working…"
+     })
+ 
+@@ -538,6 +548,91 @@ Item {
+                 }
+             }
+ 
++            StyledRect {
++                Layout.fillWidth: true
++                Layout.preferredHeight: autoCheckColumn.implicitHeight + 28
++                variant: "pane"
++                radius: Styling.radius(0)
++
++                ColumnLayout {
++                    id: autoCheckColumn
++                    anchors.left: parent.left
++                    anchors.right: parent.right
++                    anchors.top: parent.top
++                    anchors.margins: 14
++                    spacing: 12
++
++                    RowLayout {
++                        Layout.fillWidth: true
++                        spacing: 8
++
++                        ColumnLayout {
++                            Layout.fillWidth: true
++                            spacing: 2
++
++                            Text {
++                                text: root.tr("mods.updates_auto_title")
++                                font.family: Config.theme.font
++                                font.pixelSize: Styling.fontSize(-1)
++                                font.weight: Font.DemiBold
++                                color: Colors.overBackground
++                            }
++
++                            Text {
++                                Layout.fillWidth: true
++                                text: root.tr("mods.updates_auto_description")
++                                font.family: Config.theme.font
++                                font.pixelSize: Styling.fontSize(-2)
++                                color: Colors.outline
++                                wrapMode: Text.Wrap
++                            }
++                        }
++
++                        ActionButton {
++                            text: ModUpdateService.autoCheck ? root.tr("common.on") : root.tr("common.off")
++                            primary: ModUpdateService.autoCheck
++                            enabled: !ModsService.busy && ModUpdateService.settingsLoaded
++                            onClicked: ModUpdateService.setAutoCheck(!ModUpdateService.autoCheck)
++                        }
++                    }
++
++                    RowLayout {
++                        Layout.fillWidth: true
++                        spacing: 8
++                        opacity: ModUpdateService.autoCheck ? 1 : 0.5
++
++                        ColumnLayout {
++                            Layout.fillWidth: true
++                            spacing: 2
++
++                            Text {
++                                text: root.tr("mods.updates_auto_install_title")
++                                font.family: Config.theme.font
++                                font.pixelSize: Styling.fontSize(-1)
++                                font.weight: Font.DemiBold
++                                color: Colors.overBackground
++                            }
++
++                            Text {
++                                Layout.fillWidth: true
++                                text: root.tr("mods.updates_auto_install_description")
++                                font.family: Config.theme.font
++                                font.pixelSize: Styling.fontSize(-2)
++                                color: Colors.outline
++                                wrapMode: Text.Wrap
++                            }
++                        }
++
++                        ActionButton {
++                            text: ModUpdateService.autoInstall ? root.tr("common.on") : root.tr("common.off")
++                            primary: ModUpdateService.autoInstall
++                            enabled: !ModsService.busy && ModUpdateService.settingsLoaded && ModUpdateService.autoCheck
++                            onClicked: ModUpdateService.setAutoInstall(!ModUpdateService.autoInstall)
++                        }
++                    }
++                }
++            }
++
+             RowLayout {
+                 Layout.fillWidth: true
+                 Layout.topMargin: 2
+@@ -553,6 +648,22 @@ Item {
+ 
+                 Item { Layout.fillWidth: true }
+ 
++                ActionButton {
++                    visible: root.hasInstalledMods
++                    primary: ModUpdateService.updateCount > 0
++                    enabled: !ModsService.busy && !ModUpdateService.checking && !ModUpdateService.installing
++                    text: ModUpdateService.checking ? root.tr("mods.updates_checking")
++                        : ModUpdateService.updateCount === 1 ? root.tr("mods.updates_install_one")
++                        : ModUpdateService.updateCount > 1 ? root.tr("mods.updates_install_all", String(ModUpdateService.updateCount))
++                        : root.tr("mods.updates_check")
++                    onClicked: {
++                        if (ModUpdateService.updateCount > 0)
++                            ModUpdateService.updateAll(false);
++                        else
++                            ModUpdateService.checkForUpdates(false);
++                    }
++                }
++
+                 SearchInput {
+                     Layout.preferredWidth: 220
+                     visible: root.hasInstalledMods
+@@ -738,6 +849,17 @@ Item {
+                                     }
+                                 }
+ 
++                                ActionButton {
++                                    visible: !!ModUpdateService.updates[modRow.modelData.id]
++                                    primary: true
++                                    enabled: !ModsService.busy && !ModUpdateService.installing
++                                    text: root.tr("mods.updates_available", ModUpdateService.updates[modRow.modelData.id]?.version ?? "")
++                                    onClicked: {
++                                        root.selectedId = modRow.modelData.id;
++                                        ModUpdateService.updateOne(modRow.modelData.id);
++                                    }
++                                }
++
+                                 ActionButton {
+                                     text: modRow.modelData.enabled ? root.tr("mods.disable") : root.tr("mods.enable")
+                                     primary: !modRow.modelData.enabled
+diff --git a/shell.qml b/shell.qml
+index 888996d3..0125843d 100644
+--- a/shell.qml
++++ b/shell.qml
+@@ -309,6 +309,7 @@ ShellRoot {
+         onTriggered: {
+             let _ = NightLightClient.active;
+             _ = GameModeClient.toggled;
++            _ = ModUpdateService.autoCheck; // Force init (mod update checks)
+         }
+     }
+ }

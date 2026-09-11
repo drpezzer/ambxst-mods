@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "drpezzer.mod-updater",
+  "name": "Mod Updater",
+  "version": "1.0.0",
+  "description": "Adds update checking to Settings > Mods. A Check for updates button next to the search box asks every installed mod's source for its current version; when newer versions exist the button turns into Install all updates and each affected mod gets its own Update button. Two switches under the version-check bypass let the shell check automatically after boot and every few hours, notify you, and optionally install what it finds.",
+  "license": "MIT",
+  "author": "drpezzer",
+  "authorUrl": "https://github.com/drpezzer",
+  "homepage": "https://github.com/drpezzer/ambxst-mods",
+  "compatibility": {
+    "api": 1,
+    "ambxst": ">=1.3.0 <2.0.0",
+    "testedBaseCommits": [
+      "af9f8ad4f42d7cd77f57a7c75f6a2a5d1fb59674"
+    ]
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "commands": ["git", "curl"],
+  "permissions": [
+    "Contacts the source of each installed mod (local directory, git remote, or raw.githubusercontent.com) to read its current manifest when you check for updates or have automatic checks on",
+    "Installs mod updates through the mod manager's own update path, which rebuilds the shell generation",
+    "Sends notifications through Ambxst's notification service when automatic checks find updates"
+  ],
+  "settings": {
+    "schema": "settings.json"
+  },
+  "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/ModUpdateService.qml",
+      "target": "modules/services/ModUpdateService.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/mod_update_check.sh",
+      "target": "modules/services/mod_update_check.sh"
+    },
+    {
+      "type": "patch",
+      "source": "patches/mod-updater.patch"
+    }
+  ]
+}
