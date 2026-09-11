@@ -1,0 +1,395 @@
+diff --git a/modules/components/TintedWallpaper.qml b/modules/components/TintedWallpaper.qml
+index 0770448e..31642f34 100644
+--- a/modules/components/TintedWallpaper.qml
++++ b/modules/components/TintedWallpaper.qml
+@@ -8,6 +8,10 @@ Item {
+     property string source: ""
+     property real radius: 0
+     property bool tintEnabled: false
++    // Longest side to decode the image at. 0 keeps the natural size (screen-sized
++    // users); tile-sized users pass their own size so a 4K wallpaper is not
++    // decoded and uploaded at full resolution to fill a few hundred pixels.
++    property int maxSourceDim: 0
+     
+     // Subset of colors for optimization (approx 25 colors vs 98)
+     // Copied from Wallpaper.qml to ensure consistency
+@@ -76,6 +80,7 @@ Item {
+             id: rawImage
+             anchors.fill: parent
+             source: root.source
++            sourceSize: root.maxSourceDim > 0 ? Qt.size(root.maxSourceDim, root.maxSourceDim) : undefined
+             fillMode: Image.PreserveAspectCrop
+             asynchronous: true
+             smooth: true
+diff --git a/modules/corners/ScreenCorners.qml b/modules/corners/ScreenCorners.qml
+index 856b02b8..8b3eae93 100644
+--- a/modules/corners/ScreenCorners.qml
++++ b/modules/corners/ScreenCorners.qml
+@@ -2,12 +2,19 @@ import QtQuick
+ import Quickshell
+ import Quickshell.Wayland
+ import qs.modules.services
++import qs.modules.theme
+ import qs.config
+ import qs.modules.bar.workspaces // For CompositorData
+ 
+-PanelWindow {
++// Four corner-sized overlay windows instead of one screen-sized surface. The
++// corners only ever paint cornerSize x cornerSize pixels each, so a full-screen
++// layer surface (and its double-buffered ARGB backing) per monitor was pure
++// overhead. Namespace, layer, click-through mask and the fullscreen hiding
++// logic are unchanged.
++Item {
+     id: screenCorners
+ 
++    required property ShellScreen screen
+     property var monitor: null
+     property bool activeWindowFullscreen: false
+ 
+@@ -60,26 +67,71 @@ PanelWindow {
+ 
+     Component.onCompleted: updateFullscreen()
+ 
+-    visible: Config.theme.enableCorners && Config.roundness > 0 && !activeWindowFullscreen
++    readonly property bool cornersVisible: Config.theme.enableCorners && Config.roundness > 0 && !activeWindowFullscreen
+ 
+-    color: "transparent"
+-    exclusionMode: ExclusionMode.Ignore
+-    WlrLayershell.namespace: "ambxst:screenCorners"
+-    WlrLayershell.layer: WlrLayer.Overlay
+-    mask: Region {
+-        item: null
++    readonly property bool frameEnabled: Config.bar?.frameEnabled ?? false
++    readonly property int thickness: {
++        const value = Config.bar?.frameThickness;
++        if (typeof value !== "number")
++            return 6;
++        return Math.max(1, Math.min(Math.round(value), 40));
+     }
++    readonly property int cornerSize: Styling.radius(4) + (frameEnabled ? thickness : 0)
+ 
+-    anchors {
+-        top: true
+-        left: true
+-        right: true
+-        bottom: true
++    component CornerWindow: PanelWindow {
++        id: cornerWindow
++        required property int cornerKind
++
++        screen: screenCorners.screen
++        visible: screenCorners.cornersVisible
++
++        color: "transparent"
++        exclusionMode: ExclusionMode.Ignore
++        WlrLayershell.namespace: "ambxst:screenCorners"
++        WlrLayershell.layer: WlrLayer.Overlay
++        mask: Region {
++            item: null
++        }
++
++        implicitWidth: screenCorners.cornerSize
++        implicitHeight: screenCorners.cornerSize
++
++        RoundCorner {
++            anchors.fill: parent
++            size: screenCorners.cornerSize
++            corner: cornerWindow.cornerKind
++        }
++    }
++
++    CornerWindow {
++        cornerKind: RoundCorner.CornerEnum.TopLeft
++        anchors {
++            top: true
++            left: true
++        }
++    }
++
++    CornerWindow {
++        cornerKind: RoundCorner.CornerEnum.TopRight
++        anchors {
++            top: true
++            right: true
++        }
+     }
+ 
+-    ScreenCornersContent {
+-        id: cornersContent
+-        anchors.fill: parent
+-        hasFullscreenWindow: screenCorners.activeWindowFullscreen
++    CornerWindow {
++        cornerKind: RoundCorner.CornerEnum.BottomLeft
++        anchors {
++            bottom: true
++            left: true
++        }
++    }
++
++    CornerWindow {
++        cornerKind: RoundCorner.CornerEnum.BottomRight
++        anchors {
++            bottom: true
++            right: true
++        }
+     }
+ }
+diff --git a/modules/frame/ScreenFrameContent.qml b/modules/frame/ScreenFrameContent.qml
+index a4c725b8..5475adbf 100644
+--- a/modules/frame/ScreenFrameContent.qml
++++ b/modules/frame/ScreenFrameContent.qml
+@@ -122,39 +122,143 @@ Item {
+     property real innerRadius: targetInnerRadius
+ 
+     // --- Visuals ---
++    //
++    // The frame is drawn as four edge strips plus four concave corner fillers
++    // straight into the scene. The masked variant below (a screen-sized fill
++    // rendered offscreen, with the inner rounded rectangle punched out by a
++    // second screen-sized mask texture) costs two full-screen FBOs per monitor
++    // and is only needed when the background style paints a multi-stop
++    // gradient or halftone pattern that has to run continuously around the
++    // whole frame. Neither allocates anything while the frame is disabled.
+ 
+-    StyledRect {
+-        id: frameFill
++    readonly property var bgVariantConfig: Styling.getStyledRectConfig("bg") || {}
++    readonly property bool bgNeedsWholeFrameShader: {
++        const type = bgVariantConfig.gradientType;
++        if (type === "halftone")
++            return true;
++        const stops = bgVariantConfig.gradient;
++        return (type === "linear" || type === "radial") && !!stops && stops.length >= 2;
++    }
++
++    Loader {
+         anchors.fill: parent
++        active: root.frameEnabled
++        sourceComponent: root.bgNeedsWholeFrameShader ? maskedFrame : stripFrame
++    }
++
++    component FrameStrip: StyledRect {
+         variant: "bg"
+         radius: 0
+         enableBorder: false
+-        visible: root.frameEnabled
+-        layer.enabled: true
+-        layer.effect: MultiEffect {
+-            maskEnabled: true
+-            maskSource: frameMask
+-            maskInverted: true
+-            maskThresholdMin: 0.5
+-            maskSpreadAtMin: 1.0
++        animateRadius: false
++        visible: width > 0 && height > 0
++    }
++
++    component FrameCorner: RoundCorner {
++        size: Math.round(root.innerRadius)
++        visible: size > 0
++    }
++
++    Component {
++        id: stripFrame
++
++        Item {
++            FrameStrip {
++                id: topStrip
++                x: 0
++                y: 0
++                width: root.width
++                height: root.topThickness
++            }
++
++            FrameStrip {
++                x: 0
++                y: root.height - root.bottomThickness
++                width: root.width
++                height: root.bottomThickness
++            }
++
++            FrameStrip {
++                x: 0
++                y: root.topThickness
++                width: root.leftThickness
++                height: root.height - root.topThickness - root.bottomThickness
++            }
++
++            FrameStrip {
++                x: root.width - root.rightThickness
++                y: root.topThickness
++                width: root.rightThickness
++                height: root.height - root.topThickness - root.bottomThickness
++            }
++
++            FrameCorner {
++                x: root.leftThickness
++                y: root.topThickness
++                corner: RoundCorner.CornerEnum.TopLeft
++                color: topStrip.color
++            }
++
++            FrameCorner {
++                x: root.width - root.rightThickness - width
++                y: root.topThickness
++                corner: RoundCorner.CornerEnum.TopRight
++                color: topStrip.color
++            }
++
++            FrameCorner {
++                x: root.leftThickness
++                y: root.height - root.bottomThickness - height
++                corner: RoundCorner.CornerEnum.BottomLeft
++                color: topStrip.color
++            }
++
++            FrameCorner {
++                x: root.width - root.rightThickness - width
++                y: root.height - root.bottomThickness - height
++                corner: RoundCorner.CornerEnum.BottomRight
++                color: topStrip.color
++            }
+         }
+     }
+ 
+-    Item {
+-        id: frameMask
+-        anchors.fill: parent
+-        visible: false
+-        layer.enabled: true
+-
+-        Rectangle {
+-            id: maskRect
+-            x: root.leftThickness
+-            y: root.topThickness
+-            width: parent.width - (root.leftThickness + root.rightThickness)
+-            height: parent.height - (root.topThickness + root.bottomThickness)
+-            radius: root.innerRadius
+-            color: "white"
+-            visible: width > 0 && height > 0
++    Component {
++        id: maskedFrame
++
++        Item {
++            StyledRect {
++                id: frameFill
++                anchors.fill: parent
++                variant: "bg"
++                radius: 0
++                enableBorder: false
++                layer.enabled: true
++                layer.effect: MultiEffect {
++                    maskEnabled: true
++                    maskSource: frameMask
++                    maskInverted: true
++                    maskThresholdMin: 0.5
++                    maskSpreadAtMin: 1.0
++                }
++            }
++
++            Item {
++                id: frameMask
++                anchors.fill: parent
++                visible: false
++                layer.enabled: true
++
++                Rectangle {
++                    id: maskRect
++                    x: root.leftThickness
++                    y: root.topThickness
++                    width: parent.width - (root.leftThickness + root.rightThickness)
++                    height: parent.height - (root.topThickness + root.bottomThickness)
++                    radius: root.innerRadius
++                    color: "white"
++                    visible: width > 0 && height > 0
++                }
++            }
+         }
+     }
+ }
+diff --git a/modules/tools/ScreenshotOverlay.qml b/modules/tools/ScreenshotOverlay.qml
+index 24d2cd84..5f62c97d 100644
+--- a/modules/tools/ScreenshotOverlay.qml
++++ b/modules/tools/ScreenshotOverlay.qml
+@@ -121,6 +121,8 @@ PanelWindow {
+ 
+             Image {
+                 mipmap: true
++                // Preview box is 250px; do not upload the whole screenshot for it
++                sourceSize: Qt.size(512, 512)
+                 id: img
+                 anchors.fill: parent
+                 source: root.imagePath !== "" ? "file://" + root.imagePath : ""
+diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
+index cdf136e7..98e9a2d9 100644
+--- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
++++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
+@@ -1370,7 +1370,10 @@ PanelWindow {
+                 }
+ 
+                 Image {
+-                    mipmap: true
++                    // Decoded at screen size and drawn at >= 1:1 (PreserveAspectCrop
++                    // only magnifies), so mip levels would never be sampled; skipping
++                    // them saves a third of the wallpaper texture per monitor.
++                    mipmap: false
+                     id: rawImage
+                     anchors.fill: parent
+                     source: parent.sourceFile ? "file://" + parent.sourceFile : ""
+diff --git a/modules/widgets/dashboard/widgets/FullPlayer.qml b/modules/widgets/dashboard/widgets/FullPlayer.qml
+index 08e36cd3..bbabe8ea 100644
+--- a/modules/widgets/dashboard/widgets/FullPlayer.qml
++++ b/modules/widgets/dashboard/widgets/FullPlayer.qml
+@@ -138,6 +138,9 @@ StyledRect {
+ 
+     Image {
+         mipmap: true
++        // The player is a few hundred pixels tall; without a cap the wallpaper
++        // fallback is decoded and uploaded at its native (often 4K) resolution.
++        sourceSize: Qt.size(1280, 1280)
+         id: backgroundArtFull
+         anchors.fill: parent
+         source: (MprisController.activePlayer?.trackArtUrl ?? "") !== "" ? MprisController.activePlayer.trackArtUrl : player.wallpaperPath
+diff --git a/modules/widgets/overview/Overview.qml b/modules/widgets/overview/Overview.qml
+index 6dad0e66..1e87ac7a 100644
+--- a/modules/widgets/overview/Overview.qml
++++ b/modules/widgets/overview/Overview.qml
+@@ -249,6 +249,8 @@ Item {
+                                 anchors.fill: parent
+                                 radius: Styling.radius(2)
+                                 tintEnabled: GlobalStates.wallpaperManager ? GlobalStates.wallpaperManager.tintEnabled : false
++                                // Decode at twice the tile size instead of the wallpaper's native resolution
++                                maxSourceDim: Math.ceil(Math.max(width, height) * 2)
+ 
+                                 property string lockscreenFramePath: {
+                                     if (!GlobalStates.wallpaperManager)
+diff --git a/modules/widgets/overview/ScrollingWorkspace.qml b/modules/widgets/overview/ScrollingWorkspace.qml
+index 3047e559..a443998e 100644
+--- a/modules/widgets/overview/ScrollingWorkspace.qml
++++ b/modules/widgets/overview/ScrollingWorkspace.qml
+@@ -168,6 +168,8 @@ Item {
+                 anchors.fill: parent
+                 radius: Styling.radius(1)
+                 tintEnabled: GlobalStates.wallpaperManager ? GlobalStates.wallpaperManager.tintEnabled : false
++                // Decode at twice the tile size instead of the wallpaper's native resolution
++                maxSourceDim: Math.ceil(Math.max(width, height) * 2)
+ 
+                 property string lockscreenFramePath: {
+                     if (!GlobalStates.wallpaperManager)
+diff --git a/shell.qml b/shell.qml
+index 888996d3..cdb3327c 100644
+--- a/shell.qml
++++ b/shell.qml
+@@ -2,6 +2,12 @@
+ //@ pragma ShellId ambxst
+ //@ pragma DataDir $BASE/ambxst
+ //@ pragma StateDir $BASE/ambxst
++// Qt Quick attaches a depth/stencil buffer to every window swapchain and
++// every offscreen layer even though a 2D scene never reads it back. Dropping
++// it saves ~16 MiB per screen-sized surface and ~8 MiB per screen-sized layer
++// on a 3440x1440 monitor, plus a fixed slice on each of the hundreds of small
++// layers the shell keeps (icon tints, pill shadows), with no visual change.
++//@ pragma Env QSG_NO_DEPTH_BUFFER=1
+ 
+ import QtQuick
+ import Quickshell

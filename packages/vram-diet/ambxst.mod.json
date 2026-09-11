@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "drpezzer.vram-diet",
+  "name": "VRAM diet",
+  "version": "1.0.0",
+  "description": "Cuts the shell's GPU memory footprint without removing or changing any feature. Drops the unused 2D depth/stencil buffer from every window and offscreen layer, draws the screen frame as strips instead of two screen-sized mask textures, replaces the full-screen corner overlay with four corner-sized windows, skips never-sampled mipmaps on the wallpaper, and decodes the wallpaper at tile size for overview thumbnails and the player background instead of at native 4K.",
+  "license": "MIT",
+  "author": "drpezzer",
+  "authorUrl": "https://github.com/drpezzer",
+  "homepage": "https://github.com/drpezzer/ambxst-mods",
+  "compatibility": {
+    "api": 1,
+    "ambxst": ">=1.3.0 <2.0.0",
+    "testedBaseCommits": [
+      "6f9e93cb81767ff14c4867c349fc176d8d9e6697"
+    ]
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "commands": [],
+  "permissions": [
+    "Sets QSG_NO_DEPTH_BUFFER=1 for the Quickshell process via a root-file pragma",
+    "Changes how the screen frame and screen corners are drawn (same appearance, fewer textures and surfaces)"
+  ],
+  "operations": [
+    {
+      "type": "patch",
+      "source": "patches/vram-diet.patch"
+    }
+  ]
+}
