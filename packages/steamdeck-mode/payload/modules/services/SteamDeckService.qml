@@ -99,8 +99,12 @@ Singleton {
         if (root.active)
             return;
 
-        root.caffeineWasOn = CaffeineService.inhibit;
-        CaffeineService.inhibit = true;
+        // CaffeineClient (1.3+) mirrors the daemon's state; `inhibit` is only
+        // read here, and writes go through setInhibit() so they reach the
+        // backend. Assigning `inhibit` directly would flip the button and
+        // inhibit nothing.
+        root.caffeineWasOn = CaffeineClient.inhibit;
+        CaffeineClient.setInhibit(true);
 
         root.active = true;
         root.armed = false;
@@ -135,7 +139,7 @@ Singleton {
         root.armed = false;
         persist();
 
-        CaffeineService.inhibit = root.caffeineWasOn;
+        CaffeineClient.setInhibit(root.caffeineWasOn);
 
         focusDesk.running = true;
         down.running = true;
@@ -484,9 +488,9 @@ Singleton {
                 if (!root.active)
                     return;
 
-                // Hold the idle chain off again - CaffeineService restores its
-                // own persisted value a moment after start and would otherwise
-                // put us back to whatever it was before the mode began.
+                // Hold the idle chain off again. The daemon owns Caffeine's
+                // state, so a restarted daemon (or a reload racing its startup)
+                // could otherwise come back without the inhibit.
                 caffeineReassert.start();
 
                 if (root.armed)
@@ -501,7 +505,7 @@ Singleton {
         repeat: false
         onTriggered: {
             if (root.active)
-                CaffeineService.inhibit = true;
+                CaffeineClient.setInhibit(true);
         }
     }
 }

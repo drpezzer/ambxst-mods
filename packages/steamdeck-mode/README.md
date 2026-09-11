@@ -74,4 +74,5 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- 1.0.3: fix the Quick Controls button doing nothing on 1.3. Upstream renamed `CaffeineService` to `CaffeineClient` (backed by the daemon), so `enable()` threw a ReferenceError on its first line before the mode could turn on. Caffeine is now read from `CaffeineClient.inhibit` and set with `CaffeineClient.setInhibit()`.
 - 1.0.2: verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
