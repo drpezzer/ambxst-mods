@@ -35,7 +35,6 @@ the shell fails to start within eight seconds Ambxst rolls back on its own.
 | [audio-routing](packages/audio-routing) | Notch tab for per-app outputs, volumes and microphones, with EasyEffects as a first-class route |
 | [vram-diet](packages/vram-diet) | Cuts the shell's GPU memory footprint (827 to 439 MiB on a two-monitor 3440x1440 setup) with no visual change |
 | [mod-updater](packages/mod-updater) | Update checking for Settings > Mods: a Check for updates button, per-mod Update buttons, optional automatic checks and installs |
-| [custom-gtk-css](packages/custom-gtk-css) | Imports a `custom.css` from the generated GTK CSS so your own GTK overrides survive every palette regeneration |
 
 More are on the way as they are ported from a long-running personal fork.
 
