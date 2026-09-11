@@ -3,7 +3,8 @@
 Update checking for Settings > Mods.
 
 - **Check for updates** sits next to the installed-mods search box. It asks each
-  installed mod's source for its current manifest and compares versions.
+  installed mod's source for its current manifest and compares versions. With
+  nothing newer it reads *No updates* for a moment, then fades back.
 - When newer versions exist the same button becomes **Install N updates**, and
   every mod with an update gets its own **Update to x.y.z** button next to
   Enable/Disable. Installs go through the mod manager's normal update path, so
@@ -48,4 +49,5 @@ Requires `git` and `curl`, both of which Ambxst already uses.
 
 ## Changelog
 
+- 1.0.1: the button itself reports "No updates" and crossfades back; no banner message.
 - 1.0.0: initial release.

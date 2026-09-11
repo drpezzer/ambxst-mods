@@ -1,5 +1,5 @@
 diff --git a/modules/widgets/dashboard/controls/ModsPanel.qml b/modules/widgets/dashboard/controls/ModsPanel.qml
-index 31b40ca3..5ef0fbc4 100644
+index 31b40ca3..b8b64686 100644
 --- a/modules/widgets/dashboard/controls/ModsPanel.qml
 +++ b/modules/widgets/dashboard/controls/ModsPanel.qml
 @@ -116,6 +116,16 @@ Item {
@@ -15,7 +15,7 @@ index 31b40ca3..5ef0fbc4 100644
 +        "mods.updates_checking": "Checking…",
 +        "mods.updates_install_all": "Install %1 updates",
 +        "mods.updates_install_one": "Install 1 update",
-+        "mods.updates_none": "All mods are up to date.",
++        "mods.updates_none": "No updates",
          "mods.working": "Working…"
      })
  
@@ -111,18 +111,53 @@ index 31b40ca3..5ef0fbc4 100644
              RowLayout {
                  Layout.fillWidth: true
                  Layout.topMargin: 2
-@@ -553,6 +648,22 @@ Item {
+@@ -553,6 +648,57 @@ Item {
  
                  Item { Layout.fillWidth: true }
  
 +                ActionButton {
++                    id: updateCheckButton
 +                    visible: root.hasInstalledMods
 +                    primary: ModUpdateService.updateCount > 0
 +                    enabled: !ModsService.busy && !ModUpdateService.checking && !ModUpdateService.installing
-+                    text: ModUpdateService.checking ? root.tr("mods.updates_checking")
++                        && !ModUpdateService.noUpdatesFlash
++                    // The label is derived here and copied into text by a short
++                    // crossfade, so "No updates" fades back into the idle label
++                    // instead of snapping.
++                    readonly property string label: ModUpdateService.checking ? root.tr("mods.updates_checking")
 +                        : ModUpdateService.updateCount === 1 ? root.tr("mods.updates_install_one")
 +                        : ModUpdateService.updateCount > 1 ? root.tr("mods.updates_install_all", String(ModUpdateService.updateCount))
++                        : ModUpdateService.noUpdatesFlash ? root.tr("mods.updates_none")
 +                        : root.tr("mods.updates_check")
++                    text: label
++                    onLabelChanged: {
++                        if (Config.animDuration > 0)
++                            labelFade.restart();
++                        else
++                            text = label;
++                    }
++
++                    SequentialAnimation {
++                        id: labelFade
++                        NumberAnimation {
++                            target: updateCheckButton.contentItem
++                            property: "opacity"
++                            to: 0
++                            duration: Config.animDuration / 3
++                            easing.type: Easing.OutQuad
++                        }
++                        ScriptAction {
++                            script: updateCheckButton.text = updateCheckButton.label
++                        }
++                        NumberAnimation {
++                            target: updateCheckButton.contentItem
++                            property: "opacity"
++                            to: 1
++                            duration: Config.animDuration / 2
++                            easing.type: Easing.InQuad
++                        }
++                    }
++
 +                    onClicked: {
 +                        if (ModUpdateService.updateCount > 0)
 +                            ModUpdateService.updateAll(false);
@@ -134,7 +169,7 @@ index 31b40ca3..5ef0fbc4 100644
                  SearchInput {
                      Layout.preferredWidth: 220
                      visible: root.hasInstalledMods
-@@ -738,6 +849,17 @@ Item {
+@@ -738,6 +884,17 @@ Item {
                                      }
                                  }
  

@@ -32,6 +32,9 @@ Singleton {
     // Check state
     property bool checking: false
     property bool checkedOnce: false
+    // True for a moment after a manual check finds nothing; the panel button
+    // shows "No updates" while it is set, then returns to its idle label.
+    property bool noUpdatesFlash: false
     property var updates: ({})
     readonly property int updateCount: Object.keys(root.updates).length
     property var checkErrors: ({})
@@ -253,8 +256,10 @@ Singleton {
             return;
         }
         if (!root._automaticCheck) {
-            if (count === 0)
-                ModsService.statusMessageKey = "mods.updates_none";
+            if (count === 0) {
+                root.noUpdatesFlash = true;
+                noUpdatesTimer.restart();
+            }
             return;
         }
         if (count === 0)
@@ -412,6 +417,12 @@ Singleton {
                 "restart": function () { ModsService.restart(); }
             }
         });
+    }
+
+    Timer {
+        id: noUpdatesTimer
+        interval: 2500
+        onTriggered: root.noUpdatesFlash = false
     }
 
     // ── scheduling ─────────────────────────────────────────────────────

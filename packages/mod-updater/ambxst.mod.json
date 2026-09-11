@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.mod-updater",
   "name": "Mod Updater",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Adds update checking to Settings > Mods. A Check for updates button next to the search box asks every installed mod's source for its current version; when newer versions exist the button turns into Install all updates and each affected mod gets its own Update button. Two switches under the version-check bypass let the shell check automatically after boot and every few hours, notify you, and optionally install what it finds.",
   "license": "MIT",
   "author": "drpezzer",
