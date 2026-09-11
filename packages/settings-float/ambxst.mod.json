@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "drpezzer.settings-float",
+  "name": "Settings Float",
+  "version": "1.0.0",
+  "description": "Opens the Ambxst Settings window as a centred floating window sized to the screen it opens on (41% wide, 66% tall by default, never below its 900x650 design size, never above 92% of the screen) instead of tiling it into the current workspace. Works through Ambxst's own compositor abstraction, so no window rule is needed and it applies on Hyprland, Niri and Mango alike. Size and an on/off switch are in the mod's settings.",
+  "license": "MIT",
+  "author": "drpezzer",
+  "authorUrl": "https://github.com/drpezzer",
+  "homepage": "https://github.com/drpezzer/ambxst-mods",
+  "compatibility": {
+    "api": 1,
+    "ambxst": ">=1.3.0 <2.0.0",
+    "testedBaseCommits": [
+      "af9f8ad4f42d7cd77f57a7c75f6a2a5d1fb59674"
+    ]
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "commands": [],
+  "permissions": [
+    "Sends toggle-floating, resize and move requests for the Settings window to the compositor through axctl when the window opens"
+  ],
+  "settings": {
+    "schema": "settings.json"
+  },
+  "operations": [
+    {
+      "type": "patch",
+      "source": "patches/settings-float.patch"
+    }
+  ]
+}

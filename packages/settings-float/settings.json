@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/settings.schema.json",
+  "version": 1,
+  "fields": [
+    {
+      "key": "enabled",
+      "label": "Float the Settings window",
+      "description": "Open Settings as a centred floating window instead of a tile. Turn off to get the stock behaviour without disabling the mod.",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "key": "widthPercent",
+      "label": "Width, percent of the screen",
+      "description": "Never smaller than the window's design size (900 px) and never more than 92% of the screen.",
+      "type": "integer",
+      "default": 41,
+      "minimum": 20,
+      "maximum": 100
+    },
+    {
+      "key": "heightPercent",
+      "label": "Height, percent of the screen",
+      "description": "Never smaller than the window's design size (650 px) and never more than 92% of the screen.",
+      "type": "integer",
+      "default": 66,
+      "minimum": 20,
+      "maximum": 100
+    }
+  ]
+}
