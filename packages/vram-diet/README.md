@@ -32,6 +32,43 @@ screen-sized offscreen layer ~22 MiB, the MultiEffect shadow chain on a
 screen-sized layer ~26 MiB, and 200 tiny (32x32) layers ~38 MiB (21 without the
 depth buffer).
 
+## What to expect on other setups
+
+Savings scale with pixel count, so bigger screens gain more. Rough per-monitor
+figures from the unit costs above (frame on; add the corners row if you use
+corners):
+
+| Monitor | depth buffers | frame textures | atlas | wallpaper mips | total | corners (if on) |
+|---|---|---|---|---|---|---|
+| 1920x1080 | ~20 MiB | ~16 MiB | 16 -> 4 MiB | ~3 MiB | **~50 MiB** | +13-18 MiB |
+| 2560x1440 | ~35 MiB | ~28 MiB | 32 -> 4 MiB | ~5 MiB | **~95 MiB** | +25-35 MiB |
+| 3440x1440 | ~50 MiB | ~38 MiB | 32 -> 4 MiB | ~7 MiB | **~120 MiB** | +30-45 MiB |
+| 3840x2160 | ~80 MiB | ~63 MiB | 64 -> 4 MiB | ~11 MiB | **~215 MiB** | +50-75 MiB |
+
+Plus a share of the small-layer overhead that does not depend on resolution.
+On the two-ultrawide test rig the measured total was 442 MiB.
+
+- **Laptops / integrated GPUs**: VRAM is carved out of system RAM there, so
+  every MiB above is also a MiB of RAM back. Nothing in the mod is
+  NVIDIA-specific; the pragmas are Qt scene-graph settings that apply to the
+  OpenGL and Vulkan backends alike, on Mesa or proprietary drivers.
+- **HiDPI / fractional scaling**: the decode caps are in logical pixels and are
+  multiplied by the screen's device pixel ratio, so a scaled laptop panel still
+  gets oversampled textures. Frame strips and corner windows use the same
+  logical geometry as stock and render at native DPR. Only tested at scale 1
+  (two 3440x1440 monitors); the HiDPI paths are correct by construction but
+  screenshots from a scaled panel are welcome.
+- **Compositors**: the four corner windows are plain layer-shell surfaces with
+  the same `ambxst:screenCorners` namespace as stock, so existing layer rules
+  on Hyprland, niri and mango match them unchanged.
+- **Quickshell**: the `//@ pragma Env` lines need Quickshell >= 0.1.0, which
+  is older than the `DataDir` pragma Ambxst 1.3 already relies on. `Env`
+  overrides a variable of the same name set in your session; if you set
+  `QSG_NO_DEPTH_BUFFER` or `QSG_ATLAS_*` yourself, this mod wins.
+- **Gradient / halftone frame styles** automatically keep the stock masked
+  frame renderer, so themes with a pattern running around the frame are
+  unchanged (and keep the stock cost).
+
 ## Compatibility
 
 Pure insertions and self-contained rewrites; the touched files are
@@ -42,5 +79,6 @@ Pure insertions and self-contained rewrites; the touched files are
 
 ## Changelog
 
+- 1.0.2: decode caps scale with the screen's device pixel ratio (HiDPI laptops); portability notes.
 - 1.0.1: 1024x1024 texture atlas (was sized to the screen).
 - 1.0.0: initial release. 827 -> 439 MiB on the setup above; frame edges pixel-identical to stock (zero differing pixels on all four edge strips), corner windows verified mapping at 28x28 with the frame on.

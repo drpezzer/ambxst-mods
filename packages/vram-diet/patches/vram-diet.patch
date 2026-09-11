@@ -1,23 +1,25 @@
 diff --git a/modules/components/TintedWallpaper.qml b/modules/components/TintedWallpaper.qml
-index 0770448e..31642f34 100644
+index 0770448e..ab7a6378 100644
 --- a/modules/components/TintedWallpaper.qml
 +++ b/modules/components/TintedWallpaper.qml
-@@ -8,6 +8,10 @@ Item {
+@@ -8,6 +8,12 @@ Item {
      property string source: ""
      property real radius: 0
      property bool tintEnabled: false
-+    // Longest side to decode the image at. 0 keeps the natural size (screen-sized
-+    // users); tile-sized users pass their own size so a 4K wallpaper is not
-+    // decoded and uploaded at full resolution to fill a few hundred pixels.
++    // Longest side to decode the image at, in logical pixels (scaled by the
++    // screen's device pixel ratio internally). 0 keeps the natural size
++    // (screen-sized users); tile-sized users pass their own size so a 4K
++    // wallpaper is not decoded and uploaded at full resolution to fill a few
++    // hundred pixels.
 +    property int maxSourceDim: 0
      
      // Subset of colors for optimization (approx 25 colors vs 98)
      // Copied from Wallpaper.qml to ensure consistency
-@@ -76,6 +80,7 @@ Item {
+@@ -76,6 +82,7 @@ Item {
              id: rawImage
              anchors.fill: parent
              source: root.source
-+            sourceSize: root.maxSourceDim > 0 ? Qt.size(root.maxSourceDim, root.maxSourceDim) : undefined
++            sourceSize: root.maxSourceDim > 0 ? Qt.size(Math.ceil(root.maxSourceDim * Screen.devicePixelRatio), Math.ceil(root.maxSourceDim * Screen.devicePixelRatio)) : undefined
              fillMode: Image.PreserveAspectCrop
              asynchronous: true
              smooth: true
@@ -308,15 +310,15 @@ index a4c725b8..5475adbf 100644
      }
  }
 diff --git a/modules/tools/ScreenshotOverlay.qml b/modules/tools/ScreenshotOverlay.qml
-index 24d2cd84..5f62c97d 100644
+index 24d2cd84..aff87c89 100644
 --- a/modules/tools/ScreenshotOverlay.qml
 +++ b/modules/tools/ScreenshotOverlay.qml
 @@ -121,6 +121,8 @@ PanelWindow {
  
              Image {
                  mipmap: true
-+                // Preview box is 250px; do not upload the whole screenshot for it
-+                sourceSize: Qt.size(512, 512)
++                // Preview box is 250 logical px; do not upload the whole screenshot for it
++                sourceSize: Qt.size(Math.ceil(512 * Screen.devicePixelRatio), Math.ceil(512 * Screen.devicePixelRatio))
                  id: img
                  anchors.fill: parent
                  source: root.imagePath !== "" ? "file://" + root.imagePath : ""
@@ -337,16 +339,17 @@ index cdf136e7..98e9a2d9 100644
                      anchors.fill: parent
                      source: parent.sourceFile ? "file://" + parent.sourceFile : ""
 diff --git a/modules/widgets/dashboard/widgets/FullPlayer.qml b/modules/widgets/dashboard/widgets/FullPlayer.qml
-index 08e36cd3..bbabe8ea 100644
+index 08e36cd3..6a876be6 100644
 --- a/modules/widgets/dashboard/widgets/FullPlayer.qml
 +++ b/modules/widgets/dashboard/widgets/FullPlayer.qml
-@@ -138,6 +138,9 @@ StyledRect {
+@@ -138,6 +138,10 @@ StyledRect {
  
      Image {
          mipmap: true
-+        // The player is a few hundred pixels tall; without a cap the wallpaper
++        // The player is 600 logical pixels wide; without a cap the wallpaper
 +        // fallback is decoded and uploaded at its native (often 4K) resolution.
-+        sourceSize: Qt.size(1280, 1280)
++        // 1280 logical pixels keeps it oversampled at any scale factor.
++        sourceSize: Qt.size(Math.ceil(1280 * Screen.devicePixelRatio), Math.ceil(1280 * Screen.devicePixelRatio))
          id: backgroundArtFull
          anchors.fill: parent
          source: (MprisController.activePlayer?.trackArtUrl ?? "") !== "" ? MprisController.activePlayer.trackArtUrl : player.wallpaperPath
