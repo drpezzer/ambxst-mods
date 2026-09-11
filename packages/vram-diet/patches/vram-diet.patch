@@ -377,10 +377,10 @@ index 3047e559..a443998e 100644
                  property string lockscreenFramePath: {
                      if (!GlobalStates.wallpaperManager)
 diff --git a/shell.qml b/shell.qml
-index 888996d3..cdb3327c 100644
+index 888996d3..d39f1a85 100644
 --- a/shell.qml
 +++ b/shell.qml
-@@ -2,6 +2,12 @@
+@@ -2,6 +2,17 @@
  //@ pragma ShellId ambxst
  //@ pragma DataDir $BASE/ambxst
  //@ pragma StateDir $BASE/ambxst
@@ -390,6 +390,11 @@ index 888996d3..cdb3327c 100644
 +// on a 3440x1440 monitor, plus a fixed slice on each of the hundreds of small
 +// layers the shell keeps (icon tints, pill shadows), with no visual change.
 +//@ pragma Env QSG_NO_DEPTH_BUFFER=1
++// Qt sizes the small-texture atlas to the next power of two above the screen
++// (4096x2048 = 32 MiB per window on a 3440x1440 monitor, 64 MiB on 4K). The
++// shell's icons fit in 1024x1024 = 4 MiB; overflow just opens another one.
++//@ pragma Env QSG_ATLAS_WIDTH=1024
++//@ pragma Env QSG_ATLAS_HEIGHT=1024
  
  import QtQuick
  import Quickshell
