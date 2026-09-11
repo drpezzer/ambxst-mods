@@ -306,10 +306,18 @@ index cc1d673e..7374f5b3 100644
                                  return Icons.firefox;
                              if (dbusName.includes("telegram") || desktopEntry.includes("telegram") || identity.includes("telegram"))
 diff --git a/modules/widgets/defaultview/CompactPlayer.qml b/modules/widgets/defaultview/CompactPlayer.qml
-index 265b87e8..98d0775e 100644
+index 265b87e8..788a1a30 100644
 --- a/modules/widgets/defaultview/CompactPlayer.qml
 +++ b/modules/widgets/defaultview/CompactPlayer.qml
-@@ -22,12 +22,29 @@ Item {
+@@ -9,6 +9,7 @@ import Quickshell.Services.Mpris
+ import qs.modules.theme
+ import qs.modules.bar.workspaces
+ import qs.modules.services
++import qs.modules.globals
+ import qs.modules.components
+ import qs.config
+ 
+@@ -22,12 +23,29 @@ Item {
          if (!player) {
              positionSlider.value = 0;
          }
@@ -341,7 +349,7 @@ index 265b87e8..98d0775e 100644
      property string wallpaperPath: {
          if (!GlobalStates.wallpaperManager) return "";
          let path = GlobalStates.wallpaperManager.currentWallpaper;
-@@ -96,6 +113,10 @@ Item {
+@@ -96,6 +114,10 @@ Item {
              return Icons.spotify;
          if (dbusName.includes("chromium") || dbusName.includes("chrome") || desktopEntry.includes("chromium") || desktopEntry.includes("chrome"))
              return Icons.chromium;
@@ -352,7 +360,7 @@ index 265b87e8..98d0775e 100644
          if (dbusName.includes("firefox") || desktopEntry.includes("firefox"))
              return Icons.firefox;
          if (dbusName.includes("telegram") || desktopEntry.includes("telegram") || identity.includes("telegram"))
-@@ -108,9 +129,6 @@ Item {
+@@ -108,9 +130,6 @@ Item {
          interval: 1000
          repeat: true
          onTriggered: {
@@ -362,7 +370,7 @@ index 265b87e8..98d0775e 100644
              compactPlayer.player?.positionChanged();
          }
      }
-@@ -122,6 +140,9 @@ Item {
+@@ -122,6 +141,9 @@ Item {
                  positionSlider.value = compactPlayer.length > 0 ? Math.min(1.0, compactPlayer.position / compactPlayer.length) : 0;
              }
          }
@@ -372,7 +380,7 @@ index 265b87e8..98d0775e 100644
      }
  
      StyledRect {
-@@ -162,7 +183,7 @@ Item {
+@@ -162,7 +184,7 @@ Item {
                  mipmap: true
                  id: backgroundArt
                  anchors.fill: parent
@@ -381,7 +389,7 @@ index 265b87e8..98d0775e 100644
                  sourceSize: Qt.size(64, 64)
                  fillMode: Image.PreserveAspectCrop
                  asynchronous: true
-@@ -239,7 +260,7 @@ Item {
+@@ -239,7 +261,7 @@ Item {
                          mipmap: true
                          id: artworkImage
                          anchors.fill: parent
