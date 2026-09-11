@@ -1,65 +1,67 @@
 diff --git a/modules/widgets/config/SettingsWindow.qml b/modules/widgets/config/SettingsWindow.qml
-index 67993a5f..fbf08c30 100644
+index 67993a5f..400eb167 100644
 --- a/modules/widgets/config/SettingsWindow.qml
 +++ b/modules/widgets/config/SettingsWindow.qml
-@@ -38,7 +38,52 @@ FloatingWindow {
+@@ -38,6 +38,42 @@ FloatingWindow {
          return null;
      }
  
-+    // settings-float mod: float the window and centre it on its target screen
-+    // at a size derived from that screen, through the same compositor
-+    // abstraction the placement below already uses (axctl: Hyprland, Niri,
-+    // Mango). Percentages and the on/off switch come from the mod's settings;
-+    // the QML implicit size above is the floor so panels never get cramped,
-+    // and 92% of the screen is the ceiling for small laptop displays.
-+    property bool floatEnabled: true
-+    property real floatWidthPercent: 41
-+    property real floatHeightPercent: 66
-+    readonly property string floatModId: "drpezzer.settings-float"
-+
-+    function loadFloatSettings() {
-+        if (typeof ModsService === "undefined" || typeof ModsService.getSettings !== "function") return;
-+        ModsService.getSettings(floatModId, (settings, error) => {
-+            if (error || !settings) return;
-+            const v = settings.values || {};
-+            if (v.enabled !== undefined) floatEnabled = !!v.enabled;
-+            const wp = Number(v.widthPercent), hp = Number(v.heightPercent);
-+            if (!isNaN(wp) && wp > 0) floatWidthPercent = wp;
-+            if (!isNaN(hp) && hp > 0) floatHeightPercent = hp;
-+        });
-+    }
++    // settings-float mod. Until the window has been placed it declares a
++    // FIXED size (minimum == maximum), derived from the target screen, which is
++    // resolved before the backing window exists. Compositors treat a fixed-size
++    // toplevel as a dialog and float it at map time (Hyprland and Niri also
++    // centre it, keeping clear of bars), so it never tiles first and never
++    // reflows the workspace. Once the compositor reports the window, the
++    // constraints are released so it can be resized by hand.
++    //
++    // There is deliberately NO toggle-floating fallback through the compositor
++    // state: axctl reports a window that was floated at map as not floating
++    // (no floating-change event ever fires for it), so acting on that flag
++    // tiled the window it was meant to float. Values come from
++    // SettingsFloatService (loaded at shell start), floors at the implicit size
++    // above, ceilings at 92% of the screen.
++    property bool floatLocked: SettingsFloatService.enabled
 +
 +    function floatSize(screenPx, percent, minimum) {
 +        const wanted = Math.max(screenPx * percent / 100, minimum);
 +        return Math.round(Math.min(wanted, screenPx * 0.92));
 +    }
 +
-+    function floatAndCenter(client) {
-+        if (!floatEnabled || !client || !client.address) return;
-+        const scr = settingsWindow.screen;
-+        if (!scr || !scr.width || !scr.height) return;
-+        const w = floatSize(scr.width, floatWidthPercent, settingsWindow.implicitWidth);
-+        const h = floatSize(scr.height, floatHeightPercent, settingsWindow.implicitHeight);
-+        const x = Math.round(scr.x + (scr.width - w) / 2);
-+        const y = Math.round(scr.y + (scr.height - h) / 2);
-+        const addr = client.address;
-+        if (!client.floating) {
-+            BackendService.notify("compositor.dispatch", { args: ["window", "toggle-floating", addr] });
-+        }
-+        BackendService.notify("compositor.dispatch", { args: ["window", "resize", String(w), String(h), addr] });
-+        BackendService.notify("compositor.dispatch", { args: ["window", "move-pixel", String(x), String(y), addr] });
++    readonly property int floatW: screen ? floatSize(screen.width, SettingsFloatService.widthPercent, implicitWidth) : implicitWidth
++    readonly property int floatH: screen ? floatSize(screen.height, SettingsFloatService.heightPercent, implicitHeight) : implicitHeight
++
++    minimumSize: floatLocked ? Qt.size(floatW, floatH) : Qt.size(0, 0)
++    maximumSize: floatLocked ? Qt.size(floatW, floatH) : Qt.size(16777215, 16777215)
++
++    // Release the fixed-size hint a moment after the compositor has reported
++    // the window; a floating window keeps floating afterwards.
++    Timer {
++        id: releaseTimer
++        interval: 400
++        repeat: false
++        onTriggered: settingsWindow.floatLocked = false
 +    }
 +
      function preparePlacement() {
-+        loadFloatSettings();
          placementTimer.attempts = 0;
          placementTimer.restart();
-     }
-@@ -55,6 +100,7 @@ FloatingWindow {
+@@ -55,6 +91,7 @@ FloatingWindow {
                      AxctlService.dispatch(`movetoworkspacesilent ${targetWorkspace}, address:${client.address}`);
                  }
                  AxctlService.dispatch(`focuswindow address:${client.address}`);
-+                floatAndCenter(client);
++                releaseTimer.restart();
                  return true;
              }
          }
+diff --git a/shell.qml b/shell.qml
+index 888996d3..d28ad475 100644
+--- a/shell.qml
++++ b/shell.qml
+@@ -309,6 +309,7 @@ ShellRoot {
+         onTriggered: {
+             let _ = NightLightClient.active;
+             _ = GameModeClient.toggled;
++            _ = SettingsFloatService.enabled; // Force init (settings-float)
+         }
+     }
+ }

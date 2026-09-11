@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.settings-float",
   "name": "Settings Float",
-  "version": "1.0.0",
-  "description": "Opens the Ambxst Settings window as a centred floating window sized to the screen it opens on (41% wide, 66% tall by default, never below its 900x650 design size, never above 92% of the screen) instead of tiling it into the current workspace. Works through Ambxst's own compositor abstraction, so no window rule is needed and it applies on Hyprland, Niri and Mango alike. Size and an on/off switch are in the mod's settings.",
+  "version": "1.1.0",
+  "description": "Opens the Ambxst Settings window as a centred floating window sized to the screen it opens on (41% wide, 66% tall by default, never below its 900x650 design size, never above 92% of the screen) instead of tiling it. The window declares a fixed size until the compositor has placed it, which makes Hyprland, Niri and dwl-based compositors float it the moment it maps (Hyprland and Niri centre it too), so it never appears as a tile first. No window rule needed. Size and an on/off switch are in the mod's settings.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -20,12 +20,17 @@
   "conflicts": [],
   "commands": [],
   "permissions": [
-    "Sends toggle-floating, resize and move requests for the Settings window to the compositor through axctl when the window opens"
+    "Declares a fixed window size for the Settings window until the compositor has placed it"
   ],
   "settings": {
     "schema": "settings.json"
   },
   "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/SettingsFloatService.qml",
+      "target": "modules/services/SettingsFloatService.qml"
+    },
     {
       "type": "patch",
       "source": "patches/settings-float.patch"
