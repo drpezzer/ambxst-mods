@@ -42,6 +42,21 @@ and play. That is a browser-side gap no shell change can close, so this
 package ships a tiny userscript that follows whichever `<video>` or `<audio>`
 is playing on any site and re-pushes `setPositionState()` on every tick.
 
+**The easy way:** open Settings > Mods and press **Patch browser** on this
+mod's row. It finds your Firefox-family browsers (Zen, Firefox, LibreWolf,
+Floorp, Waterfox; native, Flatpak or Snap) and picks the one you actually use:
+the system default browser if it is one of those, otherwise the most recently
+used profile. It opens the Violentmonkey add-on page in it if Violentmonkey is
+missing, waits for you to press *Add*, then
+opens the userscript so Violentmonkey offers to install it. A notification
+tells you what to click at each step, and the button reads **Patched** once
+both are in place. Firefox does not let anything outside the browser install
+an add-on or a userscript, so those two clicks are yours; everything else is
+automatic, and nothing is ever written into the browser profile (the check
+reads copies of profile files).
+
+**By hand:**
+
 1. Install [Violentmonkey](https://violentmonkey.github.io/) in Firefox or Zen.
 2. Open this link; Violentmonkey will offer to install it:
 
@@ -67,6 +82,7 @@ Works with Ambxst `>=1.3.0`. No new config keys.
 - **1.1.2** — the MprisController hunk no longer drops upstream 1.3's
   last-player restore on startup.
 
+- **1.2.0** — Patch browser button in Settings > Mods: finds the browser, walks through the Violentmonkey and userscript installs, shows Patched when done. Needs `python3`.
 - **1.1.1** — the userscript works on every site, not just YouTube.
 
 - **1.1.0** — ships the Zen icon and the YouTube userscript.

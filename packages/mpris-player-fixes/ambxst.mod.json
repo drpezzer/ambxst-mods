@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.mpris-player-fixes",
   "name": "MPRIS player fixes",
-  "version": "1.1.3",
-  "description": "Browser-player fixes for the compact, full and lock players: seek bars no longer pin at the end when a player (Firefox, Zen, YouTube tabs) reports no track length; Zen gets its own player icon (it shares Firefox's MPRIS bus name); and cover art falls back to the YouTube thumbnail from xesam:url when mpris:artUrl is empty. Ships a companion userscript that keeps Firefox and Zen publishing position and length on every site.",
+  "version": "1.2.0",
+  "description": "Browser-player fixes for the compact, full and lock players: seek bars no longer pin at the end when a player (Firefox, Zen, YouTube tabs) reports no track length; Zen gets its own player icon (it shares Firefox's MPRIS bus name); and cover art falls back to the YouTube thumbnail from xesam:url when mpris:artUrl is empty. Ships a companion userscript that keeps Firefox and Zen publishing position and length on every site. A Patch browser button on the mod's row in Settings > Mods walks you through installing Violentmonkey and the userscript in your browser and shows Patched once both are in place.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -19,15 +19,29 @@
   },
   "dependencies": [],
   "conflicts": [],
-  "commands": [],
+  "commands": [
+    "python3"
+  ],
   "permissions": [
-    "Loads cover-art thumbnails from i.ytimg.com when a player provides no artwork"
+    "Loads cover-art thumbnails from i.ytimg.com when a player provides no artwork",
+    "Reads your Firefox-family browser profiles (extensions.json, prefs.js and a copy of Violentmonkey's storage) to tell whether Violentmonkey and the userscript are installed",
+    "Opens the Violentmonkey add-on page and the userscript's install URL in your browser when you press Patch browser; nothing is written into the browser profile"
   ],
   "operations": [
     {
       "type": "overlay",
       "source": "payload/modules/theme/icons/zen-browser.svg",
       "target": "modules/theme/icons/zen-browser.svg"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/MprisBrowserPatchService.qml",
+      "target": "modules/services/MprisBrowserPatchService.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/mpris_browser_patch.py",
+      "target": "modules/services/mpris_browser_patch.py"
     },
     {
       "type": "patch",

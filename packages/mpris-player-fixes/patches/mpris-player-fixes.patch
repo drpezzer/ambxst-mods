@@ -81,6 +81,45 @@ index 3333506c..d3b055f3 100644
      readonly property string chromium: "<font face='Symbols Nerd Font Mono'></font>"
      readonly property string telegram: "<font face='Symbols Nerd Font Mono'></font>"
  
+diff --git a/modules/widgets/dashboard/controls/ModsPanel.qml b/modules/widgets/dashboard/controls/ModsPanel.qml
+index 31b40ca3..80a170cf 100644
+--- a/modules/widgets/dashboard/controls/ModsPanel.qml
++++ b/modules/widgets/dashboard/controls/ModsPanel.qml
+@@ -38,6 +38,11 @@ Item {
+         "common.on": "On",
+         "common.save": "Save",
+         "mods.active": "Active",
++        "mods.mpris_browser_checking": "Checking browser…",
++        "mods.mpris_browser_no_browser": "No browser found",
++        "mods.mpris_browser_patch": "Patch browser",
++        "mods.mpris_browser_patched": "Patched",
++        "mods.mpris_browser_patching": "Patching…",
+         "mods.affected_files": "Affected files",
+         "mods.author": "Author",
+         "mods.base": "Base",
+@@ -738,6 +743,22 @@ Item {
+                                     }
+                                 }
+ 
++                                // mpris-player-fixes: guided browser patch (Violentmonkey +
++                                // the userscript) with its state as the label.
++                                ActionButton {
++                                    visible: modRow.modelData.id === "drpezzer.mpris-player-fixes"
++                                    primary: MprisBrowserPatchService.browserFound && !MprisBrowserPatchService.patched
++                                    enabled: MprisBrowserPatchService.checked && MprisBrowserPatchService.browserFound
++                                        && !MprisBrowserPatchService.patched && !MprisBrowserPatchService.patching
++                                    text: MprisBrowserPatchService.patching ? root.tr("mods.mpris_browser_patching")
++                                        : MprisBrowserPatchService.patched ? root.tr("mods.mpris_browser_patched")
++                                        : !MprisBrowserPatchService.checked ? root.tr("mods.mpris_browser_checking")
++                                        : !MprisBrowserPatchService.browserFound ? root.tr("mods.mpris_browser_no_browser")
++                                        : root.tr("mods.mpris_browser_patch")
++                                    onClicked: MprisBrowserPatchService.patch()
++                                    Component.onCompleted: if (visible) MprisBrowserPatchService.refresh(false)
++                                }
++
+                                 ActionButton {
+                                     text: modRow.modelData.enabled ? root.tr("mods.disable") : root.tr("mods.enable")
+                                     primary: !modRow.modelData.enabled
 diff --git a/modules/widgets/dashboard/widgets/FullPlayer.qml b/modules/widgets/dashboard/widgets/FullPlayer.qml
 index 08e36cd3..0553e91a 100644
 --- a/modules/widgets/dashboard/widgets/FullPlayer.qml
@@ -351,3 +390,15 @@ index 265b87e8..98d0775e 100644
                          sourceSize: Qt.size(48, 48)
                          fillMode: Image.PreserveAspectCrop
                          asynchronous: true
+diff --git a/shell.qml b/shell.qml
+index 888996d3..dc02c30a 100644
+--- a/shell.qml
++++ b/shell.qml
+@@ -309,6 +309,7 @@ ShellRoot {
+         onTriggered: {
+             let _ = NightLightClient.active;
+             _ = GameModeClient.toggled;
++            _ = MprisBrowserPatchService.patched; // Force init (mpris browser patch)
+         }
+     }
+ }
