@@ -45,17 +45,20 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
   monitor crosses the bar's edge, which flashed it up over the game for the
   hide delay. `bar.availableOnFullscreen` keeps its meaning on the screens
   that are only hiding in sympathy, and a notch the user deliberately opens
-  still reveals the bar.
+  still reveals the bar. On that screen the hide is instant -- bar, exclusive
+  zone and frame gutter drop in the frame the window arrives -- since the
+  window is already fading in over them and a slower hide could be caught on
+  top of a game opened and closed quickly.
 - **The windows move with the bar.** When the bar slides away for a
   fullscreen window its exclusive zone is released and the compositor moves
   the windows into the space with its own resize animation -- on Hyprland
   `windowsMove`, which Ambxst sets to 250 ms, so the windows arrived first and
   the bar trailed in. For the length of a slide `windowsMove` is retuned to
-  the slide's exact duration and curve (the bar drives its own travel with
-  the same cubic bezier, over exactly the distance the exclusive zone
-  changes by, and both the slide and the zone change wait for the retune to
-  have landed so the windows never start on the old curve), then restored
-  once things are quiet. The restore
+  near-instant, and the exclusive zone is walked frame by frame along the
+  bar's own slide instead of being switched, so the compositor lays the
+  windows out against a value that moves with the pills and the frame slab
+  -- one number, committed in the same frame, rather than two animations
+  started a frame apart -- then restored once things are quiet. The restore
   re-reads Hyprland first and only writes the originals back if `windowsMove`
   still carries this mod's curve; the originals are also kept on disk so a
   shell killed mid-slide is put right by the next one. Hyprland only.
@@ -99,6 +102,30 @@ sync and keeps the original animation in
 
 Testing hotplug without real hardware: `hyprctl output create headless` and
 `hyprctl output remove HEADLESS-N` are faithful add/remove events.
+
+### What the fullscreen slide assumes, and what it does not
+
+- **Bar position** -- left, right, top or bottom; the slide travels along the
+  bar's own axis by the exact size the exclusive zone changes by, which is
+  computed from the bar's own target size, outer margin and frame allowance.
+- **Screen size and scale** -- everything is in logical pixels on both sides
+  (Quickshell and the compositor's reserved area), so HiDPI and mixed-scale
+  setups need nothing special.
+- **`theme.animDuration`** -- the slide is `1.6 x animDuration`; at `0` every
+  animation is disabled and the shell behaves exactly as before.
+- **An unpinned (auto-hide) bar** is left entirely to the stock auto-hide; the
+  slide only ever engages for a bar that is holding space.
+- **The screen the fullscreen window covers** hides its bar, zone and frame
+  gutter instantly (there is nothing visible below to move in step with, and
+  the window is already fading in over them); every other screen slides.
+- **Compositor** -- the window-move sync (`BarSlideSync`) is Hyprland-only and
+  runs `hyprctl eval`; on Niri or Mango it is inert and the slide still runs,
+  with the compositor's own window animation. A `hyprctl` that hangs or is
+  missing is given 250 ms, then the slide goes ahead without it.
+- **Other mods** -- the retune is put back only if `windowsMove` still carries
+  this mod's own curve, so a transition another mod has taken over (clean-load's
+  shell enter/leave, for instance) is never yanked; the original is kept on
+  disk so a shell killed mid-slide is restored by the next start.
 
 Works with Ambxst `>=1.3.0`.
 
