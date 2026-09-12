@@ -79,6 +79,7 @@ Pure insertions and self-contained rewrites; the touched files are
 
 ## Changelog
 
+- 1.0.4: the frame's concave corner fillers are `Shape` paths instead of a `Canvas`, so an animating inner radius (the frame leaving or arriving on a screen a fullscreen window covers, with multi-monitor-fixes) straightens and rounds continuously instead of in a handful of visible steps. Adds `import QtQuick.Shapes`.
 - 1.0.3: verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - 1.0.2: decode caps scale with the screen's device pixel ratio (HiDPI laptops); portability notes.
 - 1.0.1: 1024x1024 texture atlas (was sized to the screen).

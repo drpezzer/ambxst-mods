@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.vram-diet",
   "name": "VRAM diet",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Cuts the shell's GPU memory footprint without removing or changing any feature. Drops the unused 2D depth/stencil buffer from every window and offscreen layer, draws the screen frame as strips instead of two screen-sized mask textures, replaces the full-screen corner overlay with four corner-sized windows, skips never-sampled mipmaps on the wallpaper, and decodes the wallpaper at tile size for overview thumbnails and the player background instead of at native 4K.",
   "license": "MIT",
   "author": "drpezzer",

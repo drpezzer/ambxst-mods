@@ -137,10 +137,17 @@ index 856b02b8..8b3eae93 100644
      }
  }
 diff --git a/modules/frame/ScreenFrameContent.qml b/modules/frame/ScreenFrameContent.qml
-index a4c725b8..5475adbf 100644
+index a4c725b8..ffe2cd63 100644
 --- a/modules/frame/ScreenFrameContent.qml
 +++ b/modules/frame/ScreenFrameContent.qml
-@@ -122,39 +122,143 @@ Item {
+@@ -1,5 +1,6 @@
+ import QtQuick
+ import QtQuick.Effects
++import QtQuick.Shapes
+ import Quickshell
+ import Quickshell.Wayland
+ import qs.modules.components
+@@ -122,39 +123,174 @@ Item {
      property real innerRadius: targetInnerRadius
  
      // --- Visuals ---
@@ -186,11 +193,57 @@ index a4c725b8..5475adbf 100644
 +        visible: width > 0 && height > 0
 +    }
 +
-+    component FrameCorner: RoundCorner {
-+        size: Math.round(root.innerRadius)
-+        visible: size > 0
-+    }
-+
++    // The concave corner fillers are GPU paths, not a Canvas: RoundCorner
++    // repaints a Canvas per integer size step, and while the inner radius
++    // animates (the frame leaving or arriving on a screen a fullscreen window
++    // covers) that showed as a handful of visible jumps. A Shape re-tessellates
++    // every frame from the real-valued radius, so the corners straighten and
++    // round continuously.
++    component FrameCorner: Shape {
++        id: fc
++        property int corner: RoundCorner.CornerEnum.TopLeft
++        property color color: "transparent"
++        readonly property real r: Math.max(0, root.innerRadius)
++        readonly property bool atLeft: corner === RoundCorner.CornerEnum.TopLeft || corner === RoundCorner.CornerEnum.BottomLeft
++        readonly property bool atTop: corner === RoundCorner.CornerEnum.TopLeft || corner === RoundCorner.CornerEnum.TopRight
++        width: r
++        height: r
++        visible: r > 0.25
++        preferredRendererType: Shape.CurveRenderer
++        ShapePath {
++            fillColor: fc.color
++            strokeWidth: -1
++            // Sharp corner of the square, then along the edge to where the
++            // arc begins, the quarter arc around the opposite corner, close.
++            startX: fc.atLeft ? 0 : fc.r
++            startY: fc.atTop ? 0 : fc.r
++            PathLine { x: fc.atLeft ? fc.r : 0; y: fc.atTop ? 0 : fc.r }
++            PathArc {
++                x: fc.atLeft ? 0 : fc.r
++                y: fc.atTop ? fc.r : 0
++                radiusX: fc.r
++                radiusY: fc.r
++                direction: (fc.atLeft === fc.atTop) ? PathArc.Counterclockwise : PathArc.Clockwise
++            }
++            PathLine { x: fc.atLeft ? 0 : fc.r; y: fc.atTop ? 0 : fc.r }
+         }
+     }
+ 
+-    Item {
+-        id: frameMask
+-        anchors.fill: parent
+-        visible: false
+-        layer.enabled: true
+-
+-        Rectangle {
+-            id: maskRect
+-            x: root.leftThickness
+-            y: root.topThickness
+-            width: parent.width - (root.leftThickness + root.rightThickness)
+-            height: parent.height - (root.topThickness + root.bottomThickness)
+-            radius: root.innerRadius
+-            color: "white"
+-            visible: width > 0 && height > 0
 +    Component {
 +        id: stripFrame
 +
@@ -251,24 +304,9 @@ index a4c725b8..5475adbf 100644
 +                corner: RoundCorner.CornerEnum.BottomRight
 +                color: topStrip.color
 +            }
-         }
-     }
- 
--    Item {
--        id: frameMask
--        anchors.fill: parent
--        visible: false
--        layer.enabled: true
--
--        Rectangle {
--            id: maskRect
--            x: root.leftThickness
--            y: root.topThickness
--            width: parent.width - (root.leftThickness + root.rightThickness)
--            height: parent.height - (root.topThickness + root.bottomThickness)
--            radius: root.innerRadius
--            color: "white"
--            visible: width > 0 && height > 0
++        }
++    }
++
 +    Component {
 +        id: maskedFrame
 +
