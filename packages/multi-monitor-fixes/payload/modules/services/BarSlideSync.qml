@@ -8,12 +8,16 @@ import qs.config
 // multi-monitor-fixes: keeps the compositor's window move in step with the
 // bar's fullscreen slide.
 //
-// When the bar hides for a fullscreen window its exclusive zone is released,
-// and the compositor moves the windows into that space with its own resize
-// animation. On Hyprland that is `windowsMove`, which Ambxst configures to
-// 250 ms; the bar's slide is longer, so the windows arrived first and the bar
-// trailed in behind them. For the duration of a slide `windowsMove` is retuned
-// to the slide's exact length and curve, then put back once things are quiet.
+// When the bar hides for a fullscreen window its exclusive zone changes, and
+// the compositor moves the windows into (or out of) that space with its own
+// resize animation -- on Hyprland `windowsMove`, which Ambxst configures to
+// 250 ms. Two independent animations can never stay locked: they start up to
+// a frame apart and drift by pixels at peak speed. So the bar does not
+// release the zone in one step; it walks it frame by frame along its own
+// slide (shell.qml scales the reserved size by BarContent.zoneProgress), and
+// for the duration of the slide `windowsMove` is held near-instant here so
+// the windows simply follow each step. Bar, frame slab and windows are then
+// one number, committed in the same frame. Put back once things are quiet.
 // Hyprland only; other compositors are left alone.
 //
 // This is the same idea clean-load applies to the shell enter/leave, kept
@@ -27,9 +31,9 @@ Singleton {
     readonly property bool hyprland: (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "") !== ""
     readonly property bool animate: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
 
-    // One curve, shared with the bar (BarContent feeds it to a BezierSpline
-    // easing) so the two movements are literally the same function of time.
-    // Cubic ease-in-out.
+    // The bar's slide curve (BarContent feeds it to a BezierSpline easing);
+    // also registered with Hyprland under `curveName` so the restore guard
+    // can recognise this mod's own tuning. Cubic ease-in-out.
     readonly property var bezier: [0.65, 0, 0.35, 1]
     readonly property string curveName: "ambxstBarSlide"
 
@@ -75,7 +79,8 @@ Singleton {
             done();
             return;
         }
-        const speed = Math.max(0.1, durationMs / 100);
+        // Near-instant: each per-frame zone step lands within the frame.
+        const speed = 0.1;
         restoreTimer.interval = Math.round(durationMs) + 120;
         restoreTimer.restart();
         if (root.tuned && Math.abs(root.tunedSpeed - speed) < 0.01 && !tuneProc.running) {
