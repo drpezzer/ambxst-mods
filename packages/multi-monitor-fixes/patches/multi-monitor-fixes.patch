@@ -34,10 +34,10 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index b9e57ca7..bc4e8ff5 100644
+index b9e57ca7..e520d9bd 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
-@@ -49,9 +49,148 @@ Item {
+@@ -49,9 +49,162 @@ Item {
          return toplevel.fullscreen === true;
      }
  
@@ -79,6 +79,10 @@ index b9e57ca7..bc4e8ff5 100644
 +    // same tick as the fullscreen change can tell it is asking for the same
 +    // thing and leave the deliberate timing alone.
 +    property real fsTarget: 1
++    // What the exclusive zone should reflect. Follows fullscreenHidden, but
++    // only once the compositor has the retuned window move (see fsRetarget),
++    // so the windows start moving on the slide's own curve.
++    property bool zoneFullscreen: false
 +    // For the deliberate slide the curve is a BezierSpline that BarSlideSync
 +    // also hands to Hyprland for `windowsMove`, so the bar and the windows
 +    // moving into (or out of) its space follow the same function of time.
@@ -104,13 +108,22 @@ index b9e57ca7..bc4e8ff5 100644
 +        if (deliberate) {
 +            root.fsEasing = Easing.BezierSpline;
 +            root.fsBezier = BarSlideSync.bezier.concat([1, 1]);
-+            // Retune the compositor's window move to this exact slide before
-+            // the exclusive zone changes under it.
-+            BarSlideSync.tune(root.fsSlideDuration);
-+        } else {
-+            root.fsEasing = Easing.OutCubic;
-+            root.fsBezier = [];
++            // The slide and the exclusive-zone change both wait for the
++            // compositor to have the retuned window move, so bar, frame slab
++            // and windows start on the same curve at the same instant. Off
++            // Hyprland the callback runs synchronously.
++            const want = root.fullscreenHidden;
++            root.fsTarget = want ? 0 : 1;
++            BarSlideSync.tune(root.fsSlideDuration, function() {
++                if (root.fullscreenHidden !== want)
++                    return; // superseded by a newer change
++                root.zoneFullscreen = want;
++                root.fsProgress = root.fsTarget;
++            });
++            return;
 +        }
++        root.fsEasing = Easing.OutCubic;
++        root.fsBezier = [];
 +        // The deliberate target comes from fullscreenHidden ALONE. Inside its
 +        // change handler `reveal` has not been re-evaluated yet -- QML
 +        // dirtiness travels down the notify chain in signal order, and
@@ -150,6 +163,7 @@ index b9e57ca7..bc4e8ff5 100644
 +        root.fsDuration = 0;
 +        root.fsTarget = (root.fullscreenHidden && !root.reveal) ? 0 : 1;
 +        root.fsProgress = root.fsTarget;
++        root.zoneFullscreen = root.fullscreenHidden;
 +    }
 +
 +    // True from the moment the slide starts until it has fully come home, so
@@ -187,7 +201,7 @@ index b9e57ca7..bc4e8ff5 100644
  
      onShouldAutoHideChanged: {
          if (!shouldAutoHide) {
-@@ -68,7 +207,7 @@ Item {
+@@ -68,7 +221,7 @@ Item {
  
      // Check if notch hover is active (for synchronized reveal when bar is at same side)
      // NOTE: We access Visibilities.notchPanels directly because UnifiedShellPanel registers itself as the panel ref
@@ -196,7 +210,7 @@ index b9e57ca7..bc4e8ff5 100644
      readonly property string notchPosition: (Config.notchPosition !== undefined ? Config.notchPosition : "top")
      readonly property bool notchHoverActive: {
          if (barPosition !== notchPosition)
-@@ -89,7 +228,7 @@ Item {
+@@ -89,7 +242,7 @@ Item {
      }
  
      // Check if notch is open (dashboard, powermenu, etc.)
@@ -205,7 +219,7 @@ index b9e57ca7..bc4e8ff5 100644
      readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
  
      // Radius logic for "Squished" style
-@@ -103,8 +242,18 @@ Item {
+@@ -103,8 +256,18 @@ Item {
          if (!shouldAutoHide)
              return true;
  
@@ -225,7 +239,7 @@ index b9e57ca7..bc4e8ff5 100644
              return false;
          }
  
-@@ -266,8 +415,9 @@ Item {
+@@ -266,8 +429,9 @@ Item {
              // layer.enabled: true
              // layer.effect: Shadow {}
  
@@ -237,7 +251,7 @@ index b9e57ca7..bc4e8ff5 100644
              Behavior on opacity {
                  enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
                  NumberAnimation {
-@@ -281,6 +431,8 @@ Item {
+@@ -281,6 +445,8 @@ Item {
                  x: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -246,7 +260,7 @@ index b9e57ca7..bc4e8ff5 100644
                      if (root.barPosition === "left")
                          return root.reveal ? 0 : -bar.width - (root.frameOffset + root.leftOuterMargin);
                      if (root.barPosition === "right")
-@@ -290,6 +442,8 @@ Item {
+@@ -290,6 +456,8 @@ Item {
                  y: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -255,7 +269,7 @@ index b9e57ca7..bc4e8ff5 100644
                      if (root.barPosition === "top")
                          return root.reveal ? 0 : -bar.height - (root.frameOffset + root.topOuterMargin);
                      if (root.barPosition === "bottom")
-@@ -297,14 +451,14 @@ Item {
+@@ -297,14 +465,14 @@ Item {
                      return 0;
                  }
                  Behavior on x {
@@ -272,7 +286,7 @@ index b9e57ca7..bc4e8ff5 100644
                      NumberAnimation {
                          duration: (Config.animDuration !== undefined ? Config.animDuration : 0) / 2
                          easing.type: Easing.OutCubic
-@@ -360,7 +514,7 @@ Item {
+@@ -360,7 +528,7 @@ Item {
                          spacing: 4
  
                          // Obtener referencia al notch de esta pantalla
@@ -786,7 +800,7 @@ index ee97b092..378ef7ed 100644
          }
      }
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..6400abcb 100644
+index 028c2dce..fa3a1a05 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -806,7 +820,7 @@ index 028c2dce..6400abcb 100644
      }
  
      readonly property bool dockEnabled: {
-@@ -58,13 +59,15 @@ PanelWindow {
+@@ -58,13 +59,16 @@ PanelWindow {
          if (!(Config.dock.enabled ?? false) || (Config.dock.theme ?? "default") === "integrated")
              return false;
          const list = Config.dock.screenList;
@@ -819,12 +833,13 @@ index 028c2dce..6400abcb 100644
      readonly property alias barHoverActive: barContent.hoverActive
 -    readonly property alias barFullscreen: barContent.activeWindowFullscreen
 +    readonly property alias barFullscreen: barContent.fullscreenHidden
++    readonly property alias barZoneFullscreen: barContent.zoneFullscreen
 +    readonly property alias barFsEngaged: barContent.fsEngaged
 +    readonly property alias barInPlace: barContent.barInPlace
      readonly property bool barReveal: barEnabled && barContent.reveal
      readonly property alias barTargetWidth: barContent.barTargetWidth
      readonly property alias barTargetHeight: barContent.barTargetHeight
-@@ -73,7 +76,7 @@ PanelWindow {
+@@ -73,7 +77,7 @@ PanelWindow {
      readonly property alias dockPosition: dockContent.position
      readonly property alias dockPinned: dockContent.pinned
      readonly property bool dockReveal: dockEnabled && dockContent.reveal
@@ -833,7 +848,7 @@ index 028c2dce..6400abcb 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,25 +92,74 @@ PanelWindow {
+@@ -89,25 +93,74 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
@@ -918,7 +933,7 @@ index 028c2dce..6400abcb 100644
          }
          return false;
      }
-@@ -120,22 +172,42 @@ PanelWindow {
+@@ -120,22 +173,42 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -973,7 +988,7 @@ index 028c2dce..6400abcb 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -221,6 +293,7 @@ PanelWindow {
+@@ -221,6 +294,7 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -981,7 +996,7 @@ index 028c2dce..6400abcb 100644
              z: 2
              visible: unifiedPanel.barEnabled
          }
-@@ -230,6 +303,7 @@ PanelWindow {
+@@ -230,6 +304,7 @@ PanelWindow {
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -1216,10 +1231,10 @@ index 5afcc42b..db47939a 100644
  
      visible: presetsOpen
 diff --git a/shell.qml b/shell.qml
-index 888996d3..99dcfb5d 100644
+index 888996d3..5e48fa9b 100644
 --- a/shell.qml
 +++ b/shell.qml
-@@ -90,10 +90,17 @@ ShellRoot {
+@@ -90,10 +90,20 @@ ShellRoot {
                  // Bar status for reservations
                  barEnabled: {
                      const list = (Config.bar && Config.bar.screenList !== undefined ? Config.bar.screenList : []);
@@ -1235,11 +1250,14 @@ index 888996d3..99dcfb5d 100644
 +                // toplevel, which is one global window, so it hides on every
 +                // screen at once -- the reservation follows it screen for
 +                // screen. Same for the dock.
-+                barPinned: unifiedPanel.pinned && !unifiedPanel.barFullscreen
++                // barZoneFullscreen, not barFullscreen: the zone changes when
++                // the bar's slide actually starts (once the compositor has the
++                // retuned window move), not the instant the state flips.
++                barPinned: unifiedPanel.pinned && !unifiedPanel.barZoneFullscreen
                  barSize: (unifiedPanel.barPosition === "left" || unifiedPanel.barPosition === "right") ? unifiedPanel.barTargetWidth : unifiedPanel.barTargetHeight
                  barOuterMargin: unifiedPanel.barOuterMargin
  
-@@ -105,18 +112,21 @@ ShellRoot {
+@@ -105,18 +115,21 @@ ShellRoot {
                      const list = (Config.dock && Config.dock.screenList !== undefined ? Config.dock.screenList : []);
                      if (!list || list.length === 0)
                          return true;
@@ -1265,7 +1283,7 @@ index 888996d3..99dcfb5d 100644
                  sidebarPinned: GlobalStates.assistantPinned
                  sidebarWidth: GlobalStates.assistantWidth
                  sidebarPosition: GlobalStates.assistantPosition
-@@ -136,7 +146,7 @@ ShellRoot {
+@@ -136,7 +149,7 @@ ShellRoot {
  
          Loader {
              id: overviewLoader
@@ -1274,7 +1292,7 @@ index 888996d3..99dcfb5d 100644
              required property ShellScreen modelData
              sourceComponent: OverviewPopup {
                  screen: overviewLoader.modelData
-@@ -156,7 +166,7 @@ ShellRoot {
+@@ -156,7 +169,7 @@ ShellRoot {
  
          Loader {
              id: presetsLoader

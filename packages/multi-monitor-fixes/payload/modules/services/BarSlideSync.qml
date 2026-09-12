@@ -62,15 +62,29 @@ Singleton {
 
     // Called by every BarContent starting a deliberate slide, so it is cheap
     // to call twice: a second call at the same speed only pushes the restore
-    // back.
-    function tune(durationMs) {
-        if (!root.hyprland || !root.animate || !root.original)
+    // back. `onLanded` runs once Hyprland has the new values -- the caller
+    // starts its slide and changes the exclusive zone THEN, so the windows
+    // never begin on the old 250 ms curve and switch mid-flight (that put
+    // them a few pixels ahead of the bar for the first part of every hide).
+    // Off Hyprland, or with animations off, it runs straight away.
+    property var pending: []
+
+    function tune(durationMs, onLanded) {
+        const done = function() { if (onLanded) onLanded(); };
+        if (!root.hyprland || !root.animate || !root.original) {
+            done();
             return;
+        }
         const speed = Math.max(0.1, durationMs / 100);
         restoreTimer.interval = Math.round(durationMs) + 120;
         restoreTimer.restart();
-        if (root.tuned && Math.abs(root.tunedSpeed - speed) < 0.01)
+        if (root.tuned && Math.abs(root.tunedSpeed - speed) < 0.01 && !tuneProc.running) {
+            done();
             return;
+        }
+        root.pending.push(done);
+        if (tuneProc.running)
+            return; // the eval in flight carries the same values
         if (!root.tuned) {
             // Remember the originals on disk so a shell killed mid-slide
             // still gets them restored by the next one.
@@ -83,7 +97,19 @@ Singleton {
         // Hyprland config after every shell start, which drops curves added at
         // runtime, and a missing curve silently falls back to Hyprland's
         // default.
-        root.hypr(root.curveLua() + "; " + root.animLua(speed, root.curveName, ""));
+        tuneProc.command = ["hyprctl", "eval", root.curveLua() + "; " + root.animLua(speed, root.curveName, "")];
+        tuneProc.running = true;
+    }
+
+    Process {
+        id: tuneProc
+        running: false
+        onExited: {
+            const cbs = root.pending;
+            root.pending = [];
+            for (const cb of cbs)
+                cb();
+        }
     }
 
     function restore(values) {
