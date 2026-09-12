@@ -104,17 +104,29 @@ Singleton {
         // default.
         tuneProc.command = ["hyprctl", "eval", root.curveLua() + "; " + root.animLua(speed, root.curveName, "")];
         tuneProc.running = true;
+        landedGuard.restart();
+    }
+
+    function flushPending() {
+        landedGuard.stop();
+        const cbs = root.pending;
+        root.pending = [];
+        for (const cb of cbs)
+            cb();
     }
 
     Process {
         id: tuneProc
         running: false
-        onExited: {
-            const cbs = root.pending;
-            root.pending = [];
-            for (const cb of cbs)
-                cb();
-        }
+        onExited: root.flushPending()
+    }
+
+    // A hyprctl that hangs or is missing must not hold the bar in place: the
+    // slide goes ahead without the sync after this long.
+    Timer {
+        id: landedGuard
+        interval: 250
+        onTriggered: root.flushPending()
     }
 
     function restore(values) {
