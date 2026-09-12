@@ -46,6 +46,21 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
   hide delay. `bar.availableOnFullscreen` keeps its meaning on the screens
   that are only hiding in sympathy, and a notch the user deliberately opens
   still reveals the bar.
+- **The windows move with the bar.** When the bar slides away for a
+  fullscreen window its exclusive zone is released and the compositor moves
+  the windows into the space with its own resize animation -- on Hyprland
+  `windowsMove`, which Ambxst sets to 250 ms, so the windows arrived first and
+  the bar trailed in. For the length of a slide `windowsMove` is retuned to
+  the slide's exact duration and curve (the bar drives its own travel with
+  the same cubic bezier), then restored once things are quiet. The restore
+  re-reads Hyprland first and only writes the originals back if `windowsMove`
+  still carries this mod's curve; the originals are also kept on disk so a
+  shell killed mid-slide is put right by the next one. Hyprland only.
+- **Hiding the special workspace brings the bar back.** Quickshell refreshes
+  its monitor objects on focus and workspace events but not on
+  `activespecial`, so the closed special workspace kept matching the game and
+  the bar stayed away from a screen showing ordinary windows again. The
+  monitors are refreshed on that event now.
 - **Null guards** on about fifteen `screen.name` bindings that threw a
   `TypeError` cascade during teardown.
 
@@ -68,9 +83,13 @@ ambxst reload
 One patch, thirteen files: `Bar.qml`, `BarContent.qml`, `DockContent.qml`,
 `ScreenFrameContent.qml`, `NotchContent.qml`, `NotchWindow.qml`,
 `Visibilities.qml`, `GlobalStates.qml`, `UnifiedShellPanel.qml`,
-`Wallpaper.qml`, `OverviewPopup.qml`, `PresetsPopup.qml`, `shell.qml`. No new
-files, no new config keys. Reads Hyprland monitor state through
-`Quickshell.Hyprland` for the special-workspace check.
+`Wallpaper.qml`, `OverviewPopup.qml`, `PresetsPopup.qml`, `shell.qml`; plus
+one new file, `modules/services/BarSlideSync.qml`, the singleton that retunes
+Hyprland's `windowsMove` during a bar slide. No new config keys. Reads
+Hyprland monitor state through `Quickshell.Hyprland` for the
+special-workspace check; on Hyprland runs `hyprctl eval` for the window
+sync and keeps the original animation in
+`~/.local/state/ambxst/multi-monitor-fixes-windowsmove.json` while tuned.
 
 Testing hotplug without real hardware: `hyprctl output create headless` and
 `hyprctl output remove HEADLESS-N` are faithful add/remove events.
@@ -89,7 +108,10 @@ Works with Ambxst `>=1.3.0`.
   focused-monitor fast path that made the other screen's bar and frame blink
   on every swap. The bar's fullscreen hide is a clean-load-style slide -- full
   opacity, eased both ways, timed to land with the compositor's window move --
-  and the frame's contain-bar slab follows that same travel.
+  and the frame's contain-bar slab follows that same travel; Hyprland's
+  `windowsMove` is retuned to the slide for its duration so the windows move
+  with the bar; and closing a special workspace refreshes the monitors so the
+  bar comes back to that screen.
 - **1.0.3** — verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - **1.0.2** — the Visibilities hunk no longer drops upstream 1.3's bar-popup
   grouping.

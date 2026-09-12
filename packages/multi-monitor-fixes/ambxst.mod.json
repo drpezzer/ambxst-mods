@@ -21,9 +21,15 @@
   "conflicts": [],
   "commands": [],
   "permissions": [
-    "Reads Hyprland monitor state through Quickshell.Hyprland"
+    "Reads Hyprland monitor state through Quickshell.Hyprland",
+    "On Hyprland, runs `hyprctl eval` to retune the windowsMove animation for the ~0.5 s of a bar slide, then restores it; remembers the original in ~/.local/state/ambxst/"
   ],
   "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/BarSlideSync.qml",
+      "target": "modules/services/BarSlideSync.qml"
+    },
     {
       "type": "patch",
       "source": "patches/multi-monitor-fixes.patch"
