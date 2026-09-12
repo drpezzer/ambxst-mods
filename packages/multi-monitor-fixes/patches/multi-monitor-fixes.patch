@@ -280,7 +280,7 @@ index a6b31db3..1d70ea85 100644
                                  visibilities.overview = !visibilities.overview;
                              }
 diff --git a/modules/frame/ScreenFrameContent.qml b/modules/frame/ScreenFrameContent.qml
-index a4c725b8..8ac49178 100644
+index a4c725b8..7d5f4169 100644
 --- a/modules/frame/ScreenFrameContent.qml
 +++ b/modules/frame/ScreenFrameContent.qml
 @@ -21,8 +21,8 @@ Item {
@@ -303,19 +303,28 @@ index a4c725b8..8ac49178 100644
      readonly property bool sidebarPinned: GlobalStates.assistantPinned
      readonly property int sidebarWidth: GlobalStates.assistantWidth
      readonly property string sidebarPosition: GlobalStates.assistantPosition
-@@ -53,9 +53,16 @@ Item {
+@@ -53,9 +53,25 @@ Item {
  
      // --- Animation Synchronization ---
      
 -    property real _barAnimProgress: barReveal ? 1.0 : 0.0
-+    // While the bar is running its fullscreen slide, take its travel directly
-+    // rather than starting a second, shorter animation off `barReveal`: that
-+    // boolean only flips at one end of the slide, so the frame's bar slab
-+    // collapsed in 150 ms out from under pills that were still leaving, and
-+    // on the way back waited for them to land before popping in. The two now
-+    // move as one. Outside the slide nothing changes.
++    // Follow the bar panel's own "how far in place" value rather than
++    // animating off `barReveal` here. During the fullscreen slide that value
++    // is the slide itself, and the Behavior stands down so the frame's bar
++    // slab and the pills move as one (a second, shorter animation off the
++    // reveal boolean collapsed the slab out from under pills that were still
++    // leaving, and popped it in after they had landed). Outside the slide it
++    // is the plain reveal boolean and the stock 150 ms Behavior applies.
++    //
++    // It is read for BOTH cases on purpose. Switching the source to
++    // `barReveal` when the slide ended raced: `barSliding` and `barReveal`
++    // reach this object through different signal chains, and seeing the
++    // first flip before the second put a 0 into a Behavior that had just been
++    // re-enabled -- the slab dipped toward collapsed and came back while the
++    // pills sat still. `barInPlace` is computed inside BarContent, where the
++    // two are evaluated together, so it is 1 on both sides of the handover.
 +    readonly property bool barSliding: (barPanel && barPanel.barFsEngaged !== undefined) ? barPanel.barFsEngaged : false
-+    property real _barAnimProgress: barSliding ? barPanel.barInPlace : (barReveal ? 1.0 : 0.0)
++    property real _barAnimProgress: (barPanel && barPanel.barInPlace !== undefined) ? barPanel.barInPlace : (barReveal ? 1.0 : 0.0)
      Behavior on _barAnimProgress {
 -        enabled: Config.animDuration > 0
 +        enabled: Config.animDuration > 0 && !root.barSliding
