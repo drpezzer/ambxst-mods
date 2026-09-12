@@ -23,7 +23,8 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
 - **Fullscreen games on a special workspace are detected.** The panel only
   caught them through a fast path gated on the focused monitor, so the shell
   came back over the game whenever focus moved. The output's open special
-  workspace is now read from Hyprland and checked too.
+  workspace is now read from Hyprland and matched in the window scan as well
+  as its active workspace, so the detection no longer depends on focus.
 - **No dead strip where a hidden bar used to be.** Going fullscreen hides the
   bar, the dock and the frame, but their layer-shell exclusive zones stayed
   put, so every window below kept a gap against that screen edge. The
@@ -35,7 +36,12 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
   Each screen's own fullscreen state is now ORed in, the same per-output check
   the notch and frame already use, so the screen holding the fullscreen window
   keeps its chrome away until that window is gone while the other screens get
-  theirs back on the next focus change.
+  theirs back on the next focus change. On that screen the pointer does not
+  bring them back either: sweeping the cursor off the game towards the next
+  monitor crosses the bar's edge, which flashed it up over the game for the
+  hide delay. `bar.availableOnFullscreen` keeps its meaning on the screens
+  that are only hiding in sympathy, and a notch the user deliberately opens
+  still reveals the bar.
 - **Null guards** on about fifteen `screen.name` bindings that threw a
   `TypeError` cascade during teardown.
 
@@ -72,8 +78,10 @@ Works with Ambxst `>=1.3.0`.
 - **1.1.0** — a bar, dock or frame hidden by a fullscreen window no longer
   keeps its exclusive zone, so the windows below fill the space instead of
   leaving a gap at the screen edge; and the screen holding that window keeps
-  its bar and dock hidden when focus moves away, instead of putting them back
-  over a still-fullscreen window.
+  its bar and dock hidden -- through focus changes and through the pointer --
+  instead of putting them back over a still-fullscreen window. Fixes the
+  special-workspace fullscreen check, which computed the output's open special
+  workspace and then never compared anything against it.
 - **1.0.3** — verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - **1.0.2** — the Visibilities hunk no longer drops upstream 1.3's bar-popup
   grouping.

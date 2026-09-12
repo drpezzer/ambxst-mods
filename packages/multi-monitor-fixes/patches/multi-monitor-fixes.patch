@@ -34,7 +34,7 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index b9e57ca7..2d83f1e4 100644
+index b9e57ca7..80358012 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
 @@ -49,9 +49,24 @@ Item {
@@ -81,16 +81,27 @@ index b9e57ca7..2d83f1e4 100644
      readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
  
      // Radius logic for "Squished" style
-@@ -104,7 +119,7 @@ Item {
+@@ -103,8 +118,18 @@ Item {
+         if (!shouldAutoHide)
              return true;
  
++        // This screen is the one holding the fullscreen window: the pointer
++        // does not bring the bar back over it. Sweeping the cursor off the
++        // game towards the next monitor crosses the bar's edge, which flashed
++        // it up over the game for the hide delay. Only a notch the user has
++        // deliberately opened still counts. `availableOnFullscreen` keeps its
++        // meaning on the OTHER screens, which are only hiding in sympathy
++        // with the focused toplevel.
++        if (screenFullscreen)
++            return notchOpen;
++
          // If fullscreen and not available on fullscreen, hide
 -        if (activeWindowFullscreen && !(Config.bar && Config.bar.availableOnFullscreen !== undefined ? Config.bar.availableOnFullscreen : false)) {
 +        if (fullscreenHidden && !(Config.bar && Config.bar.availableOnFullscreen !== undefined ? Config.bar.availableOnFullscreen : false)) {
              return false;
          }
  
-@@ -360,7 +375,7 @@ Item {
+@@ -360,7 +385,7 @@ Item {
                          spacing: 4
  
                          // Obtener referencia al notch de esta pantalla
@@ -100,7 +111,7 @@ index b9e57ca7..2d83f1e4 100644
                          LauncherButton {
                              id: launcherButton
 diff --git a/modules/dock/DockContent.qml b/modules/dock/DockContent.qml
-index a6b31db3..9d2bb29c 100644
+index a6b31db3..1d70ea85 100644
 --- a/modules/dock/DockContent.qml
 +++ b/modules/dock/DockContent.qml
 @@ -71,7 +71,7 @@ Item {
@@ -112,7 +123,7 @@ index a6b31db3..9d2bb29c 100644
      readonly property bool barPinned: {
          if (barPanelRef && typeof barPanelRef.pinned !== 'undefined') {
              return barPanelRef.pinned;
-@@ -99,10 +99,18 @@ Item {
+@@ -99,10 +99,22 @@ Item {
          return false;
      }
  
@@ -126,13 +137,17 @@ index a6b31db3..9d2bb29c 100644
 +
      // Reveal logic
      property bool reveal: {
++        // This screen holds the fullscreen window: stay down, hover included.
++        if (screenFullscreen)
++            return false;
++
          // Priority: Fullscreen check
 -        if (activeWindowFullscreen) {
 +        if (fullscreenHidden) {
              return (Config.dock?.availableOnFullscreen ?? false) && (Config.dock?.hoverToReveal && dockMouseArea.containsMouse);
          }
  
-@@ -519,7 +527,7 @@ Item {
+@@ -519,7 +531,7 @@ Item {
                          }
  
                          onClicked: {
@@ -141,7 +156,7 @@ index a6b31db3..9d2bb29c 100644
                              if (visibilities) {
                                  visibilities.overview = !visibilities.overview;
                              }
-@@ -653,7 +661,7 @@ Item {
+@@ -653,7 +665,7 @@ Item {
                          }
  
                          onClicked: {
@@ -572,7 +587,7 @@ index ee97b092..378ef7ed 100644
          }
      }
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..48c0ce8b 100644
+index 028c2dce..57d6b3fb 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -651,7 +666,30 @@ index 028c2dce..48c0ce8b 100644
  
          // Check active toplevel first (fast path)
          const toplevel = ToplevelManager.activeToplevel;
-@@ -120,22 +142,42 @@ PanelWindow {
+@@ -102,12 +124,19 @@ PanelWindow {
+             return true;
+         }
+ 
+-        // Check all windows on this monitor (robust path)
++        // Check all windows on this monitor (robust path). The output's open
++        // special workspace counts as on screen: a game launched into one
++        // covers the output exactly like a normal fullscreen window, and
++        // matching only `activeWorkspace` left every consumer of this
++        // property relying on the focused-monitor fast path above, so the
++        // whole shell reappeared over the game as soon as focus moved off it.
+         const wins = CompositorData.windowList;
+         for (let i = 0; i < wins.length; i++) {
+-            if (wins[i].monitor === monId && wins[i].fullscreen && wins[i].workspace.id === activeWorkspaceId) {
++            if (wins[i].monitor !== monId || !wins[i].fullscreen)
++                continue;
++            const wsId = wins[i].workspace.id;
++            if (wsId === activeWorkspaceId || (specialId !== 0 && wsId === specialId))
+                 return true;
+-            }
+         }
+         return false;
+     }
+@@ -120,22 +149,42 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -706,7 +744,7 @@ index 028c2dce..48c0ce8b 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -221,6 +263,7 @@ PanelWindow {
+@@ -221,6 +270,7 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -714,7 +752,7 @@ index 028c2dce..48c0ce8b 100644
              z: 2
              visible: unifiedPanel.barEnabled
          }
-@@ -230,6 +273,7 @@ PanelWindow {
+@@ -230,6 +280,7 @@ PanelWindow {
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
