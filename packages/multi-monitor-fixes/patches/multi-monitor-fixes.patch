@@ -800,7 +800,7 @@ index ee97b092..378ef7ed 100644
          }
      }
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..fa3a1a05 100644
+index 028c2dce..8ecc1d23 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -848,7 +848,7 @@ index 028c2dce..fa3a1a05 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,25 +93,74 @@ PanelWindow {
+@@ -89,25 +93,103 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
@@ -860,6 +860,18 @@ index 028c2dce..fa3a1a05 100644
 +    // workspace `is_active` only when it holds focus, not when it is merely on
 +    // screen. Hyprland does report it per monitor, so it comes from there.
 +    readonly property int openSpecialWorkspaceId: {
++        if (unifiedPanel.openSpecialKnown) {
++            if (!unifiedPanel.openSpecialName)
++                return 0;
++            // axctl's list is the same source the window scan's workspace ids
++            // come from, so the two agree.
++            const wss = AxctlService.workspaces.values || [];
++            for (let i = 0; i < wss.length; i++) {
++                if (wss[i].name === unifiedPanel.openSpecialName)
++                    return wss[i].id;
++            }
++            // Not listed yet (just created): fall through to Hyprland's object.
++        }
 +        const name = targetScreen ? targetScreen.name : "";
 +        if (!name)
 +            return 0;
@@ -872,16 +884,33 @@ index 028c2dce..fa3a1a05 100644
 +        return 0;
 +    }
 +
++    // The special workspace this output has open, tracked from Hyprland's own
++    // `activespecial` event ("<name>,<monitor>"; an empty name means closed).
++    //
 +    // Quickshell refreshes its monitor objects on `focusedmon` and workspace
-+    // events but not on `activespecial`, so `specialWorkspace` in
-+    // lastIpcObject kept naming a special workspace the output had already
-+    // closed. The fullscreen game on it then still matched below, and the
-+    // bar stayed away from a screen that was showing ordinary windows again.
++    // events but not on `activespecial`, and a refresh requested from here
++    // can be folded into one already in flight for the workspace/focus event
++    // that precedes it, whose reply predates the change. So the id read from
++    // lastIpcObject was stale intermittently, in both directions: the frame
++    // and bar stayed over a game that had just come back, or stayed away from
++    // a screen that was showing ordinary windows again. The event is the
++    // authoritative source; lastIpcObject is only the fallback until one has
++    // been seen.
++    property string openSpecialName: ""
++    property bool openSpecialKnown: false
++
 +    Connections {
 +        target: Hyprland
 +        function onRawEvent(event) {
-+            if (event.name === "activespecial")
-+                Hyprland.refreshMonitors();
++            if (event.name !== "activespecial")
++                return;
++            const parts = String(event.data).split(",");
++            const mon = parts.length > 1 ? parts[1] : "";
++            if (!targetScreen || mon !== targetScreen.name)
++                return;
++            unifiedPanel.openSpecialName = parts[0];
++            unifiedPanel.openSpecialKnown = true;
++            Hyprland.refreshMonitors();
 +        }
 +    }
 +
@@ -933,7 +962,7 @@ index 028c2dce..fa3a1a05 100644
          }
          return false;
      }
-@@ -120,22 +173,42 @@ PanelWindow {
+@@ -120,22 +202,42 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -988,7 +1017,7 @@ index 028c2dce..fa3a1a05 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -221,6 +294,7 @@ PanelWindow {
+@@ -221,6 +323,7 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -996,7 +1025,7 @@ index 028c2dce..fa3a1a05 100644
              z: 2
              visible: unifiedPanel.barEnabled
          }
-@@ -230,6 +304,7 @@ PanelWindow {
+@@ -230,6 +333,7 @@ PanelWindow {
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
