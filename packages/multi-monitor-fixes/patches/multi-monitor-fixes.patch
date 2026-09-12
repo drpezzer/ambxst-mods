@@ -34,10 +34,10 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index b9e57ca7..5857cd9d 100644
+index b9e57ca7..0162a214 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
-@@ -49,9 +49,233 @@ Item {
+@@ -49,9 +49,306 @@ Item {
          return toplevel.fullscreen === true;
      }
  
@@ -79,10 +79,6 @@ index b9e57ca7..5857cd9d 100644
 +    // same tick as the fullscreen change can tell it is asking for the same
 +    // thing and leave the deliberate timing alone.
 +    property real fsTarget: 1
-+    // True after the instant hide on the screen the fullscreen window covers:
-+    // the bar is also held at opacity 0 there, so nothing of it can show
-+    // while the compositor is still compositing the frame it left in.
-+    property bool fsQuick: false
 +    // How much of the bar's exclusive zone is held: 1 all, 0 none. Walked
 +    // along the same curve as fsProgress, from the same instant, so the
 +    // windows the compositor lays out against it move in lockstep with the
@@ -127,30 +123,11 @@ index b9e57ca7..5857cd9d 100644
 +        // Ease in and out both ways. Pure OutCubic front-loads the travel, so
 +        // the bar covered most of the distance in the first third and crawled
 +        // the rest -- it read as arriving too fast and then hanging about.
-+        if (deliberate && root.fullscreenHidden && root.screenFullscreen) {
-+            // This screen is the one the fullscreen window covers: nothing
-+            // below the chrome is visible, so there is nothing to move in
-+            // step with, and the window is already fading in over it through
-+            // the compositor's own animation -- any hide with a duration can
-+            // be caught on top of a game opened and closed quickly. So the
-+            // bar goes in the same frame the window arrives; the frame's
-+            // gutter does the same (ScreenFrameContent). The way back in
-+            // stays the deliberate slide: by then the windows are showing
-+            // again and move at the slide's pace.
-+            root.fsDuration = 0;
-+            root.fsEasing = Easing.OutCubic;
-+            root.fsBezier = [];
-+            root.fsTarget = 0;
-+            root.fsQuick = true;
-+            root.zoneDuration = 0;
-+            root.zoneEasing = root.fsEasing;
-+            root.zoneBezier = [];
-+            root.zoneProgress = 0;
-+            root.fsProgress = 0;
-+            return;
-+        }
++        if (deliberate && root.screenFullscreen)
++            return; // the covered screen's exit is staged by fsStage below
++        if (deliberate && root.stage === "in-frame")
++            return; // the frame is coming back first; the slide follows it
 +        if (deliberate) {
-+            root.fsQuick = false;
 +            root.fsEasing = Easing.BezierSpline;
 +            root.fsBezier = BarSlideSync.bezier.concat([1, 1]);
 +            // The slide and the exclusive-zone change both wait for the
@@ -187,6 +164,98 @@ index b9e57ca7..5857cd9d 100644
 +    }
 +
 +    onFullscreenHiddenChanged: root.fsRetarget(true)
++
++    // ─── the covered screen ────────────────────────────────────────────
++    // On the screen a fullscreen window itself covers, the chrome leaves and
++    // returns in stages, the way clean-load's shell does:
++    //
++    //   window arrives:  hold while the compositor brings it on screen
++    //                    -> bar slides out, the frame's slab following it
++    //                       back to the plain gutter (the wrap around the bar
++    //                       keeps its full thickness meanwhile, so the bar's
++    //                       edge is never exposed)
++    //                    -> gutter collapses to nothing, corners go sharp
++    //   window leaves:   gutter grows back, corners round
++    //                    -> bar slides in (with the windows, via fsRetarget)
++    //
++    // frameCollapse is what ScreenFrameContent scales the base gutter and the
++    // inner radius by on this screen: 1 in place, 0 gone.
++    property real frameCollapse: 1
++    property int frameDuration: 0
++    property int frameEasing: Easing.OutCubic
++    Behavior on frameCollapse {
++        enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
++        NumberAnimation { duration: root.frameDuration; easing.type: root.frameEasing }
++    }
++    property string stage: ""
++    Timer {
++        id: stageTimer
++        onTriggered: root.fsStageAdvance()
++    }
++
++    onScreenFullscreenChanged: root.fsStage(root.screenFullscreen)
++
++    function fsStage(covered) {
++        stageTimer.stop();
++        if (!root.pinned) {
++            root.stage = "";
++            return;
++        }
++        const anim = (Config.animDuration !== undefined ? Config.animDuration : 0);
++        if (covered) {
++            if (root.fsProgress <= 0) {
++                // Already out (a fast close and re-open): straight to the frame.
++                root.stage = "out-bar";
++                root.fsStageAdvance();
++            } else if (root.fsProgress < 1) {
++                // Already on its way (the toplevel's activation beat the
++                // compositor's event): carry on, skip the hold.
++                root.stage = "out-wait";
++                root.fsStageAdvance();
++            } else {
++                root.stage = "out-wait";
++                stageTimer.interval = Math.max(1, anim > 0 ? BarSlideSync.arrivalDelayMs : 1);
++                stageTimer.restart();
++            }
++        } else {
++            root.stage = "in-frame";
++            root.frameDuration = anim;
++            root.frameEasing = Easing.OutCubic;
++            root.frameCollapse = 1;
++            stageTimer.interval = Math.max(1, anim);
++            stageTimer.restart();
++        }
++    }
++
++    function fsStageAdvance() {
++        const anim = (Config.animDuration !== undefined ? Config.animDuration : 0);
++        if (root.stage === "out-wait") {
++            // Bar out. No window sync: nothing below is visible.
++            root.stage = "out-bar";
++            root.fsDuration = root.fsSlideDuration;
++            root.fsEasing = Easing.BezierSpline;
++            root.fsBezier = BarSlideSync.bezier.concat([1, 1]);
++            root.fsTarget = 0;
++            root.zoneDuration = root.fsDuration;
++            root.zoneEasing = root.fsEasing;
++            root.zoneBezier = root.fsBezier;
++            root.zoneProgress = 0;
++            root.fsProgress = 0;
++            stageTimer.interval = Math.max(1, anim > 0 ? root.fsSlideDuration : 1);
++            stageTimer.restart();
++        } else if (root.stage === "out-bar") {
++            // Frame out.
++            root.stage = "out-frame";
++            root.frameDuration = anim;
++            root.frameEasing = Easing.InOutCubic;
++            root.frameCollapse = 0;
++        } else if (root.stage === "in-frame") {
++            // Frame is back; now the bar, synced with the windows.
++            root.stage = "";
++            if (!root.fullscreenHidden)
++                root.fsRetarget(true);
++        }
++    }
 +    // A Connections block rather than a handler: the file already defines the
 +    // pinned handler upstream, and QML rejects a duplicate outright.
 +    Connections {
@@ -200,7 +269,10 @@ index b9e57ca7..5857cd9d 100644
 +            root.fsTarget = (root.pinned && root.fullscreenHidden) ? 0 : 1;
 +            root.fsProgress = root.fsTarget;
 +            root.zoneProgress = root.fsTarget;
-+            root.fsQuick = false;
++            stageTimer.stop();
++            root.stage = "";
++            root.frameDuration = 0;
++            root.frameCollapse = (root.pinned && root.screenFullscreen) ? 0 : 1;
 +        }
 +    }
 +
@@ -229,7 +301,8 @@ index b9e57ca7..5857cd9d 100644
 +        root.fsProgress = root.fsTarget;
 +        root.zoneDuration = 0;
 +        root.zoneProgress = root.fullscreenHidden ? 0 : 1;
-+        root.fsQuick = false;
++        root.frameDuration = 0;
++        root.frameCollapse = (root.pinned && root.screenFullscreen) ? 0 : 1;
 +    }
 +
 +    // True from the moment the slide starts until it has fully come home, so
@@ -272,7 +345,7 @@ index b9e57ca7..5857cd9d 100644
  
      onShouldAutoHideChanged: {
          if (!shouldAutoHide) {
-@@ -68,7 +292,7 @@ Item {
+@@ -68,7 +365,7 @@ Item {
  
      // Check if notch hover is active (for synchronized reveal when bar is at same side)
      // NOTE: We access Visibilities.notchPanels directly because UnifiedShellPanel registers itself as the panel ref
@@ -281,7 +354,7 @@ index b9e57ca7..5857cd9d 100644
      readonly property string notchPosition: (Config.notchPosition !== undefined ? Config.notchPosition : "top")
      readonly property bool notchHoverActive: {
          if (barPosition !== notchPosition)
-@@ -89,7 +313,7 @@ Item {
+@@ -89,7 +386,7 @@ Item {
      }
  
      // Check if notch is open (dashboard, powermenu, etc.)
@@ -290,7 +363,7 @@ index b9e57ca7..5857cd9d 100644
      readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
  
      // Radius logic for "Squished" style
-@@ -103,8 +327,18 @@ Item {
+@@ -103,8 +400,18 @@ Item {
          if (!shouldAutoHide)
              return true;
  
@@ -310,7 +383,7 @@ index b9e57ca7..5857cd9d 100644
              return false;
          }
  
-@@ -266,10 +500,12 @@ Item {
+@@ -266,8 +573,10 @@ Item {
              // layer.enabled: true
              // layer.effect: Shadow {}
  
@@ -319,14 +392,11 @@ index b9e57ca7..5857cd9d 100644
 +            // Opacity animation. The deliberate fullscreen slide carries the
 +            // bar off the screen on its own, so it travels at full opacity;
 +            // the quick hide on the covered screen fades as it goes.
-+            opacity: (root.reveal || (root.fsEngaged && !root.fsQuick)) ? 1 : 0
++            opacity: (root.reveal || root.fsEngaged) ? 1 : 0
              Behavior on opacity {
--                enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
-+                enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0 && !root.fsQuick
+                 enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
                  NumberAnimation {
-                     duration: (Config.animDuration !== undefined ? Config.animDuration : 0) / 2
-                     easing.type: Easing.OutCubic
-@@ -281,6 +517,8 @@ Item {
+@@ -281,6 +590,8 @@ Item {
                  x: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -335,7 +405,7 @@ index b9e57ca7..5857cd9d 100644
                      if (root.barPosition === "left")
                          return root.reveal ? 0 : -bar.width - (root.frameOffset + root.leftOuterMargin);
                      if (root.barPosition === "right")
-@@ -290,6 +528,8 @@ Item {
+@@ -290,6 +601,8 @@ Item {
                  y: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -344,7 +414,7 @@ index b9e57ca7..5857cd9d 100644
                      if (root.barPosition === "top")
                          return root.reveal ? 0 : -bar.height - (root.frameOffset + root.topOuterMargin);
                      if (root.barPosition === "bottom")
-@@ -297,14 +537,14 @@ Item {
+@@ -297,14 +610,14 @@ Item {
                      return 0;
                  }
                  Behavior on x {
@@ -361,7 +431,7 @@ index b9e57ca7..5857cd9d 100644
                      NumberAnimation {
                          duration: (Config.animDuration !== undefined ? Config.animDuration : 0) / 2
                          easing.type: Easing.OutCubic
-@@ -360,7 +600,7 @@ Item {
+@@ -360,7 +673,7 @@ Item {
                          spacing: 4
  
                          // Obtener referencia al notch de esta pantalla
@@ -426,7 +496,7 @@ index a6b31db3..1d70ea85 100644
                                  visibilities.overview = !visibilities.overview;
                              }
 diff --git a/modules/frame/ScreenFrameContent.qml b/modules/frame/ScreenFrameContent.qml
-index a4c725b8..8d305adb 100644
+index a4c725b8..fdcc2d39 100644
 --- a/modules/frame/ScreenFrameContent.qml
 +++ b/modules/frame/ScreenFrameContent.qml
 @@ -21,8 +21,8 @@ Item {
@@ -477,7 +547,7 @@ index a4c725b8..8d305adb 100644
          NumberAnimation { duration: Config.animDuration / 2; easing.type: Easing.OutCubic }
      }
  
-@@ -86,10 +102,24 @@ Item {
+@@ -86,10 +102,20 @@ Item {
  
      // --- Side-Specific Thickness Restoration ---
  
@@ -485,19 +555,15 @@ index a4c725b8..8d305adb 100644
 -    readonly property int bottomThickness: calculateSideThickness("bottom")
 -    readonly property int leftThickness: calculateSideThickness("left")
 -    readonly property int rightThickness: calculateSideThickness("right")
-+    // The base gutter's return after a fullscreen window has gone, eased
-+    // rather than stepped: 0 gone, 1 in place. The collapse itself is
-+    // instant -- calculateSideThickness() drops the gutter the frame
-+    // hasFullscreenWindow flips, together with the bar's instant hide on
-+    // that screen -- because the window is already fading in over the
-+    // chrome and anything slower can be caught on top of it. Coming back,
-+    // the gutter leads the bar's slide in, as clean-load's frame does.
-+    property real _fsReturn: hasFullscreenWindow ? 0.0 : 1.0
-+    Behavior on _fsReturn {
-+        enabled: Config.animDuration > 0
-+        NumberAnimation { duration: Config.animDuration / 2; easing.type: Easing.OutCubic }
-+    }
-+    readonly property real fsBaseAdjust: hasFullscreenWindow ? 0 : -baseThickness * (1 - _fsReturn)
++    // On the screen a fullscreen window covers, the base gutter and the inner
++    // radius follow the bar panel's staged choreography (BarContent.fsStage):
++    // 1 in place, 0 gone. calculateSideThickness() drops the gutter the
++    // instant hasFullscreenWindow flips; this puts back whatever the stage
++    // still holds, so the gutter stays at full thickness while the bar
++    // slides out and only then collapses, and grows back before the bar
++    // slides in. On every other screen it is 1 and changes nothing.
++    readonly property real frameCollapse: (barPanel && barPanel.barFrameCollapse !== undefined) ? barPanel.barFrameCollapse : 1
++    readonly property real fsBaseAdjust: hasFullscreenWindow ? baseThickness * frameCollapse : -baseThickness * (1 - frameCollapse)
 +
 +    readonly property int topThickness: Math.max(0, Math.round(calculateSideThickness("top") + fsBaseAdjust))
 +    readonly property int bottomThickness: Math.max(0, Math.round(calculateSideThickness("bottom") + fsBaseAdjust))
@@ -506,15 +572,17 @@ index a4c725b8..8d305adb 100644
  
      function calculateSideThickness(side) {
          let t = baseThickness;
-@@ -112,7 +142,7 @@ Item {
+@@ -112,8 +138,8 @@ Item {
      // --- Corner Logic ---
      
      readonly property real targetInnerRadius: {
 -        if (!root.hasFullscreenWindow) return Styling.radius(4);
-+        if (!root.hasFullscreenWindow) return Styling.radius(4) * _fsReturn;
-         if (!barHovered && !dockHovered) return 0;
+-        if (!barHovered && !dockHovered) return 0;
++        if (!root.hasFullscreenWindow) return Styling.radius(4) * frameCollapse;
++        if (!barHovered && !dockHovered) return Styling.radius(4) * frameCollapse;
          
          let progress = Math.max(_barAnimProgress, _dockAnimProgress, _notchAnimProgress);
+         return Styling.radius(4) * progress;
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
 index 528a20b3..e7d535e9 100644
 --- a/modules/globals/GlobalStates.qml
@@ -913,7 +981,7 @@ index ee97b092..378ef7ed 100644
          }
      }
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..9a2486e0 100644
+index 028c2dce..12985357 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -933,7 +1001,7 @@ index 028c2dce..9a2486e0 100644
      }
  
      readonly property bool dockEnabled: {
-@@ -58,13 +59,16 @@ PanelWindow {
+@@ -58,13 +59,17 @@ PanelWindow {
          if (!(Config.dock.enabled ?? false) || (Config.dock.theme ?? "default") === "integrated")
              return false;
          const list = Config.dock.screenList;
@@ -947,12 +1015,13 @@ index 028c2dce..9a2486e0 100644
 -    readonly property alias barFullscreen: barContent.activeWindowFullscreen
 +    readonly property alias barFullscreen: barContent.fullscreenHidden
 +    readonly property alias barZoneProgress: barContent.zoneProgress
++    readonly property alias barFrameCollapse: barContent.frameCollapse
 +    readonly property alias barFsEngaged: barContent.fsEngaged
 +    readonly property alias barInPlace: barContent.barInPlace
      readonly property bool barReveal: barEnabled && barContent.reveal
      readonly property alias barTargetWidth: barContent.barTargetWidth
      readonly property alias barTargetHeight: barContent.barTargetHeight
-@@ -73,7 +77,7 @@ PanelWindow {
+@@ -73,7 +78,7 @@ PanelWindow {
      readonly property alias dockPosition: dockContent.position
      readonly property alias dockPinned: dockContent.pinned
      readonly property bool dockReveal: dockEnabled && dockContent.reveal
@@ -961,7 +1030,7 @@ index 028c2dce..9a2486e0 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,25 +93,103 @@ PanelWindow {
+@@ -89,25 +94,103 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
@@ -1075,7 +1144,7 @@ index 028c2dce..9a2486e0 100644
          }
          return false;
      }
-@@ -120,22 +202,42 @@ PanelWindow {
+@@ -120,22 +203,42 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -1130,7 +1199,7 @@ index 028c2dce..9a2486e0 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -221,6 +323,7 @@ PanelWindow {
+@@ -221,6 +324,7 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -1138,7 +1207,7 @@ index 028c2dce..9a2486e0 100644
              z: 2
              visible: unifiedPanel.barEnabled
          }
-@@ -230,6 +333,7 @@ PanelWindow {
+@@ -230,6 +334,7 @@ PanelWindow {
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen

@@ -41,6 +41,13 @@ Singleton {
 
     // Effective original windowsMove, captured once at startup.
     property var original: null
+
+    // How long the compositor takes to bring a (special) workspace on screen,
+    // so the covered screen can let the window fully arrive before its chrome
+    // leaves. From Hyprland's `specialWorkspace` animation (falling back to
+    // `workspaces`, then `global`); animDuration off Hyprland.
+    readonly property int arrivalDelayMs: root.arrivalFromCompositor > 0 ? root.arrivalFromCompositor : (Config.animDuration !== undefined ? Config.animDuration : 300)
+    property int arrivalFromCompositor: 0
     property bool tuned: false
     property real tunedSpeed: 0
 
@@ -206,6 +213,13 @@ Singleton {
                 const byName = root.parseAnimations(parts[0]);
                 if (!byName)
                     return;
+                for (const name of ["specialWorkspace", "workspaces", "global"]) {
+                    const a = byName[name];
+                    if (a && a.overridden && a.enabled && a.speed > 0) {
+                        root.arrivalFromCompositor = Math.round(a.speed * 100);
+                        break;
+                    }
+                }
                 let eff = null;
                 for (const name of ["windowsMove", "windows", "global"]) {
                     const a = byName[name];
