@@ -24,6 +24,13 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
   caught them through a fast path gated on the focused monitor, so the shell
   came back over the game whenever focus moved. The output's open special
   workspace is now read from Hyprland and checked too.
+- **No dead strip where a hidden bar used to be.** Going fullscreen hides the
+  bar, the dock and the frame, but their layer-shell exclusive zones stayed
+  put, so every window below kept a gap against that screen edge. The
+  reservation now follows the chrome: the bar and dock read fullscreen off the
+  active toplevel, which is one global window, so they hide on every screen at
+  once and every screen releases their space; the frame hides per output, so
+  only the screen showing the fullscreen window drops its frame reservation.
 - **Null guards** on about fifteen `screen.name` bindings that threw a
   `TypeError` cascade during teardown.
 
@@ -57,6 +64,9 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- **1.1.0** — a bar, dock or frame hidden by a fullscreen window no longer
+  keeps its exclusive zone, so the windows below fill the space instead of
+  leaving a gap at the screen edge.
 - **1.0.3** — verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - **1.0.2** — the Visibilities hunk no longer drops upstream 1.3's bar-popup
   grouping.

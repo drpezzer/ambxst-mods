@@ -862,10 +862,10 @@ index 5afcc42b..db47939a 100644
  
      visible: presetsOpen
 diff --git a/shell.qml b/shell.qml
-index 888996d3..01a86836 100644
+index 888996d3..99dcfb5d 100644
 --- a/shell.qml
 +++ b/shell.qml
-@@ -90,7 +90,7 @@ ShellRoot {
+@@ -90,10 +90,17 @@ ShellRoot {
                  // Bar status for reservations
                  barEnabled: {
                      const list = (Config.bar && Config.bar.screenList !== undefined ? Config.bar.screenList : []);
@@ -873,8 +873,19 @@ index 888996d3..01a86836 100644
 +                    return (!list || list.length === 0 || list.indexOf(screen?.name ?? "") !== -1);
                  }
                  barPosition: unifiedPanel.barPosition
-                 barPinned: unifiedPanel.pinned
-@@ -105,7 +105,7 @@ ShellRoot {
+-                barPinned: unifiedPanel.pinned
++                // A bar that has hidden itself for a fullscreen window must
++                // stop holding space, or the strip it used to occupy stays
++                // reserved and every window below keeps a gap against the
++                // screen edge. The bar reads fullscreen off the active
++                // toplevel, which is one global window, so it hides on every
++                // screen at once -- the reservation follows it screen for
++                // screen. Same for the dock.
++                barPinned: unifiedPanel.pinned && !unifiedPanel.barFullscreen
+                 barSize: (unifiedPanel.barPosition === "left" || unifiedPanel.barPosition === "right") ? unifiedPanel.barTargetWidth : unifiedPanel.barTargetHeight
+                 barOuterMargin: unifiedPanel.barOuterMargin
+ 
+@@ -105,18 +112,21 @@ ShellRoot {
                      const list = (Config.dock && Config.dock.screenList !== undefined ? Config.dock.screenList : []);
                      if (!list || list.length === 0)
                          return true;
@@ -882,8 +893,16 @@ index 888996d3..01a86836 100644
 +                    return list.indexOf(screenShellContainer.modelData?.name ?? "") !== -1;
                  }
                  dockPosition: unifiedPanel.dockPosition
-                 dockPinned: unifiedPanel.dockPinned
-@@ -116,7 +116,7 @@ ShellRoot {
+-                dockPinned: unifiedPanel.dockPinned
++                dockPinned: unifiedPanel.dockPinned && !unifiedPanel.dockFullscreen
+                 dockHeight: unifiedPanel.dockHeight
+                 containBar: unifiedPanel.containBar
+ 
+-                frameEnabled: (Config.bar && Config.bar.frameEnabled !== undefined ? Config.bar.frameEnabled : false)
++                // The frame, unlike the bar, hides per output, so its
++                // reservation is dropped only on the screen showing the
++                // fullscreen window.
++                frameEnabled: (Config.bar && Config.bar.frameEnabled !== undefined ? Config.bar.frameEnabled : false) && !unifiedPanel.hasFullscreenWindow
                  frameThickness: (Config.bar && Config.bar.frameThickness !== undefined ? Config.bar.frameThickness : 6)
  
                  // Sidebar status for reservations
@@ -892,7 +911,7 @@ index 888996d3..01a86836 100644
                  sidebarPinned: GlobalStates.assistantPinned
                  sidebarWidth: GlobalStates.assistantWidth
                  sidebarPosition: GlobalStates.assistantPosition
-@@ -136,7 +136,7 @@ ShellRoot {
+@@ -136,7 +146,7 @@ ShellRoot {
  
          Loader {
              id: overviewLoader
@@ -901,7 +920,7 @@ index 888996d3..01a86836 100644
              required property ShellScreen modelData
              sourceComponent: OverviewPopup {
                  screen: overviewLoader.modelData
-@@ -156,7 +156,7 @@ ShellRoot {
+@@ -156,7 +166,7 @@ ShellRoot {
  
          Loader {
              id: presetsLoader
