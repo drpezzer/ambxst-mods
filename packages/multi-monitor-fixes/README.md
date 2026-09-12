@@ -24,7 +24,11 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
   caught them through a fast path gated on the focused monitor, so the shell
   came back over the game whenever focus moved. The output's open special
   workspace is now read from Hyprland and matched in the window scan as well
-  as its active workspace, so the detection no longer depends on focus.
+  as its active workspace, so the detection no longer depends on focus. That
+  fast path is gone altogether: it ANDed the focused toplevel (Wayland) with
+  the focused monitor (axctl), two sources that update independently, so on
+  every swap away from a fullscreen window the *other* screen briefly believed
+  it had one -- its bar pulled out and back and its frame blinked away.
 - **No dead strip where a hidden bar used to be.** Going fullscreen hides the
   bar, the dock and the frame, but their layer-shell exclusive zones stayed
   put, so every window below kept a gap against that screen edge. The
@@ -81,7 +85,11 @@ Works with Ambxst `>=1.3.0`.
   its bar and dock hidden -- through focus changes and through the pointer --
   instead of putting them back over a still-fullscreen window. Fixes the
   special-workspace fullscreen check, which computed the output's open special
-  workspace and then never compared anything against it.
+  workspace and then never compared anything against it, and drops the
+  focused-monitor fast path that made the other screen's bar and frame blink
+  on every swap. The bar's fullscreen hide is a clean-load-style slide -- full
+  opacity, eased both ways, timed to land with the compositor's window move --
+  and the frame's contain-bar slab follows that same travel.
 - **1.0.3** — verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - **1.0.2** — the Visibilities hunk no longer drops upstream 1.3's bar-popup
   grouping.

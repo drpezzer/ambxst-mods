@@ -34,10 +34,10 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index b9e57ca7..80358012 100644
+index b9e57ca7..f12bb598 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
-@@ -49,9 +49,24 @@ Item {
+@@ -49,9 +49,91 @@ Item {
          return toplevel.fullscreen === true;
      }
  
@@ -56,14 +56,81 @@ index b9e57ca7..80358012 100644
 +    // holding the fullscreen window keeps its bar away until the window is
 +    // gone, while the others get theirs back on the next focus change.
 +    readonly property bool fullscreenHidden: activeWindowFullscreen || screenFullscreen
++
++    // The hide a fullscreen window causes gets its own movement channel.
++    //
++    // It is not the hover auto-hide: it is the shell leaving the screen, and
++    // the exclusive zone released with it sets the compositor's own window
++    // move going at the same instant. The stock 150 ms cross-fade blinked the
++    // bar out and left the windows drifting after it for another third of a
++    // second. This slides instead -- one unhurried travel past the screen
++    // edge at full opacity, timed to land with the windows, ease-in-out on
++    // the way out and ease-out on the way home -- which is how clean-load's
++    // shell enter and leave read.
++    readonly property int fsSlideDuration: Math.round((Config.animDuration !== undefined ? Config.animDuration : 300) * 1.6)
++
++    // 1 = in place, 0 = past the screen edge.
++    property real fsProgress: 1
++    // Set imperatively BEFORE fsProgress, so the Behavior reads this run's
++    // values whatever order the bindings happen to run in.
++    property int fsDuration: 0
++    property int fsEasing: Easing.OutCubic
++
++    Behavior on fsProgress {
++        enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
++        NumberAnimation {
++            duration: root.fsDuration
++            easing.type: root.fsEasing
++        }
++    }
++
++    // `deliberate` is the fullscreen state change itself; a hover while the
++    // screen is already hiding is a quick reveal and keeps the stock timing.
++    function fsRetarget(deliberate) {
++        const anim = (Config.animDuration !== undefined ? Config.animDuration : 0);
++        root.fsDuration = deliberate ? root.fsSlideDuration : Math.round(anim / 2);
++        // Ease in and out both ways. Pure OutCubic front-loads the travel, so
++        // the bar covered most of the distance in the first third and crawled
++        // the rest -- it read as arriving too fast and then hanging about.
++        root.fsEasing = deliberate ? Easing.InOutCubic : Easing.OutCubic;
++        root.fsProgress = (root.fullscreenHidden && !root.reveal) ? 0 : 1;
++    }
++
++    onFullscreenHiddenChanged: root.fsRetarget(true)
++    onRevealChanged: {
++        if (root.fullscreenHidden || root.fsProgress < 1)
++            root.fsRetarget(false);
++    }
++
++    Component.onCompleted: {
++        // A screen already showing a fullscreen window when the shell starts
++        // has nothing to slide out of: take the end state without animating.
++        root.fsDuration = 0;
++        root.fsProgress = (root.fullscreenHidden && !root.reveal) ? 0 : 1;
++    }
++
++    // True from the moment the slide starts until it has fully come home, so
++    // the stock reveal transform and its Behavior stand aside for the whole
++    // travel instead of fighting it or snapping the last pixel.
++    readonly property bool fsEngaged: fullscreenHidden || fsProgress < 1
++
++    // How far the bar is in place: 0 gone, 1 home. The frame's contain-bar
++    // slab follows this instead of running its own animation off `reveal`,
++    // which is a boolean that flips at one end of the travel or the other --
++    // the slab collapsed out from under the pills on the way out and popped
++    // in after they had already arrived on the way back.
++    readonly property real barInPlace: fsEngaged ? fsProgress : (reveal ? 1 : 0)
++
++    readonly property real fsX: orientation === "vertical" ? (barPosition === "left" ? -1 : 1) * (totalBarWidth + frameOffset) * (1 - fsProgress) : 0
++    readonly property real fsY: orientation === "horizontal" ? (barPosition === "top" ? -1 : 1) * (totalBarHeight + frameOffset) * (1 - fsProgress) : 0
  
      // Whether auto-hide should be active (not pinned, or fullscreen forces it)
 -    readonly property bool shouldAutoHide: !pinned || activeWindowFullscreen
-+    readonly property bool shouldAutoHide: !pinned || fullscreenHidden
++    readonly property bool shouldAutoHide: !pinned || fsEngaged
  
      onShouldAutoHideChanged: {
          if (!shouldAutoHide) {
-@@ -68,7 +83,7 @@ Item {
+@@ -68,7 +150,7 @@ Item {
  
      // Check if notch hover is active (for synchronized reveal when bar is at same side)
      // NOTE: We access Visibilities.notchPanels directly because UnifiedShellPanel registers itself as the panel ref
@@ -72,7 +139,7 @@ index b9e57ca7..80358012 100644
      readonly property string notchPosition: (Config.notchPosition !== undefined ? Config.notchPosition : "top")
      readonly property bool notchHoverActive: {
          if (barPosition !== notchPosition)
-@@ -89,7 +104,7 @@ Item {
+@@ -89,7 +171,7 @@ Item {
      }
  
      // Check if notch is open (dashboard, powermenu, etc.)
@@ -81,7 +148,7 @@ index b9e57ca7..80358012 100644
      readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
  
      // Radius logic for "Squished" style
-@@ -103,8 +118,18 @@ Item {
+@@ -103,8 +185,18 @@ Item {
          if (!shouldAutoHide)
              return true;
  
@@ -101,7 +168,54 @@ index b9e57ca7..80358012 100644
              return false;
          }
  
-@@ -360,7 +385,7 @@ Item {
+@@ -266,8 +358,9 @@ Item {
+             // layer.enabled: true
+             // layer.effect: Shadow {}
+ 
+-            // Opacity animation
+-            opacity: root.reveal ? 1 : 0
++            // Opacity animation. The fullscreen slide carries the bar off the
++            // screen on its own, so it travels at full opacity.
++            opacity: (root.reveal || root.fsEngaged) ? 1 : 0
+             Behavior on opacity {
+                 enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
+                 NumberAnimation {
+@@ -281,6 +374,8 @@ Item {
+                 x: {
+                     if (!root.shouldAutoHide)
+                         return 0;
++                    if (root.fsEngaged)
++                        return root.fsX;
+                     if (root.barPosition === "left")
+                         return root.reveal ? 0 : -bar.width - (root.frameOffset + root.leftOuterMargin);
+                     if (root.barPosition === "right")
+@@ -290,6 +385,8 @@ Item {
+                 y: {
+                     if (!root.shouldAutoHide)
+                         return 0;
++                    if (root.fsEngaged)
++                        return root.fsY;
+                     if (root.barPosition === "top")
+                         return root.reveal ? 0 : -bar.height - (root.frameOffset + root.topOuterMargin);
+                     if (root.barPosition === "bottom")
+@@ -297,14 +394,14 @@ Item {
+                     return 0;
+                 }
+                 Behavior on x {
+-                    enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
++                    enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0 && !root.fsEngaged
+                     NumberAnimation {
+                         duration: (Config.animDuration !== undefined ? Config.animDuration : 0) / 2
+                         easing.type: Easing.OutCubic
+                     }
+                 }
+                 Behavior on y {
+-                    enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
++                    enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0 && !root.fsEngaged
+                     NumberAnimation {
+                         duration: (Config.animDuration !== undefined ? Config.animDuration : 0) / 2
+                         easing.type: Easing.OutCubic
+@@ -360,7 +457,7 @@ Item {
                          spacing: 4
  
                          // Obtener referencia al notch de esta pantalla
@@ -166,7 +280,7 @@ index a6b31db3..1d70ea85 100644
                                  visibilities.overview = !visibilities.overview;
                              }
 diff --git a/modules/frame/ScreenFrameContent.qml b/modules/frame/ScreenFrameContent.qml
-index a4c725b8..6e98303c 100644
+index a4c725b8..8ac49178 100644
 --- a/modules/frame/ScreenFrameContent.qml
 +++ b/modules/frame/ScreenFrameContent.qml
 @@ -21,8 +21,8 @@ Item {
@@ -189,6 +303,25 @@ index a4c725b8..6e98303c 100644
      readonly property bool sidebarPinned: GlobalStates.assistantPinned
      readonly property int sidebarWidth: GlobalStates.assistantWidth
      readonly property string sidebarPosition: GlobalStates.assistantPosition
+@@ -53,9 +53,16 @@ Item {
+ 
+     // --- Animation Synchronization ---
+     
+-    property real _barAnimProgress: barReveal ? 1.0 : 0.0
++    // While the bar is running its fullscreen slide, take its travel directly
++    // rather than starting a second, shorter animation off `barReveal`: that
++    // boolean only flips at one end of the slide, so the frame's bar slab
++    // collapsed in 150 ms out from under pills that were still leaving, and
++    // on the way back waited for them to land before popping in. The two now
++    // move as one. Outside the slide nothing changes.
++    readonly property bool barSliding: (barPanel && barPanel.barFsEngaged !== undefined) ? barPanel.barFsEngaged : false
++    property real _barAnimProgress: barSliding ? barPanel.barInPlace : (barReveal ? 1.0 : 0.0)
+     Behavior on _barAnimProgress {
+-        enabled: Config.animDuration > 0
++        enabled: Config.animDuration > 0 && !root.barSliding
+         NumberAnimation { duration: Config.animDuration / 2; easing.type: Easing.OutCubic }
+     }
+ 
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
 index 528a20b3..e7d535e9 100644
 --- a/modules/globals/GlobalStates.qml
@@ -587,7 +720,7 @@ index ee97b092..378ef7ed 100644
          }
      }
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..57d6b3fb 100644
+index 028c2dce..bde26a41 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -607,7 +740,7 @@ index 028c2dce..57d6b3fb 100644
      }
  
      readonly property bool dockEnabled: {
-@@ -58,13 +59,13 @@ PanelWindow {
+@@ -58,13 +59,15 @@ PanelWindow {
          if (!(Config.dock.enabled ?? false) || (Config.dock.theme ?? "default") === "integrated")
              return false;
          const list = Config.dock.screenList;
@@ -620,10 +753,12 @@ index 028c2dce..57d6b3fb 100644
      readonly property alias barHoverActive: barContent.hoverActive
 -    readonly property alias barFullscreen: barContent.activeWindowFullscreen
 +    readonly property alias barFullscreen: barContent.fullscreenHidden
++    readonly property alias barFsEngaged: barContent.fsEngaged
++    readonly property alias barInPlace: barContent.barInPlace
      readonly property bool barReveal: barEnabled && barContent.reveal
      readonly property alias barTargetWidth: barContent.barTargetWidth
      readonly property alias barTargetHeight: barContent.barTargetHeight
-@@ -73,7 +74,7 @@ PanelWindow {
+@@ -73,7 +76,7 @@ PanelWindow {
      readonly property alias dockPosition: dockContent.position
      readonly property alias dockPinned: dockContent.pinned
      readonly property bool dockReveal: dockEnabled && dockContent.reveal
@@ -632,7 +767,7 @@ index 028c2dce..57d6b3fb 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,12 +90,33 @@ PanelWindow {
+@@ -89,25 +92,61 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
@@ -662,21 +797,36 @@ index 028c2dce..57d6b3fb 100644
  
          const activeWorkspaceId = compositorMonitor.activeWorkspace.id;
          const monId = compositorMonitor.id;
-+        const specialId = unifiedPanel.openSpecialWorkspaceId;
- 
-         // Check active toplevel first (fast path)
-         const toplevel = ToplevelManager.activeToplevel;
-@@ -102,12 +124,19 @@ PanelWindow {
-             return true;
-         }
- 
+-
+-        // Check active toplevel first (fast path)
+-        const toplevel = ToplevelManager.activeToplevel;
+-        if (toplevel && toplevel.fullscreen && AxctlService.focusedMonitor.id === monId) {
+-            return true;
+-        }
+-
 -        // Check all windows on this monitor (robust path)
-+        // Check all windows on this monitor (robust path). The output's open
++        const specialId = unifiedPanel.openSpecialWorkspaceId;
++
++        // There used to be a fast path here: the focused toplevel is
++        // fullscreen AND axctl says this output is the focused one. Those two
++        // facts come from different sources that update independently --
++        // ToplevelManager over the Wayland foreign-toplevel protocol, the
++        // focused monitor over axctl's socket -- so on every swap away from a
++        // fullscreen window axctl moved focus to the OTHER output while
++        // ToplevelManager still reported the old, fullscreen toplevel. For
++        // those frames the other output evaluated "the focused toplevel is
++        // fullscreen and I am the focused monitor" as true: its bar pulled
++        // itself out and slid back in, and its frame collapsed to nothing and
++        // returned, once per swap. No AND of two independently clocked
++        // sources can be made safe, and the scan below is per-output and
++        // internally consistent, so the fast path is gone.
++        //
++        // Check all windows on this monitor. The output's open
 +        // special workspace counts as on screen: a game launched into one
 +        // covers the output exactly like a normal fullscreen window, and
 +        // matching only `activeWorkspace` left every consumer of this
-+        // property relying on the focused-monitor fast path above, so the
-+        // whole shell reappeared over the game as soon as focus moved off it.
++        // property relying on that focused-monitor fast path, so the whole
++        // shell reappeared over the game as soon as focus moved off it.
          const wins = CompositorData.windowList;
          for (let i = 0; i < wins.length; i++) {
 -            if (wins[i].monitor === monId && wins[i].fullscreen && wins[i].workspace.id === activeWorkspaceId) {
@@ -689,7 +839,7 @@ index 028c2dce..57d6b3fb 100644
          }
          return false;
      }
-@@ -120,22 +149,42 @@ PanelWindow {
+@@ -120,22 +159,42 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -744,7 +894,7 @@ index 028c2dce..57d6b3fb 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -221,6 +270,7 @@ PanelWindow {
+@@ -221,6 +280,7 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -752,7 +902,7 @@ index 028c2dce..57d6b3fb 100644
              z: 2
              visible: unifiedPanel.barEnabled
          }
-@@ -230,6 +280,7 @@ PanelWindow {
+@@ -230,6 +290,7 @@ PanelWindow {
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
