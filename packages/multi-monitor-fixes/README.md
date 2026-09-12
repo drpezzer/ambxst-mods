@@ -27,10 +27,15 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
 - **No dead strip where a hidden bar used to be.** Going fullscreen hides the
   bar, the dock and the frame, but their layer-shell exclusive zones stayed
   put, so every window below kept a gap against that screen edge. The
-  reservation now follows the chrome: the bar and dock read fullscreen off the
-  active toplevel, which is one global window, so they hide on every screen at
-  once and every screen releases their space; the frame hides per output, so
-  only the screen showing the fullscreen window drops its frame reservation.
+  reservation now follows the chrome, screen for screen.
+- **The bar stays away from the screen the fullscreen window is on.** The bar
+  and dock read fullscreen off the *focused* toplevel, so both came straight
+  back the moment focus moved to another monitor -- over a game that was still
+  fullscreen, and dragging that screen's windows back off the edge with them.
+  Each screen's own fullscreen state is now ORed in, the same per-output check
+  the notch and frame already use, so the screen holding the fullscreen window
+  keeps its chrome away until that window is gone while the other screens get
+  theirs back on the next focus change.
 - **Null guards** on about fifteen `screen.name` bindings that threw a
   `TypeError` cascade during teardown.
 
@@ -66,7 +71,9 @@ Works with Ambxst `>=1.3.0`.
 
 - **1.1.0** — a bar, dock or frame hidden by a fullscreen window no longer
   keeps its exclusive zone, so the windows below fill the space instead of
-  leaving a gap at the screen edge.
+  leaving a gap at the screen edge; and the screen holding that window keeps
+  its bar and dock hidden when focus moves away, instead of putting them back
+  over a still-fullscreen window.
 - **1.0.3** — verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.
 - **1.0.2** — the Visibilities hunk no longer drops upstream 1.3's bar-popup
   grouping.
