@@ -52,15 +52,21 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
   `windowsMove`, which Ambxst sets to 250 ms, so the windows arrived first and
   the bar trailed in. For the length of a slide `windowsMove` is retuned to
   the slide's exact duration and curve (the bar drives its own travel with
-  the same cubic bezier), then restored once things are quiet. The restore
+  the same cubic bezier, over exactly the distance the exclusive zone
+  changes by, and both the slide and the zone change wait for the retune to
+  have landed so the windows never start on the old curve), then restored
+  once things are quiet. The restore
   re-reads Hyprland first and only writes the originals back if `windowsMove`
   still carries this mod's curve; the originals are also kept on disk so a
   shell killed mid-slide is put right by the next one. Hyprland only.
-- **Hiding the special workspace brings the bar back.** Quickshell refreshes
-  its monitor objects on focus and workspace events but not on
-  `activespecial`, so the closed special workspace kept matching the game and
-  the bar stayed away from a screen showing ordinary windows again. The
-  monitors are refreshed on that event now.
+- **Hiding or showing the special workspace is followed instantly.** The
+  screen's open special workspace is tracked from Hyprland's own
+  `activespecial` event rather than read back from Quickshell's monitor
+  object, which does not refresh on that event and whose refresh, when
+  requested, could be folded into one already in flight with a stale reply.
+  Before, the bar sometimes stayed away from a screen showing ordinary
+  windows again, or the frame and bar stayed over a game that had just come
+  back.
 - **Null guards** on about fifteen `screen.name` bindings that threw a
   `TypeError` cascade during teardown.
 
