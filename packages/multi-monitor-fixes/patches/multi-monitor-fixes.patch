@@ -34,10 +34,10 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index b9e57ca7..e520d9bd 100644
+index b9e57ca7..e3d8c71a 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
-@@ -49,9 +49,162 @@ Item {
+@@ -49,9 +49,178 @@ Item {
          return toplevel.fullscreen === true;
      }
  
@@ -105,6 +105,22 @@ index b9e57ca7..e520d9bd 100644
 +        // Ease in and out both ways. Pure OutCubic front-loads the travel, so
 +        // the bar covered most of the distance in the first third and crawled
 +        // the rest -- it read as arriving too fast and then hanging about.
++        if (deliberate && root.fullscreenHidden && root.screenFullscreen) {
++            // This screen is the one the fullscreen window covers: nothing
++            // below the chrome is visible, so there is nothing to move in
++            // step with. Leave quickly -- the frame's gutter eases out over
++            // the same 150 ms (ScreenFrameContent) so the two go together --
++            // rather than sliding out over a game for half a second. The way
++            // back in stays the deliberate slide: by then the windows are
++            // showing again and move at the slide's pace.
++            root.fsDuration = Math.round(anim / 2);
++            root.fsEasing = Easing.OutCubic;
++            root.fsBezier = [];
++            root.fsTarget = 0;
++            root.zoneFullscreen = true;
++            root.fsProgress = 0;
++            return;
++        }
 +        if (deliberate) {
 +            root.fsEasing = Easing.BezierSpline;
 +            root.fsBezier = BarSlideSync.bezier.concat([1, 1]);
@@ -201,7 +217,7 @@ index b9e57ca7..e520d9bd 100644
  
      onShouldAutoHideChanged: {
          if (!shouldAutoHide) {
-@@ -68,7 +221,7 @@ Item {
+@@ -68,7 +237,7 @@ Item {
  
      // Check if notch hover is active (for synchronized reveal when bar is at same side)
      // NOTE: We access Visibilities.notchPanels directly because UnifiedShellPanel registers itself as the panel ref
@@ -210,7 +226,7 @@ index b9e57ca7..e520d9bd 100644
      readonly property string notchPosition: (Config.notchPosition !== undefined ? Config.notchPosition : "top")
      readonly property bool notchHoverActive: {
          if (barPosition !== notchPosition)
-@@ -89,7 +242,7 @@ Item {
+@@ -89,7 +258,7 @@ Item {
      }
  
      // Check if notch is open (dashboard, powermenu, etc.)
@@ -219,7 +235,7 @@ index b9e57ca7..e520d9bd 100644
      readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
  
      // Radius logic for "Squished" style
-@@ -103,8 +256,18 @@ Item {
+@@ -103,8 +272,18 @@ Item {
          if (!shouldAutoHide)
              return true;
  
@@ -239,7 +255,7 @@ index b9e57ca7..e520d9bd 100644
              return false;
          }
  
-@@ -266,8 +429,9 @@ Item {
+@@ -266,8 +445,9 @@ Item {
              // layer.enabled: true
              // layer.effect: Shadow {}
  
@@ -251,7 +267,7 @@ index b9e57ca7..e520d9bd 100644
              Behavior on opacity {
                  enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
                  NumberAnimation {
-@@ -281,6 +445,8 @@ Item {
+@@ -281,6 +461,8 @@ Item {
                  x: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -260,7 +276,7 @@ index b9e57ca7..e520d9bd 100644
                      if (root.barPosition === "left")
                          return root.reveal ? 0 : -bar.width - (root.frameOffset + root.leftOuterMargin);
                      if (root.barPosition === "right")
-@@ -290,6 +456,8 @@ Item {
+@@ -290,6 +472,8 @@ Item {
                  y: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -269,7 +285,7 @@ index b9e57ca7..e520d9bd 100644
                      if (root.barPosition === "top")
                          return root.reveal ? 0 : -bar.height - (root.frameOffset + root.topOuterMargin);
                      if (root.barPosition === "bottom")
-@@ -297,14 +465,14 @@ Item {
+@@ -297,14 +481,14 @@ Item {
                      return 0;
                  }
                  Behavior on x {
@@ -286,7 +302,7 @@ index b9e57ca7..e520d9bd 100644
                      NumberAnimation {
                          duration: (Config.animDuration !== undefined ? Config.animDuration : 0) / 2
                          easing.type: Easing.OutCubic
-@@ -360,7 +528,7 @@ Item {
+@@ -360,7 +544,7 @@ Item {
                          spacing: 4
  
                          // Obtener referencia al notch de esta pantalla
@@ -351,7 +367,7 @@ index a6b31db3..1d70ea85 100644
                                  visibilities.overview = !visibilities.overview;
                              }
 diff --git a/modules/frame/ScreenFrameContent.qml b/modules/frame/ScreenFrameContent.qml
-index a4c725b8..7d5f4169 100644
+index a4c725b8..8349712b 100644
 --- a/modules/frame/ScreenFrameContent.qml
 +++ b/modules/frame/ScreenFrameContent.qml
 @@ -21,8 +21,8 @@ Item {
@@ -402,6 +418,45 @@ index a4c725b8..7d5f4169 100644
          NumberAnimation { duration: Config.animDuration / 2; easing.type: Easing.OutCubic }
      }
  
+@@ -86,10 +102,23 @@ Item {
+ 
+     // --- Side-Specific Thickness Restoration ---
+ 
+-    readonly property int topThickness: calculateSideThickness("top")
+-    readonly property int bottomThickness: calculateSideThickness("bottom")
+-    readonly property int leftThickness: calculateSideThickness("left")
+-    readonly property int rightThickness: calculateSideThickness("right")
++    // The base gutter's fullscreen collapse, eased rather than stepped: 1 in
++    // place, 0 gone. calculateSideThickness() drops the gutter the instant
++    // hasFullscreenWindow flips; this adds back the part still on its way out
++    // (and holds back the part still on its way in), timed like the bar's
++    // quick hide on that screen so gutter and bar leave together instead of
++    // the gutter vanishing and a flat bar sliding off on its own.
++    property real _fsCollapse: hasFullscreenWindow ? 0.0 : 1.0
++    Behavior on _fsCollapse {
++        enabled: Config.animDuration > 0
++        NumberAnimation { duration: Config.animDuration / 2; easing.type: Easing.OutCubic }
++    }
++    readonly property real fsBaseAdjust: hasFullscreenWindow ? baseThickness * _fsCollapse : -baseThickness * (1 - _fsCollapse)
++
++    readonly property int topThickness: Math.max(0, Math.round(calculateSideThickness("top") + fsBaseAdjust))
++    readonly property int bottomThickness: Math.max(0, Math.round(calculateSideThickness("bottom") + fsBaseAdjust))
++    readonly property int leftThickness: Math.max(0, Math.round(calculateSideThickness("left") + fsBaseAdjust))
++    readonly property int rightThickness: Math.max(0, Math.round(calculateSideThickness("right") + fsBaseAdjust))
+ 
+     function calculateSideThickness(side) {
+         let t = baseThickness;
+@@ -112,8 +141,8 @@ Item {
+     // --- Corner Logic ---
+     
+     readonly property real targetInnerRadius: {
+-        if (!root.hasFullscreenWindow) return Styling.radius(4);
+-        if (!barHovered && !dockHovered) return 0;
++        if (!root.hasFullscreenWindow) return Styling.radius(4) * _fsCollapse;
++        if (!barHovered && !dockHovered) return Styling.radius(4) * _fsCollapse;
+         
+         let progress = Math.max(_barAnimProgress, _dockAnimProgress, _notchAnimProgress);
+         return Styling.radius(4) * progress;
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
 index 528a20b3..e7d535e9 100644
 --- a/modules/globals/GlobalStates.qml
