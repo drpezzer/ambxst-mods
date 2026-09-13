@@ -141,10 +141,17 @@ Testing hotplug without real hardware: `hyprctl output create headless` and
   its edge never shows), then the corners straighten and the gutter settles
   onto the screen edge. When the window goes, the frame returns as one motion
   and the bar slides in after it, synced with the windows.
-- **Compositor** -- the window-move sync (`BarSlideSync`) is Hyprland-only and
-  runs `hyprctl eval`; on Niri or Mango it is inert and the slide still runs,
-  with the compositor's own window animation. A `hyprctl` that hangs or is
-  missing is given 250 ms, then the slide goes ahead without it.
+- **Compositor** -- the window-move sync (`BarSlideSync`) is Hyprland-only,
+  and speaks both of Hyprland's config dialects (`hyprctl keyword` for stock
+  builds, `hyprctl eval` for Lua configs; each change is issued in both, the
+  one the parser does not take fails harmlessly). On Niri or Mango it is
+  inert and the slide still runs, with the compositor's own window animation.
+  A `hyprctl` that hangs or is missing is given 250 ms, then the slide goes
+  ahead without it.
+- **One screen, or a bar on some screens only** -- with a single monitor the
+  bar is simply always the focused one. If `bar.screenList` excludes the
+  screen that has focus, no screen shows a bar until focus moves to one that
+  has it; turn Dual Screen Single Bar off if that is not what you want.
 - **Other mods** -- the retune is put back only if `windowsMove` still carries
   this mod's own curve, so a transition another mod has taken over (clean-load's
   shell enter/leave, for instance) is never yanked; the original is kept on
