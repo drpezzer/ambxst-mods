@@ -301,10 +301,12 @@ Singleton {
     // still marked when the OSD asks; cleared once the event loop moves on,
     // after every screen's OSD has asked.
     property var osdInitReads: ({})
-    property int osdWatched: 0
     property int osdSwallowed: 0
+    // Monitors under watch (diagnostics; one per screen).
+    readonly property int osdWatched: osdMonitorWatch.count
 
     Instantiator {
+        id: osdMonitorWatch
         model: Brightness.monitors
         delegate: Connections {
             required property var modelData
@@ -318,8 +320,6 @@ Singleton {
                 Qt.callLater(() => { delete root.osdInitReads[name]; });
             }
         }
-        function onObjectAdded(index, object) { root.osdWatched += 1; }
-        function onObjectRemoved(index, object) { root.osdWatched -= 1; }
     }
 
     function osdAllowed(kind: string, screenName: string): bool {
