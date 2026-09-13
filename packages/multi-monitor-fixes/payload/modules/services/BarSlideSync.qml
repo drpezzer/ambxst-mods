@@ -85,10 +85,27 @@ Singleton {
     property bool tuned: false
     property real tunedSpeed: 0
 
-    function hypr(lua) {
+    // Hyprland has two config parsers. Stock builds take `hyprctl keyword`;
+    // builds on the Lua config reject it ("keyword can't work with
+    // non-legacy parsers") and take `hyprctl eval` instead. Every change is
+    // issued in both dialects; the one the parser does not speak fails
+    // harmlessly.
+    function hyprCommand(keywords, lua) {
+        let sh = "";
+        for (const k of keywords)
+            sh += "hyprctl keyword " + k + " >/dev/null 2>&1; ";
+        sh += "hyprctl eval " + root.shellQuote(lua) + " >/dev/null 2>&1; true";
+        return ["sh", "-c", sh];
+    }
+
+    function shellQuote(s) {
+        return "'" + String(s).replace(/'/g, "'\\''") + "'";
+    }
+
+    function hypr(keywords, lua) {
         if (!root.hyprland)
             return;
-        Quickshell.execDetached({ command: ["hyprctl", "eval", lua] });
+        Quickshell.execDetached({ command: root.hyprCommand(keywords, lua) });
     }
 
     function curveLua() {
@@ -103,6 +120,19 @@ Singleton {
         if (style)
             lua += ", style = \"" + style + "\"";
         return lua + " })";
+    }
+
+    // The same two statements for the stock parser.
+    function curveKeyword() {
+        const b = root.bezier;
+        return "bezier " + root.curveName + "," + b[0] + "," + b[1] + "," + b[2] + "," + b[3];
+    }
+
+    function animKeyword(speed, bezierName, style) {
+        let k = "animation windowsMove,1," + Number(speed).toFixed(2) + "," + (bezierName || "default");
+        if (style)
+            k += "," + style;
+        return k;
     }
 
     // Called by every BarContent starting a deliberate slide, so it is cheap
@@ -143,7 +173,8 @@ Singleton {
         // Hyprland config after every shell start, which drops curves added at
         // runtime, and a missing curve silently falls back to Hyprland's
         // default.
-        tuneProc.command = ["hyprctl", "eval", root.curveLua() + "; " + root.animLua(speed, root.curveName, "")];
+        tuneProc.command = root.hyprCommand([root.curveKeyword(), root.animKeyword(speed, root.curveName, "")],
+                                            root.curveLua() + "; " + root.animLua(speed, root.curveName, ""));
         tuneProc.running = true;
         landedGuard.restart();
     }
@@ -174,7 +205,7 @@ Singleton {
         const o = values || root.original;
         if (!root.hyprland || !o)
             return;
-        root.hypr(root.animLua(o.speed, o.bezier, o.style));
+        root.hypr([root.animKeyword(o.speed, o.bezier, o.style)], root.animLua(o.speed, o.bezier, o.style));
         root.tuned = false;
         stateWriter.command = ["rm", "-f", root.stateFile];
         stateWriter.running = true;
