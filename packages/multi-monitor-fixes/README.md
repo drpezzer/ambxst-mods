@@ -68,6 +68,19 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
   Before, the bar sometimes stayed away from a screen showing ordinary
   windows again, or the frame and bar stayed over a game that had just come
   back.
+- **Dual Screen Single Bar.** A pinned bar shows on the focused screen only
+  and slides across when focus moves -- out here, in there, on the same
+  slide, its space walked with it so the windows on both screens move in
+  step. This makes the old "hide in sympathy with a fullscreen window
+  elsewhere" rule redundant: an unfocused screen has no bar anyway, and the
+  focused screen only hides for a fullscreen window it holds itself. A switch
+  in **Settings > Theme > General** (and the mod's own settings page,
+  `followFocus`) turns it off; off restores a bar on every screen with the
+  sympathy hide.
+- **An auto-hide (unpinned) bar gets the same slide.** Reveal and hide are
+  the deliberate slide -- pills and frame slab together, no cross-fade --
+  and the bar's space comes and goes with it, so the windows shrink as it
+  arrives and grow back as it leaves, in lockstep.
 - **Null guards** on about fifteen `screen.name` bindings that threw a
   `TypeError` cascade during teardown.
 
@@ -87,12 +100,15 @@ ambxst reload
 
 ## What it changes
 
-One patch, thirteen files: `Bar.qml`, `BarContent.qml`, `DockContent.qml`,
+One patch, fifteen files: `Bar.qml`, `BarContent.qml`, `DockContent.qml`,
 `ScreenFrameContent.qml`, `NotchContent.qml`, `NotchWindow.qml`,
 `Visibilities.qml`, `GlobalStates.qml`, `UnifiedShellPanel.qml`,
-`Wallpaper.qml`, `OverviewPopup.qml`, `PresetsPopup.qml`, `shell.qml`; plus
-one new file, `modules/services/BarSlideSync.qml`, the singleton that retunes
-Hyprland's `windowsMove` during a bar slide. No new config keys. Reads
+`Wallpaper.qml`, `OverviewPopup.qml`, `PresetsPopup.qml`, `ThemePanel.qml`
+(the Dual Screen Single Bar switch), `SettingsIndex.qml` (its search entry),
+`shell.qml`; plus one new file, `modules/services/BarSlideSync.qml`, the
+singleton that holds Hyprland's `windowsMove` during a bar slide and carries
+the mod's settings. One mod setting, `followFocus` (settings.json); no new
+config keys. Reads
 Hyprland monitor state through `Quickshell.Hyprland` for the
 special-workspace check; on Hyprland runs `hyprctl eval` for the window
 sync and keeps the original animation in
@@ -111,8 +127,13 @@ Testing hotplug without real hardware: `hyprctl output create headless` and
   setups need nothing special.
 - **`theme.animDuration`** -- the slide is `1.6 x animDuration`; at `0` every
   animation is disabled and the shell behaves exactly as before.
-- **An unpinned (auto-hide) bar** is left entirely to the stock auto-hide; the
-  slide only ever engages for a bar that is holding space.
+- **An unpinned (auto-hide) bar** rides the same slide for every reveal and
+  hide, and takes its space with it; the auto-hide delay and hover rules are
+  untouched.
+- **Which screen has the bar** -- with Dual Screen Single Bar on (default),
+  the focused one; the focused monitor comes from Ambxst's compositor
+  abstraction, so this is not Hyprland-specific, and an unknown focus at
+  start never hides every bar.
 - **The screen the fullscreen window covers** leaves and returns in stages,
   the way clean-load's shell does: the window's own arrival animation is
   allowed to finish, the bar slides out with the frame's slab following it
@@ -133,6 +154,12 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- **1.2.0** — Dual Screen Single Bar: a pinned bar shows on the focused
+  screen only and slides across when focus moves, windows on both screens
+  moving in step; switch in Settings > Theme > General (`followFocus`,
+  default on). An auto-hide bar rides the same slide and takes its space with
+  it. The covered screen's exit is staged (hold for the window's arrival,
+  bar out, corners straighten, gutter settles) and its return is one motion.
 - **1.1.0** — a bar, dock or frame hidden by a fullscreen window no longer
   keeps its exclusive zone, so the windows below fill the space instead of
   leaving a gap at the screen edge; and the screen holding that window keeps
