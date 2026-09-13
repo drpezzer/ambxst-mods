@@ -1118,7 +1118,7 @@ index ee97b092..378ef7ed 100644
          }
      }
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..3fe6aa56 100644
+index 028c2dce..e7c958e9 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -1168,7 +1168,7 @@ index 028c2dce..3fe6aa56 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,25 +95,118 @@ PanelWindow {
+@@ -89,25 +95,123 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
@@ -1222,6 +1222,11 @@ index 028c2dce..3fe6aa56 100644
 +    Connections {
 +        target: Hyprland
 +        function onRawEvent(event) {
++            // Keep Quickshell's per-window records current for the fullscreen
++            // scan below (it tracks them itself once primed, this is belt and
++            // braces for the event that matters most).
++            if (event.name === "fullscreen")
++                Hyprland.refreshToplevels();
 +            if (event.name !== "activespecial")
 +                return;
 +            const parts = String(event.data).split(",");
@@ -1297,7 +1302,7 @@ index 028c2dce..3fe6aa56 100644
          }
          return false;
      }
-@@ -120,22 +219,42 @@ PanelWindow {
+@@ -120,22 +224,47 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -1319,6 +1324,11 @@ index 028c2dce..3fe6aa56 100644
 -        Visibilities.registerBar(screen.name, barContent);
 -        Visibilities.registerNotch(screen.name, notchContent.notchContainerRef);
 -        Visibilities.registerDock(screen.name, dockContent);
++        // Quickshell's Hyprland.toplevels list stays EMPTY until something
++        // asks for a refresh once; after that it follows the compositor's
++        // open/close/fullscreen events on its own. The fullscreen scan reads
++        // it, so prime it here.
++        Hyprland.refreshToplevels();
 +        registeredScreenName = targetScreen ? targetScreen.name : "";
 +        if (!registeredScreenName)
 +            return;
@@ -1352,7 +1362,7 @@ index 028c2dce..3fe6aa56 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -221,6 +340,7 @@ PanelWindow {
+@@ -221,6 +350,7 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -1360,7 +1370,7 @@ index 028c2dce..3fe6aa56 100644
              z: 2
              visible: unifiedPanel.barEnabled
          }
-@@ -230,6 +350,7 @@ PanelWindow {
+@@ -230,6 +360,7 @@ PanelWindow {
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
