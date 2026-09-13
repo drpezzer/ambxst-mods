@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/settings.schema.json",
+  "version": 1,
+  "fields": [
+    {
+      "key": "followFocus",
+      "label": "Bar follows the focused screen",
+      "description": "A pinned bar shows only on the screen that has focus and slides across when focus moves, taking its space with it so the windows on both screens move in step. A screen a fullscreen window covers keeps its own staged exit. Off: every screen keeps its bar, and a bar hides in sympathy when a fullscreen window has focus anywhere (the pre-1.2 behaviour).",
+      "type": "boolean",
+      "default": true
+    }
+  ]
+}

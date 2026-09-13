@@ -34,5 +34,8 @@
       "type": "patch",
       "source": "patches/multi-monitor-fixes.patch"
     }
-  ]
+  ],
+  "settings": {
+    "schema": "settings.json"
+  }
 }

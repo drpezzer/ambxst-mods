@@ -34,10 +34,10 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index b9e57ca7..e1906352 100644
+index b9e57ca7..94108eec 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
-@@ -49,9 +49,392 @@ Item {
+@@ -49,9 +49,421 @@ Item {
          return toplevel.fullscreen === true;
      }
  
@@ -55,7 +55,30 @@ index b9e57ca7..e1906352 100644
 +    // still fullscreen, so the screen's own state is ORed in: the screen
 +    // holding the fullscreen window keeps its bar away until the window is
 +    // gone, while the others get theirs back on the next focus change.
-+    readonly property bool fullscreenHidden: activeWindowFullscreen || screenFullscreen
++    // With followFocus the focused toplevel no longer matters: an unfocused
++    // screen hides its bar anyway (awayHidden), and the focused screen only
++    // hides for a fullscreen window it holds itself.
++    readonly property bool fullscreenHidden: screenFullscreen || (!BarSlideSync.followFocus && activeWindowFullscreen)
++
++    // ─── follow the focused screen ─────────────────────────────────────
++    // A pinned bar shows on the focused screen only; when focus moves it
++    // slides out here and in there, taking its space with it, so the windows
++    // on both screens move in step. The focused monitor is latched from the
++    // compositor abstraction and never treated as "none" (-1) once known, so
++    // a transient empty value cannot hide every bar at once.
++    property int focusedMonId: -1
++    Connections {
++        target: AxctlService
++        function onFocusedMonitorChanged() {
++            const m = AxctlService.focusedMonitor;
++            if (m && m.id !== undefined && m.id !== null)
++                root.focusedMonId = m.id;
++        }
++    }
++    readonly property bool screenFocused: !!compositorMonitor && compositorMonitor.id === focusedMonId
++    readonly property bool awayHidden: BarSlideSync.followFocus && focusedMonId >= 0 && !screenFocused
++    // Everything the deliberate slide responds to.
++    readonly property bool barAway: fullscreenHidden || awayHidden
 +
 +    // The hide a fullscreen window causes gets its own movement channel.
 +    //
@@ -134,10 +157,10 @@ index b9e57ca7..e1906352 100644
 +            // compositor to have the retuned window move, so bar, frame slab
 +            // and windows start on the same curve at the same instant. Off
 +            // Hyprland the callback runs synchronously.
-+            const want = root.fullscreenHidden;
++            const want = root.barAway;
 +            root.fsTarget = want ? 0 : 1;
 +            BarSlideSync.tune(root.fsSlideDuration, function() {
-+                if (root.fullscreenHidden !== want)
++                if (root.barAway !== want)
 +                    return; // superseded by a newer change
 +                root.zoneDuration = root.fsDuration;
 +                root.zoneEasing = root.fsEasing;
@@ -158,8 +181,8 @@ index b9e57ca7..e1906352 100644
 +        // deferred reveal check's 150 ms hover-hide, arriving 150 ms late.
 +        // A hover that is genuinely holding the bar up is still honoured:
 +        // the deferred check runs after the bindings settle and retargets.
-+        root.fsTarget = deliberate ? (root.fullscreenHidden ? 0 : 1)
-+                                   : ((root.fullscreenHidden && !root.reveal) ? 0 : 1);
++        root.fsTarget = deliberate ? (root.barAway ? 0 : 1)
++                                   : ((root.barAway && !root.reveal) ? 0 : 1);
 +        root.fsProgress = root.fsTarget;
 +    }
 +
@@ -188,7 +211,7 @@ index b9e57ca7..e1906352 100644
 +        });
 +    }
 +
-+    onFullscreenHiddenChanged: root.fsRetarget(true)
++    onBarAwayChanged: root.fsRetarget(true)
 +
 +    // ─── the covered screen ────────────────────────────────────────────
 +    // On the screen a fullscreen window itself covers, the chrome leaves and
@@ -328,7 +351,7 @@ index b9e57ca7..e1906352 100644
 +        } else if (root.stage === "in-frame") {
 +            // Frame is back; now the bar, synced with the windows.
 +            root.stage = "";
-+            if (!root.fullscreenHidden)
++            if (!root.barAway)
 +                root.fsRetarget(true);
 +        }
 +    }
@@ -343,7 +366,7 @@ index b9e57ca7..e1906352 100644
 +            // Neither is a slide.
 +            root.fsDuration = 0;
 +            root.zoneDuration = 0;
-+            root.fsTarget = root.pinned ? (root.fullscreenHidden ? 0 : 1) : (root.reveal ? 1 : 0);
++            root.fsTarget = root.pinned ? (root.barAway ? 0 : 1) : (root.reveal ? 1 : 0);
 +            root.fsProgress = root.fsTarget;
 +            root.zoneProgress = root.fsTarget;
 +            stageTimer.stop();
@@ -368,9 +391,9 @@ index b9e57ca7..e1906352 100644
 +            root.fsAutoHide();
 +            return;
 +        }
-+        if (!(root.fullscreenHidden || root.fsProgress < 1))
++        if (!(root.barAway || root.fsProgress < 1))
 +            return;
-+        const target = (root.fullscreenHidden && !root.reveal) ? 0 : 1;
++        const target = (root.barAway && !root.reveal) ? 0 : 1;
 +        if (target === root.fsTarget)
 +            return;
 +        root.fsRetarget(false);
@@ -380,10 +403,16 @@ index b9e57ca7..e1906352 100644
 +        // A screen already showing a fullscreen window when the shell starts
 +        // has nothing to slide out of: take the end state without animating.
 +        root.fsDuration = 0;
-+        root.fsTarget = root.pinned ? ((root.fullscreenHidden && !root.reveal) ? 0 : 1) : (root.reveal ? 1 : 0);
++        const m = AxctlService.focusedMonitor;
++        if (m && m.id !== undefined && m.id !== null)
++            root.focusedMonId = m.id;
++        const away = root.screenFullscreen
++            || (!BarSlideSync.followFocus && root.activeWindowFullscreen)
++            || (BarSlideSync.followFocus && root.focusedMonId >= 0 && !(root.compositorMonitor && root.compositorMonitor.id === root.focusedMonId));
++        root.fsTarget = root.pinned ? ((away && !root.reveal) ? 0 : 1) : (root.reveal ? 1 : 0);
 +        root.fsProgress = root.fsTarget;
 +        root.zoneDuration = 0;
-+        root.zoneProgress = root.pinned ? (root.fullscreenHidden ? 0 : 1) : (root.reveal ? 1 : 0);
++        root.zoneProgress = root.pinned ? (away ? 0 : 1) : (root.reveal ? 1 : 0);
 +        root.frameDuration = 0;
 +        root.cornerDuration = 0;
 +        root.frameCollapse = (root.pinned && root.screenFullscreen) ? 0 : 1;
@@ -399,7 +428,7 @@ index b9e57ca7..e1906352 100644
 +    // slide -- pills and frame slab together on the slide's curve, at full
 +    // opacity -- instead of the stock 150 ms cross-fade (fsAutoHide below).
 +    // Its space comes and goes with it (fsAutoHide), so the windows move too.
-+    readonly property bool fsEngaged: pinned ? (fullscreenHidden || fsProgress < 1) : true
++    readonly property bool fsEngaged: pinned ? (barAway || fsProgress < 1) : true
 +
 +    // How far the bar is in place: 0 gone, 1 home. The frame's contain-bar
 +    // slab follows this instead of running its own animation off `reveal`,
@@ -431,7 +460,7 @@ index b9e57ca7..e1906352 100644
  
      onShouldAutoHideChanged: {
          if (!shouldAutoHide) {
-@@ -68,7 +451,7 @@ Item {
+@@ -68,7 +480,7 @@ Item {
  
      // Check if notch hover is active (for synchronized reveal when bar is at same side)
      // NOTE: We access Visibilities.notchPanels directly because UnifiedShellPanel registers itself as the panel ref
@@ -440,7 +469,7 @@ index b9e57ca7..e1906352 100644
      readonly property string notchPosition: (Config.notchPosition !== undefined ? Config.notchPosition : "top")
      readonly property bool notchHoverActive: {
          if (barPosition !== notchPosition)
-@@ -89,7 +472,7 @@ Item {
+@@ -89,7 +501,7 @@ Item {
      }
  
      // Check if notch is open (dashboard, powermenu, etc.)
@@ -449,7 +478,7 @@ index b9e57ca7..e1906352 100644
      readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
  
      // Radius logic for "Squished" style
-@@ -103,8 +486,18 @@ Item {
+@@ -103,8 +515,18 @@ Item {
          if (!shouldAutoHide)
              return true;
  
@@ -469,7 +498,7 @@ index b9e57ca7..e1906352 100644
              return false;
          }
  
-@@ -266,8 +659,10 @@ Item {
+@@ -266,8 +688,10 @@ Item {
              // layer.enabled: true
              // layer.effect: Shadow {}
  
@@ -482,7 +511,7 @@ index b9e57ca7..e1906352 100644
              Behavior on opacity {
                  enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
                  NumberAnimation {
-@@ -281,6 +676,8 @@ Item {
+@@ -281,6 +705,8 @@ Item {
                  x: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -491,7 +520,7 @@ index b9e57ca7..e1906352 100644
                      if (root.barPosition === "left")
                          return root.reveal ? 0 : -bar.width - (root.frameOffset + root.leftOuterMargin);
                      if (root.barPosition === "right")
-@@ -290,6 +687,8 @@ Item {
+@@ -290,6 +716,8 @@ Item {
                  y: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -500,7 +529,7 @@ index b9e57ca7..e1906352 100644
                      if (root.barPosition === "top")
                          return root.reveal ? 0 : -bar.height - (root.frameOffset + root.topOuterMargin);
                      if (root.barPosition === "bottom")
-@@ -297,14 +696,14 @@ Item {
+@@ -297,14 +725,14 @@ Item {
                      return 0;
                  }
                  Behavior on x {
@@ -517,7 +546,7 @@ index b9e57ca7..e1906352 100644
                      NumberAnimation {
                          duration: (Config.animDuration !== undefined ? Config.animDuration : 0) / 2
                          easing.type: Easing.OutCubic
-@@ -360,7 +759,7 @@ Item {
+@@ -360,7 +788,7 @@ Item {
                          spacing: 4
  
                          // Obtener referencia al notch de esta pantalla
