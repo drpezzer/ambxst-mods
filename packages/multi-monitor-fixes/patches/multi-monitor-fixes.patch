@@ -1118,7 +1118,7 @@ index ee97b092..378ef7ed 100644
          }
      }
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..9a91dac3 100644
+index 028c2dce..3fe6aa56 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -1168,7 +1168,7 @@ index 028c2dce..9a91dac3 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,25 +95,103 @@ PanelWindow {
+@@ -89,25 +95,118 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
@@ -1270,19 +1270,34 @@ index 028c2dce..9a91dac3 100644
 +        // matching only `activeWorkspace` left every consumer of this
 +        // property relying on that focused-monitor fast path, so the whole
 +        // shell reappeared over the game as soon as focus moved off it.
++        const onScreen = function(wsId) {
++            return wsId === activeWorkspaceId || (specialId !== 0 && wsId === specialId);
++        };
          const wins = CompositorData.windowList;
          for (let i = 0; i < wins.length; i++) {
 -            if (wins[i].monitor === monId && wins[i].fullscreen && wins[i].workspace.id === activeWorkspaceId) {
-+            if (wins[i].monitor !== monId || !wins[i].fullscreen)
++            if (wins[i].monitor === monId && wins[i].fullscreen && onScreen(wins[i].workspace.id))
++                return true;
++        }
++        // On Hyprland, also the compositor's own per-window records, which
++        // Quickshell refreshes straight off the `fullscreen` event. axctl's
++        // daemon has been seen to stop enriching windows created after a
++        // monitor hotplug (no geometry, is_fullscreen stuck false), and a
++        // game that goes fullscreen on such a window would otherwise never
++        // be noticed. Hyprland's monitor ids are the ones axctl reports.
++        const tls = Hyprland.toplevels ? Hyprland.toplevels.values : [];
++        for (let i = 0; i < tls.length; i++) {
++            const o = tls[i].lastIpcObject;
++            if (!o || o.monitor !== monId)
 +                continue;
-+            const wsId = wins[i].workspace.id;
-+            if (wsId === activeWorkspaceId || (specialId !== 0 && wsId === specialId))
++            // 2 = fullscreen, 1 = maximized (which leaves the frame in place).
++            if (Number(o.fullscreen) >= 2 && o.workspace && onScreen(o.workspace.id))
                  return true;
 -            }
          }
          return false;
      }
-@@ -120,22 +204,42 @@ PanelWindow {
+@@ -120,22 +219,42 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -1337,7 +1352,7 @@ index 028c2dce..9a91dac3 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -221,6 +325,7 @@ PanelWindow {
+@@ -221,6 +340,7 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -1345,7 +1360,7 @@ index 028c2dce..9a91dac3 100644
              z: 2
              visible: unifiedPanel.barEnabled
          }
-@@ -230,6 +335,7 @@ PanelWindow {
+@@ -230,6 +350,7 @@ PanelWindow {
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
