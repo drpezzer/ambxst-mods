@@ -2,10 +2,17 @@
 
 Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
 
-![Dual Screen Single Bar: the bar arrives with focus and the windows make room, leaves with it, then a fullscreen window's staged exit and return](media/demo.gif)
+## In action
 
-*The bar following focus onto a screen, leaving with it, then a fullscreen
-window's staged exit and return. 22 s; [MP4 version](media/demo.mp4).*
+| Focus arrives: the bar slides in, the windows make room | Focus leaves: the bar slides out, the windows take the space |
+|---|---|
+| ![bar slides in with focus](media/focus-in.gif) | ![bar slides out with focus](media/focus-out.gif) |
+
+| A window goes fullscreen: the game lands, the bar slides out, the corners straighten, the gutter settles | Fullscreen ends: the frame returns as one motion, then the bar, with the windows |
+|---|---|
+| ![staged exit under a fullscreen window](media/fs-exit.gif) | ![frame and bar return](media/fs-return.gif) |
+
+Left edge of a 4K screen, real time. The whole sequence: [demo.mp4](media/demo.mp4) (22 s, 1080p60).
 
 - **Unplugging a monitor no longer breaks a surviving one.** When an output
   goes away, Quickshell reassigns the dying panel window's `screen` to a
