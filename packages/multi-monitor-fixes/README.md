@@ -45,10 +45,8 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
   monitor crosses the bar's edge, which flashed it up over the game for the
   hide delay. `bar.availableOnFullscreen` keeps its meaning on the screens
   that are only hiding in sympathy, and a notch the user deliberately opens
-  still reveals the bar. On that screen the hide is instant -- bar, exclusive
-  zone and frame gutter drop in the frame the window arrives -- since the
-  window is already fading in over them and a slower hide could be caught on
-  top of a game opened and closed quickly.
+  still reveals the bar. On that screen the exit is staged rather than
+  instant -- see "What the fullscreen slide assumes" below.
 - **The windows move with the bar.** When the bar slides away for a
   fullscreen window its exclusive zone is released and the compositor moves
   the windows into the space with its own resize animation -- on Hyprland
@@ -115,9 +113,13 @@ Testing hotplug without real hardware: `hyprctl output create headless` and
   animation is disabled and the shell behaves exactly as before.
 - **An unpinned (auto-hide) bar** is left entirely to the stock auto-hide; the
   slide only ever engages for a bar that is holding space.
-- **The screen the fullscreen window covers** hides its bar, zone and frame
-  gutter instantly (there is nothing visible below to move in step with, and
-  the window is already fading in over them); every other screen slides.
+- **The screen the fullscreen window covers** leaves and returns in stages,
+  the way clean-load's shell does: the window's own arrival animation is
+  allowed to finish, the bar slides out with the frame's slab following it
+  back to the plain gutter (the wrap around the bar keeps its thickness, so
+  its edge never shows), then the corners straighten and the gutter settles
+  onto the screen edge. When the window goes, the frame returns as one motion
+  and the bar slides in after it, synced with the windows.
 - **Compositor** -- the window-move sync (`BarSlideSync`) is Hyprland-only and
   runs `hyprctl eval`; on Niri or Mango it is inert and the slide still runs,
   with the compositor's own window animation. A `hyprctl` that hangs or is
