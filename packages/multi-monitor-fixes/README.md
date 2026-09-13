@@ -24,7 +24,13 @@ Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
   caught them through a fast path gated on the focused monitor, so the shell
   came back over the game whenever focus moved. The output's open special
   workspace is now read from Hyprland and matched in the window scan as well
-  as its active workspace, so the detection no longer depends on focus. That
+  as its active workspace, so the detection no longer depends on focus. On
+  Hyprland the scan also reads the compositor's own per-window records
+  (`Hyprland.toplevels`, primed once and refreshed on the `fullscreen`
+  event): axctl enriches a new window's geometry and fullscreen state a few
+  seconds after it appears, and not at all for windows created after a
+  monitor hotplug, so a game that went fullscreen straight after launch was
+  missed until then. That
   fast path is gone altogether: it ANDed the focused toplevel (Wayland) with
   the focused monitor (axctl), two sources that update independently, so on
   every swap away from a fullscreen window the *other* screen briefly believed
