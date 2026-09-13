@@ -1335,6 +1335,120 @@ index 028c2dce..9a91dac3 100644
              z: 3
              visible: unifiedPanel.dockEnabled
          }
+diff --git a/modules/widgets/dashboard/controls/SettingsIndex.qml b/modules/widgets/dashboard/controls/SettingsIndex.qml
+index 25c46427..9cd847bf 100644
+--- a/modules/widgets/dashboard/controls/SettingsIndex.qml
++++ b/modules/widgets/dashboard/controls/SettingsIndex.qml
+@@ -40,6 +40,7 @@ QtObject {
+         { label: "Wallpapers", keywords: "background image picture desktop", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.image, isIcon: true },
+         { label: "Tint Icons", keywords: "color icons tint monochrome", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.palette, isIcon: true },
+         { label: "Enable Corners", keywords: "rounded corners radius screen", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.cornersOut, isIcon: true },
++        { label: "Dual Screen Single Bar", keywords: "monitor focus follow bar multi screen one", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.layout, isIcon: true },
+         { label: "Animation Duration", keywords: "speed fast slow transition", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.clock, isIcon: true },
+         { label: "UI Font", keywords: "typography text family size", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.textT, isIcon: true },
+         { label: "Roundness", keywords: "radius border curve", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.circle, isIcon: true },
+diff --git a/modules/widgets/dashboard/controls/ThemePanel.qml b/modules/widgets/dashboard/controls/ThemePanel.qml
+index e622dff3..5cbc8fec 100644
+--- a/modules/widgets/dashboard/controls/ThemePanel.qml
++++ b/modules/widgets/dashboard/controls/ThemePanel.qml
+@@ -6,6 +6,7 @@ import QtQuick.Layouts
+ import qs.modules.theme
+ import qs.modules.components
+ import qs.modules.globals
++import qs.modules.services
+ import Quickshell
+ import Quickshell.Io
+ import qs.config
+@@ -471,6 +472,89 @@ Item {
+                                 }
+                             }
+ 
++                            // multi-monitor-fixes: Dual Screen Single Bar
++                            // (the mod's followFocus setting, surfaced here
++                            // because it changes where the bar lives).
++                            RowLayout {
++                                Layout.fillWidth: true
++                                spacing: 8
++
++                                ColumnLayout {
++                                    Layout.fillWidth: true
++                                    spacing: 2
++
++                                    Text {
++                                        text: "Dual Screen Single Bar"
++                                        font.family: Config.theme.font
++                                        font.pixelSize: Styling.fontSize(0)
++                                        color: Colors.overBackground
++                                        Layout.fillWidth: true
++                                    }
++
++                                    Text {
++                                        text: "Show the bar on the focused screen only; it slides across when focus moves"
++                                        font.family: Config.theme.font
++                                        font.pixelSize: Styling.fontSize(-2)
++                                        color: Colors.overSurfaceVariant
++                                        wrapMode: Text.WordWrap
++                                        Layout.fillWidth: true
++                                    }
++                                }
++
++                                Switch {
++                                    id: singleBarSwitch
++                                    checked: BarSlideSync.followFocus
++
++                                    readonly property bool settingValue: BarSlideSync.followFocus
++
++                                    onSettingValueChanged: {
++                                        if (checked !== settingValue) {
++                                            checked = settingValue;
++                                        }
++                                    }
++
++                                    onCheckedChanged: {
++                                        if (checked !== BarSlideSync.followFocus) {
++                                            ModsService.setSetting(BarSlideSync.modId, "followFocus", checked);
++                                        }
++                                    }
++
++                                    indicator: Rectangle {
++                                        implicitWidth: 40
++                                        implicitHeight: 20
++                                        x: singleBarSwitch.leftPadding
++                                        y: parent.height / 2 - height / 2
++                                        radius: height / 2
++                                        color: singleBarSwitch.checked ? Styling.srItem("overprimary") : Colors.surfaceBright
++                                        border.color: singleBarSwitch.checked ? Styling.srItem("overprimary") : Colors.outline
++
++                                        Behavior on color {
++                                            enabled: Config.animDuration > 0
++                                            ColorAnimation {
++                                                duration: Config.animDuration / 2
++                                            }
++                                        }
++
++                                        Rectangle {
++                                            x: singleBarSwitch.checked ? parent.width - width - 2 : 2
++                                            y: 2
++                                            width: parent.height - 4
++                                            height: width
++                                            radius: width / 2
++                                            color: singleBarSwitch.checked ? Colors.background : Colors.overSurfaceVariant
++
++                                            Behavior on x {
++                                                enabled: Config.animDuration > 0
++                                                NumberAnimation {
++                                                    duration: Config.animDuration / 2
++                                                    easing.type: Easing.OutCubic
++                                                }
++                                            }
++                                        }
++                                    }
++                                }
++                            }
++
+                             // Animation Duration slider
+                             RowLayout {
+                                 Layout.fillWidth: true
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 index cdf136e7..00decebe 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
