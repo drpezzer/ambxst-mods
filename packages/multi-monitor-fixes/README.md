@@ -2,6 +2,11 @@
 
 Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
 
+![Dual Screen Single Bar: the bar arrives with focus and the windows make room, leaves with it, then a fullscreen window's staged exit and return](media/demo.gif)
+
+*The bar following focus onto a screen, leaving with it, then a fullscreen
+window's staged exit and return. 22 s; [MP4 version](media/demo.mp4).*
+
 - **Unplugging a monitor no longer breaks a surviving one.** When an output
   goes away, Quickshell reassigns the dying panel window's `screen` to a
   surviving output, so a panel that unregistered itself by `screen.name` at

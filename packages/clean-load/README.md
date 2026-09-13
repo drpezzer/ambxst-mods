@@ -92,6 +92,18 @@ theme file has loaded, so they flash as bare boxes at every screen corner for
 a moment; they now wait for the theme and only exist while the frame is in
 place.
 
+**Volume and brightness pop-ups.** The on-screen display shows whenever the
+audio or brightness service reports a change, and both also report while
+reading their initial state after a start: the PipeWire sink and source sync
+within the first second or so, and every monitor reports the moment its first
+brightness read lands, which over DDC can be ten seconds after the shell came
+up. So the pop-up plays over the entry, or long after it, on every reload. By
+default the mod swallows exactly those reports: volume and microphone while
+the start window is open (the entry plus 1.5 s), brightness when the report is
+the one that turned its monitor ready (which also covers the re-read after a
+wake or a monitor hotplug). A real key press or slider change still shows it.
+The display can also be turned off altogether.
+
 **Sidebar fix.** The AI assistant sidebar's slide was a `Behavior` on its
 `x`, and `x` depends on the panel width, so the first layout (panel width 0 to
 screen width) and the config-driven width change both played the slide with
@@ -106,6 +118,9 @@ Under Settings > Mods > Ambxst Clean Load:
 - **Leave duration** (900 ms). The base L.
 - **Cover a cold kill with the veil helper** (on). Starts or stops the helper
   on the next reload.
+- **On-screen display** (Quiet at start). *Quiet at start* hides the volume,
+  microphone and brightness pop-ups for the initial reads after a start and
+  shows them for real changes; *As stock* always shows them; *Off* never does.
 
 ## Notes
 
@@ -131,8 +146,13 @@ Under Settings > Mods > Ambxst Clean Load:
   the Hyprland config at every shell start anyway, which resets it.
 - `setsid` (util-linux) is used to detach the helper from Quickshell's process
   group, which the Ambxst daemon kills as a whole on shutdown.
-- For diagnostics: `qs ipc --pid $(cat $XDG_RUNTIME_DIR/ambxst-qs.pid) call cleanload state`.
+- For diagnostics: `qs ipc --pid $(cat $XDG_RUNTIME_DIR/ambxst-qs.pid) call cleanload state`
+  (`osdSwallowed` counts the initial-state pop-ups that were held back, per
+  screen, since the shell started).
 
 ## Changelog
 
+- 1.1.0: the volume, microphone and brightness pop-ups no longer appear on
+  their own after a start (new **On-screen display** setting, which can also
+  turn the display off).
 - 1.0.0: initial release, verified on Ambxst 1.3.3 (base af9f8ad4).

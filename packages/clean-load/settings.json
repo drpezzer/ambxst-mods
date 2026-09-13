@@ -33,6 +33,27 @@
       "description": "Keep a tiny detached helper that, if the shell is killed without leaving first (a plain `ambxst reload` with no wrapper), shows the last wallpaper and frame and plays the leave animation itself, then holds the background colour until the new shell is up. Needs a reload to start or stop the helper.",
       "type": "boolean",
       "default": true
+    },
+    {
+      "key": "osd",
+      "label": "On-screen display (volume, microphone, brightness)",
+      "description": "Quiet at start: the pop-up is not shown for the reports the services make while reading their initial state after a start (the volume and microphone sync during the first seconds, and each monitor's first brightness read, which on DDC monitors can land many seconds in); real changes still show it. As stock: always show it. Off: never show it.",
+      "type": "enum",
+      "default": "quiet",
+      "options": [
+        {
+          "label": "Quiet at start",
+          "value": "quiet"
+        },
+        {
+          "label": "As stock",
+          "value": "stock"
+        },
+        {
+          "label": "Off",
+          "value": "off"
+        }
+      ]
     }
   ]
 }

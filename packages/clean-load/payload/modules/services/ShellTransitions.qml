@@ -41,10 +41,14 @@ Singleton {
     property int enterDuration: 650
     property int leaveDuration: 900
     property bool veilEnabled: true
+    // "stock" | "quiet" | "off", see the on-screen display section.
+    property string osd: "quiet"
 
     function applyValues(values) {
         if (!values)
             return;
+        if (["stock", "quiet", "off"].indexOf(values.osd) !== -1)
+            root.osd = values.osd;
         if (values.enterAnimation !== undefined)
             root.enterAnimation = !!values.enterAnimation;
         if (values.veilEnabled !== undefined)
@@ -212,6 +216,8 @@ Singleton {
         root.entered = true;
         root.applyTargets();
         root.tuneWindows(root.frameDur, "shellTransitionsEnter");
+        osdStartTimer.interval = root.enterTotal + root.osdStartGrace;
+        osdStartTimer.restart();
         reserveTimer.interval = Math.max(1, root.animate ? root.frameDelay : 1);
         reserveTimer.restart();
         windowsRestoreTimer.interval = root.enterTotal + 100;
@@ -265,6 +271,68 @@ Singleton {
     onProgressChanged: {
         if (root.progress >= 1)
             root.scheduleSync();
+    }
+
+    // ─── on-screen display ─────────────────────────────────────────────
+    // Stock Ambxst shows the volume / microphone / brightness OSD whenever
+    // the matching service reports a change, and the services also report
+    // when they read their initial state after a start: the PipeWire sink
+    // and source during the first second or so, and every monitor the moment
+    // its first brightness read lands, which over DDC can be ten seconds in.
+    // So the pop-up plays over (or long after) the entry, and on some setups
+    // it stutters while the shell is still loading. The OSD's handlers ask
+    // osdAllowed() before showing anything:
+    //
+    //   "stock"  as upstream
+    //   "quiet"  swallow the initial reports: volume and mic while the start
+    //            window is open (entry + a grace), brightness when the report
+    //            is the one that turned its monitor ready (start, wake and
+    //            hotplug re-reads alike); real changes always show
+    //   "off"    never show it
+    property bool osdStartWindow: true
+    readonly property int osdStartGrace: 1500
+    Timer {
+        id: osdStartTimer
+        onTriggered: root.osdStartWindow = false
+    }
+
+    // Monitors whose `ready` has just flipped on. Brightness emits the
+    // initial read in the same call right after setting ready, so it is
+    // still marked when the OSD asks; cleared once the event loop moves on,
+    // after every screen's OSD has asked.
+    property var osdInitReads: ({})
+    property int osdWatched: 0
+    property int osdSwallowed: 0
+
+    Instantiator {
+        model: Brightness.monitors
+        delegate: Connections {
+            required property var modelData
+            target: modelData
+            ignoreUnknownSignals: true
+            function onReadyChanged() {
+                if (!modelData.ready)
+                    return;
+                const name = modelData.screen ? modelData.screen.name : "";
+                root.osdInitReads[name] = true;
+                Qt.callLater(() => { delete root.osdInitReads[name]; });
+            }
+        }
+        function onObjectAdded(index, object) { root.osdWatched += 1; }
+        function onObjectRemoved(index, object) { root.osdWatched -= 1; }
+    }
+
+    function osdAllowed(kind: string, screenName: string): bool {
+        if (root.osd === "off")
+            return false;
+        if (root.osd !== "quiet")
+            return true;
+        const swallow = kind === "brightness"
+            ? !!root.osdInitReads[screenName || ""]
+            : root.osdStartWindow;
+        if (swallow)
+            root.osdSwallowed += 1;
+        return !swallow;
     }
 
     // ─── leaving ───────────────────────────────────────────────────────
@@ -348,6 +416,10 @@ Singleton {
                 configReady: root.configReady,
                 initialLoadComplete: Config.initialLoadComplete,
                 veilConnected: !!root.client,
+                osd: root.osd,
+                osdStartWindow: root.osdStartWindow,
+                osdWatched: root.osdWatched,
+                osdSwallowed: root.osdSwallowed,
                 wallpapers: root.wallpapers.length,
                 frames: root.frames.length
             });

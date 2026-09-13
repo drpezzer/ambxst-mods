@@ -221,6 +221,37 @@ index 26da91a8..75c3b74d 100644
              let zone = actualFrameSize;
              if (barEnabled && barPosition === "right" && barPinned) {
                  zone += barSize + barOuterMargin;
+diff --git a/modules/shell/osd/OSD.qml b/modules/shell/osd/OSD.qml
+index 432f771d..8159b994 100644
+--- a/modules/shell/osd/OSD.qml
++++ b/modules/shell/osd/OSD.qml
+@@ -176,6 +176,8 @@ PanelWindow {
+     Connections {
+         target: Audio
+         function onVolumeChanged(volume, muted, node) {
++            if (!ShellTransitions.osdAllowed("volume", ""))
++                return;
+             root.osdValue = volume;
+             root.osdMuted = muted;
+             GlobalStates.osdIndicator = "volume";
+@@ -183,6 +185,8 @@ PanelWindow {
+             hideTimer.restart();
+         }
+         function onMicVolumeChanged(volume, muted, node) {
++            if (!ShellTransitions.osdAllowed("mic", ""))
++                return;
+             root.osdValue = volume;
+             root.osdMuted = muted;
+             GlobalStates.osdIndicator = "mic";
+@@ -194,6 +198,8 @@ PanelWindow {
+     Connections {
+         target: Brightness
+         function onBrightnessChanged(value, screen) {
++            if (!ShellTransitions.osdAllowed("brightness", screen ? screen.name : ""))
++                return;
+             // Check if the change happened on THIS screen or if it's a sync change
+             if (!screen || !root.targetScreen || screen.name === root.targetScreen.name || Brightness.syncBrightness) {
+                 root.osdValue = value;
 diff --git a/modules/sidebar/AssistantSidebar.qml b/modules/sidebar/AssistantSidebar.qml
 index be201de3..8660b8cb 100644
 --- a/modules/sidebar/AssistantSidebar.qml
