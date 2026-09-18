@@ -1,0 +1,16 @@
+{
+  "shutdown": [
+    {
+      "text": "So long, partner.",
+      "source": "Toy Story 3"
+    },
+    "A plain string works too."
+  ],
+  "reboot": [
+    {
+      "text": "I'll be back.",
+      "source": "The Terminator"
+    }
+  ],
+  "replace": false
+}

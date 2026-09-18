@@ -1,0 +1,74 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "drpezzer.roadie",
+  "name": "Ambxst Roadie",
+  "version": "1.0.0",
+  "description": "The crew that keeps the show running while the stage changes. Boot: the screen stays in the background colour until the shell is ready, then the wallpaper and frame come in and the shell locks (unless you logged in through a greeter or an external locker is up), the bar following after you unlock. Shell start and reload: the wallpaper fades in while the frame, bar, notch and dock slide into place and the windows make room on one staged timeline; a reload through `ambxst run reload` (or the optional `ambxst` wrapper in extras/) plays it in reverse before the restart, and a tiny detached helper covers a cold kill the same way. Monitors coming and going: hotplug without a shell reload (panels unregister by the screen name latched at creation, stale unregisters are ignored, the wallpaper-manager role passes to a surviving screen, ~15 screen.name bindings are null-guarded during teardown). Focus and fullscreen: a pinned bar can live on the focused screen only and slide across when focus moves (Dual Screen Single Bar, switchable), a bar, dock or frame that hides for a fullscreen window releases the space it held, fullscreen detection sees games on an open special workspace, and the notch and dock count that workspace's windows. On Hyprland the compositor's window animation is matched to each of these moves for its duration. Shutting down: Reboot and Power Off from the power menu swell the notch into the whole screen, a line from a film or show fades in (a goodbye for a shutdown, a back-in-a-second for a reboot), and the command runs once it has been up long enough to read; Escape backs out. Also: no AI sidebar sweep or corner flash at start, and no volume or brightness pop-ups on their own after a start. Replaces Ambxst Clean Load and Multi-monitor fixes (it is both, and more); it cannot be enabled together with either.",
+  "license": "MIT",
+  "author": "drpezzer",
+  "authorUrl": "https://github.com/drpezzer",
+  "homepage": "https://github.com/drpezzer/ambxst-mods",
+  "compatibility": {
+    "api": 1,
+    "ambxst": ">=1.3.0 <2.0.0",
+    "testedBaseCommits": [
+      "af9f8ad4f42d7cd77f57a7c75f6a2a5d1fb59674"
+    ]
+  },
+  "dependencies": [],
+  "conflicts": [
+    "drpezzer.clean-load",
+    "drpezzer.multi-monitor-fixes"
+  ],
+  "commands": [
+    "setsid"
+  ],
+  "permissions": [
+    "Spawns a second, detached Quickshell process (the veil) that listens on a socket in XDG_RUNTIME_DIR and draws wallpaper and frame surfaces while the shell is down",
+    "Runs `ambxst reload` itself when asked to reload through `ambxst run reload` or the roadie IPC target",
+    "Reads Hyprland monitor state through Quickshell.Hyprland",
+    "On Hyprland, runs `hyprctl eval` to retune the windowsMove animation for the duration of a shell transition or a bar slide, then restores it; remembers the originals in ~/.local/state/ambxst/",
+    "Runs the power menu's own reboot / power off command itself, a few seconds after the click, and keeps a small state file of quotes already shown in ~/.local/state/ambxst/",
+    "At boot, reads the login session's PAM service name over `loginctl` and looks for a running external locker, to decide whether to lock; locks with the Ambxst lockscreen"
+  ],
+  "settings": {
+    "schema": "settings.json"
+  },
+  "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/ShellTransitions.qml",
+      "target": "modules/services/ShellTransitions.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/veil/Veil.qml",
+      "target": "modules/services/veil/Veil.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/BarSlideSync.qml",
+      "target": "modules/services/BarSlideSync.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/ShellFarewell.qml",
+      "target": "modules/services/ShellFarewell.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/notch/FarewellQuote.qml",
+      "target": "modules/notch/FarewellQuote.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/controls/RoadieQuotesEditor.qml",
+      "target": "modules/widgets/dashboard/controls/RoadieQuotesEditor.qml"
+    },
+    {
+      "type": "patch",
+      "source": "patches/roadie.patch"
+    }
+  ]
+}
