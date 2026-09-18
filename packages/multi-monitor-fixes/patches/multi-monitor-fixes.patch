@@ -576,7 +576,7 @@ index b9e57ca7..40a65477 100644
                          LauncherButton {
                              id: launcherButton
 diff --git a/modules/dock/DockContent.qml b/modules/dock/DockContent.qml
-index a6b31db3..1d70ea85 100644
+index a6b31db3..58dec628 100644
 --- a/modules/dock/DockContent.qml
 +++ b/modules/dock/DockContent.qml
 @@ -71,7 +71,7 @@ Item {
@@ -588,7 +588,28 @@ index a6b31db3..1d70ea85 100644
      readonly property bool barPinned: {
          if (barPanelRef && typeof barPanelRef.pinned !== 'undefined') {
              return barPanelRef.pinned;
-@@ -99,10 +99,22 @@ Item {
+@@ -79,11 +79,18 @@ Item {
+         return true;
+     }
+ 
++    // The special workspace this output has open, if any (id, 0 = none), set
++    // by UnifiedShellPanel from its activespecial tracking. axctl's monitor
++    // payload only carries the normal active workspace, so without this the
++    // windows on an open special workspace never counted: the notch and dock
++    // stayed out over them whenever the workspace underneath was empty.
++    property int openSpecialWorkspaceId: 0
++
+     // Monitor reference and refrence to toplevels on monitor
+     readonly property var compositorMonitor: AxctlService.monitorFor(screen)
+-    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.activeWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.activeWorkspace.id)
++    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.activeWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.activeWorkspace.id || (openSpecialWorkspaceId !== 0 && c.workspace.id === openSpecialWorkspaceId))
+ 
+-    // Check if there are any windows on the current monitor and workspace
++    // Check if there are any windows on this output's visible workspaces
+     readonly property bool hasWindows: toplevels.length > 0
+ 
+     // Fullscreen detection
+@@ -99,10 +106,22 @@ Item {
          return false;
      }
  
@@ -612,7 +633,7 @@ index a6b31db3..1d70ea85 100644
              return (Config.dock?.availableOnFullscreen ?? false) && (Config.dock?.hoverToReveal && dockMouseArea.containsMouse);
          }
  
-@@ -519,7 +531,7 @@ Item {
+@@ -519,7 +538,7 @@ Item {
                          }
  
                          onClicked: {
@@ -621,7 +642,7 @@ index a6b31db3..1d70ea85 100644
                              if (visibilities) {
                                  visibilities.overview = !visibilities.overview;
                              }
-@@ -653,7 +665,7 @@ Item {
+@@ -653,7 +672,7 @@ Item {
                          }
  
                          onClicked: {
@@ -770,10 +791,10 @@ index 528a20b3..e7d535e9 100644
      }
  
 diff --git a/modules/notch/NotchContent.qml b/modules/notch/NotchContent.qml
-index 3c7d32c9..2633fe8d 100644
+index 3c7d32c9..b51352c7 100644
 --- a/modules/notch/NotchContent.qml
 +++ b/modules/notch/NotchContent.qml
-@@ -23,8 +23,8 @@ Item {
+@@ -23,14 +23,21 @@ Item {
      property bool unifiedEffectActive: false
  
      // Get this screen's visibility state
@@ -781,10 +802,25 @@ index 3c7d32c9..2633fe8d 100644
 -    readonly property bool isScreenFocused: AxctlService.focusedMonitor && AxctlService.focusedMonitor.name === screen.name
 +    readonly property var screenVisibilities: Visibilities.getForScreen(screen?.name ?? "")
 +    readonly property bool isScreenFocused: AxctlService.focusedMonitor && AxctlService.focusedMonitor.name === screen?.name
++
++    // The special workspace this output has open, if any (id, 0 = none), set
++    // by UnifiedShellPanel from its activespecial tracking. axctl's monitor
++    // payload only carries the normal active workspace, so without this the
++    // windows on an open special workspace never counted: the notch and dock
++    // stayed out over them whenever the workspace underneath was empty.
++    property int openSpecialWorkspaceId: 0
  
      // Monitor reference and refrence to toplevels on monitor
      readonly property var compositorMonitor: AxctlService.monitorFor(screen)
-@@ -38,7 +38,7 @@ Item {
+-    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.activeWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.activeWorkspace.id)
++    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.activeWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.activeWorkspace.id || (openSpecialWorkspaceId !== 0 && c.workspace.id === openSpecialWorkspaceId))
+ 
+-    // Check if there are any windows on the current monitor and workspace
++    // Check if there are any windows on this output's visible workspaces
+     readonly property bool hasWindows: toplevels.length > 0
+ 
+     // Get the bar position for this screen
+@@ -38,7 +45,7 @@ Item {
      readonly property string notchPosition: Config.notchPosition !== undefined ? Config.notchPosition : "top"
  
      // Get the bar panel for this screen to check its state
@@ -793,7 +829,7 @@ index 3c7d32c9..2633fe8d 100644
  
      // Check if bar is pinned (use bar state directly)
      readonly property bool barPinned: {
-@@ -166,7 +166,7 @@ Item {
+@@ -166,7 +173,7 @@ Item {
      Loader {
          id: persistentDashboardViewLoader
          active: false
@@ -802,7 +838,7 @@ index 3c7d32c9..2633fe8d 100644
      }
  
      // Persistent power menu view
-@@ -411,96 +411,79 @@ Item {
+@@ -411,96 +418,79 @@ Item {
          }
      }
  
@@ -1120,7 +1156,7 @@ index ee97b092..378ef7ed 100644
          }
      }
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..e7c958e9 100644
+index 028c2dce..fd906437 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -1364,7 +1400,7 @@ index 028c2dce..e7c958e9 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -221,6 +350,7 @@ PanelWindow {
+@@ -221,21 +350,25 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -1372,7 +1408,10 @@ index 028c2dce..e7c958e9 100644
              z: 2
              visible: unifiedPanel.barEnabled
          }
-@@ -230,6 +360,7 @@ PanelWindow {
+ 
+         DockContent {
+             id: dockContent
++            openSpecialWorkspaceId: unifiedPanel.openSpecialWorkspaceId
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -1380,6 +1419,13 @@ index 028c2dce..e7c958e9 100644
              z: 3
              visible: unifiedPanel.dockEnabled
          }
+ 
+         NotchContent {
+             id: notchContent
++            openSpecialWorkspaceId: unifiedPanel.openSpecialWorkspaceId
+             unifiedEffectActive: unifiedPanel.unifiedEffectActive
+             anchors.fill: parent
+             screen: unifiedPanel.targetScreen
 diff --git a/modules/widgets/dashboard/controls/SettingsIndex.qml b/modules/widgets/dashboard/controls/SettingsIndex.qml
 index 25c46427..9cd847bf 100644
 --- a/modules/widgets/dashboard/controls/SettingsIndex.qml

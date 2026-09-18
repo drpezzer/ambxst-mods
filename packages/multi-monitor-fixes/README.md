@@ -1,5 +1,7 @@
 # Multi-monitor fixes
 
+> **Superseded by [Ambxst Roadie](../roadie).** Roadie is this mod and its sibling in one package, plus a boot sequence and a shutdown farewell, and it is where all further work happens. This package stays installable but will not be updated. The two cannot be enabled together: disable this one, then install Roadie.
+
 Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
 
 ## In action
@@ -179,6 +181,10 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- **1.2.1** — The notch and dock now count the windows on the special
+  workspace an output has open. They only looked at the normal active
+  workspace, so with an empty workspace underneath they stayed out over the
+  special workspace's windows instead of auto-hiding.
 - **1.2.0** — Dual Screen Single Bar: a pinned bar shows on the focused
   screen only and slides across when focus moves, windows on both screens
   moving in step; switch in Settings > Theme > General (`followFocus`,

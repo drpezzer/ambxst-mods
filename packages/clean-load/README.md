@@ -1,5 +1,7 @@
 # Ambxst Clean Load
 
+> **Superseded by [Ambxst Roadie](../roadie).** Roadie is this mod and its sibling in one package, plus a boot sequence and a shutdown farewell, and it is where all further work happens. This package stays installable but will not be updated. The two cannot be enabled together: disable this one, then install Roadie.
+
 Gives Ambxst a fluid way in and out.
 
 Stock Ambxst assembles itself in pieces: the wallpaper pops in whenever its
@@ -152,6 +154,7 @@ Under Settings > Mods > Ambxst Clean Load:
 
 ## Changelog
 
+- 1.1.1: superseded by Ambxst Roadie; no code change.
 - 1.1.0: the volume, microphone and brightness pop-ups no longer appear on
   their own after a start (new **On-screen display** setting, which can also
   turn the display off).
