@@ -1,6 +1,8 @@
 # Multi-monitor fixes
 
 > **Superseded by [Ambxst Roadie](../roadie).** Roadie is this mod and its sibling in one package, plus a boot sequence and a shutdown farewell, and it is where all further work happens. This package stays installable but will not be updated. The two cannot be enabled together: disable this one, then install Roadie.
+>
+> **Not ported to Ambxst 1.3.6:** this package's patch no longer merges on 1.3.6 (native translations and the new wallpaper backend moved its anchors). On 1.3.6 and later, use Roadie.
 
 Monitor hotplug without an `ambxst reload`, and a few multi-screen state bugs.
 

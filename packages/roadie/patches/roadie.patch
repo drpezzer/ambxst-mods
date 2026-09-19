@@ -34,7 +34,7 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index b9e57ca7..c8c70eec 100644
+index 9d43848a..2d1f2890 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
 @@ -23,11 +23,22 @@ import "." as Bar
@@ -60,7 +60,7 @@ index b9e57ca7..c8c70eec 100644
      // Auto-hide properties
      onPinnedChanged: {
          if (Config.bar && Config.bar.pinnedOnStartup !== pinned) {
-@@ -49,9 +60,445 @@ Item {
+@@ -63,9 +74,445 @@ Item {
          return toplevel.fullscreen === true;
      }
  
@@ -507,7 +507,7 @@ index b9e57ca7..c8c70eec 100644
  
      onShouldAutoHideChanged: {
          if (!shouldAutoHide) {
-@@ -68,7 +515,7 @@ Item {
+@@ -82,7 +529,7 @@ Item {
  
      // Check if notch hover is active (for synchronized reveal when bar is at same side)
      // NOTE: We access Visibilities.notchPanels directly because UnifiedShellPanel registers itself as the panel ref
@@ -516,7 +516,7 @@ index b9e57ca7..c8c70eec 100644
      readonly property string notchPosition: (Config.notchPosition !== undefined ? Config.notchPosition : "top")
      readonly property bool notchHoverActive: {
          if (barPosition !== notchPosition)
-@@ -89,7 +536,7 @@ Item {
+@@ -103,7 +550,7 @@ Item {
      }
  
      // Check if notch is open (dashboard, powermenu, etc.)
@@ -525,7 +525,7 @@ index b9e57ca7..c8c70eec 100644
      readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
  
      // Radius logic for "Squished" style
-@@ -103,8 +550,18 @@ Item {
+@@ -117,8 +564,18 @@ Item {
          if (!shouldAutoHide)
              return true;
  
@@ -545,7 +545,7 @@ index b9e57ca7..c8c70eec 100644
              return false;
          }
  
-@@ -250,6 +707,9 @@ Item {
+@@ -264,6 +721,9 @@ Item {
          Item {
              id: bar
  
@@ -555,7 +555,7 @@ index b9e57ca7..c8c70eec 100644
              anchors {
                  top: (root.barPosition === "top" || root.orientation === "vertical") ? parent.top : undefined
                  bottom: (root.barPosition === "bottom" || root.orientation === "vertical") ? parent.bottom : undefined
-@@ -266,8 +726,10 @@ Item {
+@@ -280,8 +740,10 @@ Item {
              // layer.enabled: true
              // layer.effect: Shadow {}
  
@@ -568,7 +568,7 @@ index b9e57ca7..c8c70eec 100644
              Behavior on opacity {
                  enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
                  NumberAnimation {
-@@ -277,10 +739,12 @@ Item {
+@@ -291,10 +753,12 @@ Item {
              }
  
              // Slide animation
@@ -582,7 +582,7 @@ index b9e57ca7..c8c70eec 100644
                      if (root.barPosition === "left")
                          return root.reveal ? 0 : -bar.width - (root.frameOffset + root.leftOuterMargin);
                      if (root.barPosition === "right")
-@@ -290,6 +754,8 @@ Item {
+@@ -304,6 +768,8 @@ Item {
                  y: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -591,7 +591,7 @@ index b9e57ca7..c8c70eec 100644
                      if (root.barPosition === "top")
                          return root.reveal ? 0 : -bar.height - (root.frameOffset + root.topOuterMargin);
                      if (root.barPosition === "bottom")
-@@ -297,20 +763,20 @@ Item {
+@@ -311,20 +777,20 @@ Item {
                      return 0;
                  }
                  Behavior on x {
@@ -615,7 +615,7 @@ index b9e57ca7..c8c70eec 100644
  
              states: [
                  State {
-@@ -360,7 +826,7 @@ Item {
+@@ -374,7 +840,7 @@ Item {
                          spacing: 4
  
                          // Obtener referencia al notch de esta pantalla
@@ -625,7 +625,7 @@ index b9e57ca7..c8c70eec 100644
                          LauncherButton {
                              id: launcherButton
 diff --git a/modules/dock/DockContent.qml b/modules/dock/DockContent.qml
-index a6b31db3..04c9e6c0 100644
+index 8ed1f358..682832a1 100644
 --- a/modules/dock/DockContent.qml
 +++ b/modules/dock/DockContent.qml
 @@ -16,6 +16,10 @@ import qs.config
@@ -730,19 +730,19 @@ index a6b31db3..04c9e6c0 100644
  
              // Full background container with masking (default theme)
              Item {
-@@ -519,7 +554,7 @@ Item {
-                         }
- 
-                         onClicked: {
+@@ -523,7 +558,7 @@ Item {
+                                 AxctlService.dispatch("overview toggle");
+                                 return;
+                             }
 -                            let visibilities = Visibilities.getForScreen(root.screen.name);
 +                            let visibilities = Visibilities.getForScreen(root.screen?.name ?? "");
                              if (visibilities) {
                                  visibilities.overview = !visibilities.overview;
                              }
-@@ -653,7 +688,7 @@ Item {
-                         }
- 
-                         onClicked: {
+@@ -661,7 +696,7 @@ Item {
+                                 AxctlService.dispatch("overview toggle");
+                                 return;
+                             }
 -                            let visibilities = Visibilities.getForScreen(root.screen.name);
 +                            let visibilities = Visibilities.getForScreen(root.screen?.name ?? "");
                              if (visibilities) {
@@ -869,7 +869,7 @@ index a4c725b8..3cbe5bab 100644
      // --- Visuals ---
  
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
-index 528a20b3..e7d535e9 100644
+index eb6e9ccd..be55c9ab 100644
 --- a/modules/globals/GlobalStates.qml
 +++ b/modules/globals/GlobalStates.qml
 @@ -10,6 +10,33 @@ Singleton {
@@ -905,8 +905,8 @@ index 528a20b3..e7d535e9 100644
 +
      property string avatarCacheBuster: ""
  
-     function pickUserAvatar() {
-@@ -147,6 +174,8 @@ Singleton {
+     // Broadcast to every BarContent instance: flip the pinned state.
+@@ -192,6 +219,8 @@ Singleton {
  
      function getNotchOpen(screenName) {
          let visibilities = Visibilities.getForScreen(screenName);
@@ -1336,10 +1336,10 @@ index 5a80e6bd..c3b9019b 100644
  
      NotchContent {
 diff --git a/modules/services/GlobalShortcuts.qml b/modules/services/GlobalShortcuts.qml
-index ee1ce50f..ca3b3642 100644
+index b1aa3be4..343e3657 100644
 --- a/modules/services/GlobalShortcuts.qml
 +++ b/modules/services/GlobalShortcuts.qml
-@@ -74,6 +74,7 @@ QtObject {
+@@ -80,6 +80,7 @@ QtObject {
                  GlobalStates.screenshotToolVisible = true;
                  break;
              case "lockscreen": GlobalStates.lockscreenVisible = true; break;
@@ -1816,7 +1816,7 @@ index 028c2dce..8ac9ce66 100644
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
 diff --git a/modules/shell/osd/OSD.qml b/modules/shell/osd/OSD.qml
-index 432f771d..8159b994 100644
+index f8bb8632..5671bff7 100644
 --- a/modules/shell/osd/OSD.qml
 +++ b/modules/shell/osd/OSD.qml
 @@ -176,6 +176,8 @@ PanelWindow {
@@ -1847,10 +1847,10 @@ index 432f771d..8159b994 100644
              if (!screen || !root.targetScreen || screen.name === root.targetScreen.name || Brightness.syncBrightness) {
                  root.osdValue = value;
 diff --git a/modules/sidebar/AssistantSidebar.qml b/modules/sidebar/AssistantSidebar.qml
-index be201de3..e98dd0c5 100644
+index cfed4f6c..34965b2c 100644
 --- a/modules/sidebar/AssistantSidebar.qml
 +++ b/modules/sidebar/AssistantSidebar.qml
-@@ -144,15 +144,22 @@ Item {
+@@ -144,25 +144,26 @@ Item {
          width: GlobalStates.assistantWidth + root.sidebarMargin
          height: parent.height
  
@@ -1861,26 +1861,40 @@ index be201de3..e98dd0c5 100644
 +        // closed sidebar swept across the screen at every shell start.
 +        property real slide: root.active ? 1 : 0
 +
-         x: {
-             if (GlobalStates.assistantPosition === "left")
--                return root.active ? 0 : -(width);
--            return root.active ? parent.width - width : parent.width;
-+                return -width + width * slide;
-+            return parent.width - width * slide;
-         }
++        // Anchored to the screen edge as upstream does since 1.3.6; the margin
++        // follows `slide`, so nothing but `active` can start the animation.
+         anchors.right: GlobalStates.assistantPosition !== "left" ? parent.right : undefined
+         anchors.left: GlobalStates.assistantPosition === "left" ? parent.left : undefined
  
-         visible: root.active || slideAnimation.running
+-        anchors.rightMargin: GlobalStates.assistantPosition !== "left" ? (root.active ? 0 : -width) : 0
+-        anchors.leftMargin: GlobalStates.assistantPosition === "left" ? (root.active ? 0 : -width) : 0
++        anchors.rightMargin: GlobalStates.assistantPosition !== "left" ? -width * (1 - slide) : 0
++        anchors.leftMargin: GlobalStates.assistantPosition === "left" ? -width * (1 - slide) : 0
  
--        Behavior on x {
+-        visible: root.active || slideAnimR.running || slideAnimL.running
++        visible: root.active || slideAnimation.running
+ 
+-        Behavior on anchors.rightMargin {
 +        Behavior on slide {
              NumberAnimation {
-                 id: slideAnimation
+-                id: slideAnimR
+-                duration: Config.animDuration
+-                easing.type: Easing.OutCubic
+-            }
+-        }
+-
+-        Behavior on anchors.leftMargin {
+-            NumberAnimation {
+-                id: slideAnimL
++                id: slideAnimation
                  duration: Config.animDuration
+                 easing.type: Easing.OutCubic
+             }
 diff --git a/modules/widgets/dashboard/controls/ModsPanel.qml b/modules/widgets/dashboard/controls/ModsPanel.qml
-index 31b40ca3..37ea49c7 100644
+index 66cbd27d..e5ac9707 100644
 --- a/modules/widgets/dashboard/controls/ModsPanel.qml
 +++ b/modules/widgets/dashboard/controls/ModsPanel.qml
-@@ -1217,6 +1217,15 @@ Item {
+@@ -1267,6 +1267,15 @@ Item {
                          }
                      }
  
@@ -1897,30 +1911,22 @@ index 31b40ca3..37ea49c7 100644
  
                      RowLayout {
 diff --git a/modules/widgets/dashboard/controls/SettingsIndex.qml b/modules/widgets/dashboard/controls/SettingsIndex.qml
-index 25c46427..9cd847bf 100644
+index 0ef76170..5b631877 100644
 --- a/modules/widgets/dashboard/controls/SettingsIndex.qml
 +++ b/modules/widgets/dashboard/controls/SettingsIndex.qml
-@@ -40,6 +40,7 @@ QtObject {
-         { label: "Wallpapers", keywords: "background image picture desktop", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.image, isIcon: true },
-         { label: "Tint Icons", keywords: "color icons tint monochrome", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.palette, isIcon: true },
-         { label: "Enable Corners", keywords: "rounded corners radius screen", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.cornersOut, isIcon: true },
-+        { label: "Dual Screen Single Bar", keywords: "monitor focus follow bar multi screen one", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.layout, isIcon: true },
-         { label: "Animation Duration", keywords: "speed fast slow transition", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.clock, isIcon: true },
-         { label: "UI Font", keywords: "typography text family size", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.textT, isIcon: true },
-         { label: "Roundness", keywords: "radius border curve", section: 4, subSection: "general", subLabel: "Theme > General", icon: Icons.circle, isIcon: true },
+@@ -41,6 +41,7 @@ QtObject {
+         { label: I18n.t("settings.theme.wallpapers"), keywords: "background image picture desktop", section: 4, subSection: "general", subLabel: I18n.t("settings.theme") + " > " + I18n.t("settings.theme.general"), icon: Icons.image, isIcon: true },
+         { label: I18n.t("settings.theme.tint_icons"), keywords: "color icons tint monochrome", section: 4, subSection: "general", subLabel: I18n.t("settings.theme") + " > " + I18n.t("settings.theme.general"), icon: Icons.palette, isIcon: true },
+         { label: I18n.t("settings.theme.enable_corners"), keywords: "rounded corners radius screen", section: 4, subSection: "general", subLabel: I18n.t("settings.theme") + " > " + I18n.t("settings.theme.general"), icon: Icons.cornersOut, isIcon: true },
++        { label: "Dual Screen Single Bar", keywords: "monitor focus follow bar multi screen one", section: 4, subSection: "general", subLabel: I18n.t("settings.theme") + " > " + I18n.t("settings.theme.general"), icon: Icons.layout, isIcon: true },
+         { label: I18n.t("settings.theme.animation_duration"), keywords: "speed fast slow transition", section: 4, subSection: "general", subLabel: I18n.t("settings.theme") + " > " + I18n.t("settings.theme.general"), icon: Icons.clock, isIcon: true },
+         { label: I18n.t("settings.theme.ui_font"), keywords: "typography text family size", section: 4, subSection: "general", subLabel: I18n.t("settings.theme") + " > " + I18n.t("settings.theme.general"), icon: Icons.textT, isIcon: true },
+         { label: I18n.t("settings.theme.roundness"), keywords: "radius border curve", section: 4, subSection: "general", subLabel: I18n.t("settings.theme") + " > " + I18n.t("settings.theme.general"), icon: Icons.circle, isIcon: true },
 diff --git a/modules/widgets/dashboard/controls/ThemePanel.qml b/modules/widgets/dashboard/controls/ThemePanel.qml
-index e622dff3..9200ff00 100644
+index ac44b52a..b862e2d5 100644
 --- a/modules/widgets/dashboard/controls/ThemePanel.qml
 +++ b/modules/widgets/dashboard/controls/ThemePanel.qml
-@@ -6,6 +6,7 @@ import QtQuick.Layouts
- import qs.modules.theme
- import qs.modules.components
- import qs.modules.globals
-+import qs.modules.services
- import Quickshell
- import Quickshell.Io
- import qs.config
-@@ -471,6 +472,89 @@ Item {
+@@ -484,6 +484,89 @@ Item {
                                  }
                              }
  
@@ -2011,18 +2017,10 @@ index e622dff3..9200ff00 100644
                              RowLayout {
                                  Layout.fillWidth: true
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-index cdf136e7..86adf48b 100644
+index 099acb04..ac7b3cf4 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 +++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-@@ -3,6 +3,7 @@ import Quickshell
- import Quickshell.Wayland
- import Quickshell.Io
- import qs.modules.globals
-+import qs.modules.services
- import qs.modules.theme
- import qs.config
- import "MpvShaderGenerator.js" as ShaderGenerator
-@@ -23,6 +24,13 @@ PanelWindow {
+@@ -24,6 +24,13 @@ PanelWindow {
  
      color: "transparent"
  
@@ -2033,12 +2031,12 @@ index cdf136e7..86adf48b 100644
 +        Component.onDestruction: ShellTransitions.unregisterWallpaper(wallpaper)
 +    }
 +
-     property string wallpaperDir: wallpaperConfig.adapter.wallPath
+     property string wallpaperDir: expandTilde(wallpaperConfig.adapter.wallPath)
      property string fallbackDir: decodeURIComponent(Qt.resolvedUrl("../../../../assets/wallpapers_example").toString().replace("file://", ""))
      property var wallpaperPaths: []
-@@ -47,32 +55,38 @@ PanelWindow {
- 
-     readonly property var optimizedPalette: ["background", "overBackground", "shadow", "surface", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primary", "secondary", "tertiary", "red", "lightRed", "green", "lightGreen", "blue", "lightBlue", "yellow", "lightYellow", "cyan", "lightCyan", "magenta", "lightMagenta"]
+@@ -51,32 +58,38 @@ PanelWindow {
+         && overviewBlurPossible
+         && AxctlService.overviewOpen
  
 -    // Sync state from the primary wallpaper manager to secondary instances
 +    // Sync state from the primary wallpaper manager to secondary instances.
@@ -2080,11 +2078,14 @@ index cdf136e7..86adf48b 100644
          when: GlobalStates.wallpaperManager !== null && GlobalStates.wallpaperManager !== wallpaper
      }
  
-@@ -648,17 +662,48 @@ PanelWindow {
-         }
+@@ -462,20 +475,48 @@ PanelWindow {
+         GlobalStates.videoSyncTick++;
      }
  
 -    Component.onCompleted: {
+-        if (currentScreenName)
+-            GlobalStates.screenWallpapers[currentScreenName] = wallpaper;
+-
 -        // Only the first Wallpaper instance should manage scanning
 -        // Other instances (for other screens) share the same data via GlobalStates
 -        if (GlobalStates.wallpaperManager !== null) {
@@ -2136,24 +2137,25 @@ index cdf136e7..86adf48b 100644
          // Verify wallpapers.json exists, create with fallback if not
          checkWallpapersJson.running = true;
  
-@@ -669,6 +714,11 @@ PanelWindow {
+@@ -486,6 +527,11 @@ PanelWindow {
          // Load initial wallpaper config - triggers onWallPathChanged which does the actual scan
          wallpaperConfig.reload();
  
 +        // On promotion wallPath is usually already loaded, so onWallPathChanged
 +        // will not fire again; arm the scan directly. initWallpaperScan is
 +        // idempotent, so the startup path costs nothing.
-+        initWallpaperScan(wallpaperConfig.adapter ? wallpaperConfig.adapter.wallPath : "");
++        initWallpaperScan(wallpaperConfig.adapter && wallpaperConfig.adapter.wallPath ? expandTilde(wallpaperConfig.adapter.wallPath) : "");
 +
-         // Lockscreen frame and MPV shader generation deferred 5s after boot to reduce peak memory.
+         // Lockscreen frame generation deferred 5s after boot to reduce peak memory.
          Qt.callLater(function () {
              if (currentWallpaper) {
-@@ -680,6 +730,59 @@ PanelWindow {
+@@ -494,9 +540,62 @@ PanelWindow {
          });
      }
  
 +    // Arm directory watching, the wallpaper scan and thumbnail generation.
 +    // Guarded so it only ever runs once, and only for the managing instance.
++    // `path` is already tilde-expanded.
 +    function initWallpaperScan(path) {
 +        if (!path || _wallpaperDirInitialized || GlobalStates.wallpaperManager !== wallpaper)
 +            return;
@@ -2165,7 +2167,7 @@ index cdf136e7..86adf48b 100644
 +        directoryWatcher.reload();
 +
 +        // Perform initial wallpaper scan
-+        var cmd = ["find", path, "-name", ".*", "-prune", "-o", "-type", "f", "(", "-name", "*.jpg", "-o", "-name", "*.jpeg", "-o", "-name", "*.png", "-o", "-name", "*.webp", "-o", "-name", "*.tif", "-o", "-name", "*.tiff", "-o", "-name", "*.gif", "-o", "-name", "*.mp4", "-o", "-name", "*.webm", "-o", "-name", "*.mov", "-o", "-name", "*.avi", "-o", "-name", "*.mkv", ")", "-print"];
++        var cmd = ["find", "-L", path, "-name", ".*", "-prune", "-o", "-type", "f", "(", "-name", "*.jpg", "-o", "-name", "*.jpeg", "-o", "-name", "*.png", "-o", "-name", "*.webp", "-o", "-name", "*.tif", "-o", "-name", "*.tiff", "-o", "-name", "*.gif", "-o", "-name", "*.mp4", "-o", "-name", "*.webm", "-o", "-name", "*.mov", "-o", "-name", "*.avi", "-o", "-name", "*.mkv", ")", "-print"];
 +        scanWallpapers.command = cmd;
 +        scanWallpapers.running = true;
 +        wallpaper.scanSubfolders();
@@ -2175,6 +2177,8 @@ index cdf136e7..86adf48b 100644
 +    }
 +
 +    Component.onCompleted: {
++        if (currentScreenName)
++            GlobalStates.screenWallpapers[currentScreenName] = wallpaper;
 +        GlobalStates.registerWallpaper(wallpaper);
 +
 +        // Only the first Wallpaper instance should manage scanning
@@ -2192,7 +2196,9 @@ index cdf136e7..86adf48b 100644
 +    // Without this the role died with the monitor: `wallpaperManager` went null
 +    // and every remaining screen kept a static wallpaper it could no longer
 +    // rescan, re-theme or drive matugen from.
-+    Component.onDestruction: {
+     Component.onDestruction: {
+         if (currentScreenName && GlobalStates.screenWallpapers[currentScreenName] === wallpaper)
+             delete GlobalStates.screenWallpapers[currentScreenName];
 +        GlobalStates.unregisterWallpaper(wallpaper);
 +
 +        if (GlobalStates.wallpaperManager !== wallpaper)
@@ -2203,24 +2209,22 @@ index cdf136e7..86adf48b 100644
 +            heir.becomeWallpaperManager(wallpaper);
 +        else
 +            GlobalStates.wallpaperManager = null;
-+    }
-+
+     }
+ 
      // Deferred lockscreen frame generation to avoid blocking boot
-     Timer {
-         id: lockscreenFrameTimer
-@@ -764,22 +867,7 @@ PanelWindow {
-                     console.log("Config wallPath updated:", wallPath);
+@@ -584,22 +683,7 @@ PanelWindow {
+                     console.log("Config wallPath updated:", dir);
  
                      // Initialize scanning on first valid wallPath load
 -                    if (!wallpaper._wallpaperDirInitialized && GlobalStates.wallpaperManager === wallpaper) {
 -                        wallpaper._wallpaperDirInitialized = true;
 -
 -                        // Set up directory watcher
--                        directoryWatcher.path = wallPath;
+-                        directoryWatcher.path = dir;
 -                        directoryWatcher.reload();
 -
 -                        // Perform initial wallpaper scan
--                        var cmd = ["find", wallPath, "-name", ".*", "-prune", "-o", "-type", "f", "(", "-name", "*.jpg", "-o", "-name", "*.jpeg", "-o", "-name", "*.png", "-o", "-name", "*.webp", "-o", "-name", "*.tif", "-o", "-name", "*.tiff", "-o", "-name", "*.gif", "-o", "-name", "*.mp4", "-o", "-name", "*.webm", "-o", "-name", "*.mov", "-o", "-name", "*.avi", "-o", "-name", "*.mkv", ")", "-print"];
+-                        var cmd = ["find", "-L", dir, "-name", ".*", "-prune", "-o", "-type", "f", "(", "-name", "*.jpg", "-o", "-name", "*.jpeg", "-o", "-name", "*.png", "-o", "-name", "*.webp", "-o", "-name", "*.tif", "-o", "-name", "*.tiff", "-o", "-name", "*.gif", "-o", "-name", "*.mp4", "-o", "-name", "*.webm", "-o", "-name", "*.mov", "-o", "-name", "*.avi", "-o", "-name", "*.mkv", ")", "-print"];
 -                        scanWallpapers.command = cmd;
 -                        scanWallpapers.running = true;
 -                        wallpaper.scanSubfolders();
@@ -2228,11 +2232,11 @@ index cdf136e7..86adf48b 100644
 -                        // Start thumbnail generation
 -                        delayedThumbnailGen.start();
 -                    }
-+                    wallpaper.initWallpaperScan(wallPath);
++                    wallpaper.initWallpaperScan(dir);
                  }
              }
          }
-@@ -1235,6 +1323,18 @@ PanelWindow {
+@@ -1055,6 +1139,18 @@ PanelWindow {
              anchors.fill: parent
              source: wallpaper.effectiveWallpaper
          }
@@ -2251,7 +2255,7 @@ index cdf136e7..86adf48b 100644
      }
  
      component WallpaperImage: Item {
-@@ -1377,6 +1477,11 @@ PanelWindow {
+@@ -1204,6 +1300,11 @@ PanelWindow {
                      fillMode: Image.PreserveAspectCrop
                      asynchronous: true
                      smooth: true
@@ -2263,17 +2267,21 @@ index cdf136e7..86adf48b 100644
                      sourceSize.width: wallpaper.width
                      sourceSize.height: wallpaper.height
                      layer.enabled: parent.tint
-@@ -1423,6 +1528,8 @@ PanelWindow {
-                     if (sourceFile) {
-                         console.log("Initial mpvpaper run for:", sourceFile);
-                         mpvpaperProcess.running = true;
-+                        // roadie: a video player counts as shown.
-+                        ShellTransitions.wallpaperShown(wallpaper.currentScreenName);
-                         wallpaper.requestVideoSync();
-                     }
-                 }
+@@ -1228,7 +1329,11 @@ PanelWindow {
+                 tint: wallpaper.tintEnabled
+                 onRequestVideoSync: wallpaper.requestVideoSync()
+ 
+-                Component.onCompleted: wallpaper.activeVideo = videoWallpaperChild
++                Component.onCompleted: {
++                    wallpaper.activeVideo = videoWallpaperChild;
++                    // roadie: a video player counts as shown.
++                    ShellTransitions.wallpaperShown(wallpaper.currentScreenName);
++                }
+                 Component.onDestruction: {
+                     if (wallpaper.activeVideo === videoWallpaperChild)
+                         wallpaper.activeVideo = null;
 diff --git a/modules/widgets/overview/OverviewPopup.qml b/modules/widgets/overview/OverviewPopup.qml
-index 6ad80557..539e7671 100644
+index ea23135e..85448993 100644
 --- a/modules/widgets/overview/OverviewPopup.qml
 +++ b/modules/widgets/overview/OverviewPopup.qml
 @@ -28,7 +28,7 @@ PanelWindow {
@@ -2286,7 +2294,7 @@ index 6ad80557..539e7671 100644
  
      visible: overviewOpen
 diff --git a/modules/widgets/powermenu/PowerMenu.qml b/modules/widgets/powermenu/PowerMenu.qml
-index ad0af53d..f032bcea 100644
+index a03eed50..3ad69e52 100644
 --- a/modules/widgets/powermenu/PowerMenu.qml
 +++ b/modules/widgets/powermenu/PowerMenu.qml
 @@ -23,6 +23,11 @@ ActionGrid {
@@ -2304,14 +2312,14 @@ index ad0af53d..f032bcea 100644
 @@ -47,17 +52,24 @@ ActionGrid {
          {
              icon: Icons.reboot,
-             tooltip: "Reboot",
+             tooltip: I18n.t("powermenu.reboot"),
 -            command: "systemctl reboot"
 +            command: ShellFarewell.farewellEnabled ? "" : "systemctl reboot",
 +            powerCommand: "systemctl reboot"
          },
          {
              icon: Icons.shutdown,
-             tooltip: "Power Off",
+             tooltip: I18n.t("powermenu.power_off"),
 -            command: "systemctl poweroff"
 +            command: ShellFarewell.farewellEnabled ? "" : "systemctl poweroff",
 +            powerCommand: "systemctl poweroff"

@@ -1,8 +1,8 @@
 diff --git a/modules/components/TintedWallpaper.qml b/modules/components/TintedWallpaper.qml
-index 0770448e..ab7a6378 100644
+index 9419459f..4dc71590 100644
 --- a/modules/components/TintedWallpaper.qml
 +++ b/modules/components/TintedWallpaper.qml
-@@ -8,6 +8,12 @@ Item {
+@@ -9,6 +9,12 @@ Item {
      property string source: ""
      property real radius: 0
      property bool tintEnabled: false
@@ -12,13 +12,13 @@ index 0770448e..ab7a6378 100644
 +    // wallpaper is not decoded and uploaded at full resolution to fill a few
 +    // hundred pixels.
 +    property int maxSourceDim: 0
-     
-     // Subset of colors for optimization (approx 25 colors vs 98)
-     // Copied from Wallpaper.qml to ensure consistency
-@@ -76,6 +82,7 @@ Item {
-             id: rawImage
+ 
+     readonly property bool isVideo: {
+         var ext = source.toString().toLowerCase().split('?')[0].split('.').pop();
+@@ -176,6 +182,7 @@ Item {
              anchors.fill: parent
-             source: root.source
+             visible: !root.isVideo
+             source: root.isVideo ? "" : root.source
 +            sourceSize: root.maxSourceDim > 0 ? Qt.size(Math.ceil(root.maxSourceDim * Screen.devicePixelRatio), Math.ceil(root.maxSourceDim * Screen.devicePixelRatio)) : undefined
              fillMode: Image.PreserveAspectCrop
              asynchronous: true
@@ -348,7 +348,7 @@ index a4c725b8..ffe2cd63 100644
      }
  }
 diff --git a/modules/tools/ScreenshotOverlay.qml b/modules/tools/ScreenshotOverlay.qml
-index 24d2cd84..aff87c89 100644
+index bd7d38ec..7e066f9b 100644
 --- a/modules/tools/ScreenshotOverlay.qml
 +++ b/modules/tools/ScreenshotOverlay.qml
 @@ -121,6 +121,8 @@ PanelWindow {
@@ -361,10 +361,10 @@ index 24d2cd84..aff87c89 100644
                  anchors.fill: parent
                  source: root.imagePath !== "" ? "file://" + root.imagePath : ""
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-index cdf136e7..98e9a2d9 100644
+index 099acb04..566b8fd1 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 +++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-@@ -1370,7 +1370,10 @@ PanelWindow {
+@@ -1197,7 +1197,10 @@ PanelWindow {
                  }
  
                  Image {
@@ -377,7 +377,7 @@ index cdf136e7..98e9a2d9 100644
                      anchors.fill: parent
                      source: parent.sourceFile ? "file://" + parent.sourceFile : ""
 diff --git a/modules/widgets/dashboard/widgets/FullPlayer.qml b/modules/widgets/dashboard/widgets/FullPlayer.qml
-index 08e36cd3..6a876be6 100644
+index 5f33ccec..24a8e3e1 100644
 --- a/modules/widgets/dashboard/widgets/FullPlayer.qml
 +++ b/modules/widgets/dashboard/widgets/FullPlayer.qml
 @@ -138,6 +138,10 @@ StyledRect {

@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.settings-float",
   "name": "Settings Float",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Opens the Ambxst Settings window as a centred floating window sized to the screen it opens on (41% wide, 66% tall by default, never below its 900x650 design size, never above 92% of the screen) instead of tiling it. The window declares a fixed size until the compositor has placed it, which makes Hyprland, Niri and dwl-based compositors float it the moment it maps (Hyprland and Niri centre it too), so it never appears as a tile first. No window rule needed. Size and an on/off switch are in the mod's settings.",
   "license": "MIT",
   "author": "drpezzer",
@@ -13,7 +13,9 @@
     "api": 1,
     "ambxst": ">=1.3.0 <2.0.0",
     "testedBaseCommits": [
-      "af9f8ad4f42d7cd77f57a7c75f6a2a5d1fb59674"
+      "af9f8ad4f42d7cd77f57a7c75f6a2a5d1fb59674",
+      "8de8cd4b0e725984cb6e618b2b1028a2fdef2113",
+      "480a10cab5c7e381b7910ef70281b7e67ed2c8a1"
     ]
   },
   "dependencies": [],

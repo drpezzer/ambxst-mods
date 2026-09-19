@@ -75,4 +75,5 @@ Works with Ambxst `>=1.3.0`. No new config keys.
 
 ## Changelog
 
+- 1.0.2: verified on Ambxst 1.3.6 (base 480a10ca); patch applies verbatim, no source changes.
 - 1.0.1: verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.

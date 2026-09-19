@@ -464,6 +464,7 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.0.1: ported to Ambxst 1.3.6 (base 480a10ca), which is now the minimum. The wallpaper-manager handover is rebuilt on upstream's new `Wallpaper.qml` (QtMultimedia backend, tilde expansion, `find -L`); the curtain lifts when the new `VideoWallpaper` item is created, where it used to hook the mpvpaper launch; the assistant sidebar keeps the `slide` driver on top of upstream's new edge anchoring; the power menu and settings index keep upstream's native translations.
 - 1.0.0: first public release. Everything below, verified on Ambxst 1.3.3
   (base af9f8ad4).
 - 0.4.0: the boot sequence -- background colour until the shell is ready,

@@ -1,5 +1,5 @@
 diff --git a/config/Config.qml b/config/Config.qml
-index 4e4834ee..6a293c99 100644
+index 4eaad957..99278d6d 100644
 --- a/config/Config.qml
 +++ b/config/Config.qml
 @@ -549,6 +549,11 @@ Singleton {
@@ -27,10 +27,10 @@ index 7962cdde..056b5243 100644
 +    "systrayExclude": ["blueman"]
  }
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index b9e57ca7..762dfe3f 100644
+index 9d43848a..3ad5562a 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
-@@ -520,6 +520,22 @@ Item {
+@@ -534,6 +534,22 @@ Item {
                              endRadius: root.innerRadius
                          }
  
@@ -53,7 +53,7 @@ index b9e57ca7..762dfe3f 100644
                          ControlsButton {
                              id: controlsButton
                              bar: root
-@@ -576,6 +592,14 @@ Item {
+@@ -590,6 +606,14 @@ Item {
                              endRadius: root.innerRadius
                          }
  
@@ -68,7 +68,7 @@ index b9e57ca7..762dfe3f 100644
                          ToolsButton {
                              id: toolsButtonVert
                              startRadius: root.innerRadius
-@@ -727,11 +751,21 @@ Item {
+@@ -741,11 +765,21 @@ Item {
                              }
                          }
  
@@ -92,7 +92,7 @@ index b9e57ca7..762dfe3f 100644
                          }
  
 diff --git a/modules/bar/BatteryIndicator.qml b/modules/bar/BatteryIndicator.qml
-index c3fcb229..43226190 100644
+index 94490f92..720a80e7 100644
 --- a/modules/bar/BatteryIndicator.qml
 +++ b/modules/bar/BatteryIndicator.qml
 @@ -190,145 +190,151 @@ Item {
@@ -188,7 +188,7 @@ index c3fcb229..43226190 100644
 +
 +                        ColumnLayout {
                              Layout.fillWidth: true
--                            text: Battery.isPluggedIn ? (Battery.isCharging ? "Charging" : "Full") : "On battery"
+-                            text: Battery.isPluggedIn ? (Battery.isCharging ? I18n.t("battery.charging") : I18n.t("battery.full")) : I18n.t("battery.on_battery")
 -                            font.family: Styling.defaultFont
 -                            font.pixelSize: Styling.fontSize(0)
 -                            font.bold: true
@@ -199,7 +199,7 @@ index c3fcb229..43226190 100644
 +
 +                            Text {
 +                                Layout.fillWidth: true
-+                                text: Battery.isPluggedIn ? (Battery.isCharging ? "Charging" : "Full") : "On battery"
++                                text: Battery.isPluggedIn ? (Battery.isCharging ? I18n.t("battery.charging") : I18n.t("battery.full")) : I18n.t("battery.on_battery")
 +                                font.family: Styling.defaultFont
 +                                font.pixelSize: Styling.fontSize(0)
 +                                font.bold: true
@@ -207,7 +207,7 @@ index c3fcb229..43226190 100644
 +                            }
 +
 +                            Text {
-+                                text: Battery.isPluggedIn ? (Battery.timeToFull !== "" ? "Full in " + Battery.timeToFull : "Fully charged") : (Battery.timeToEmpty !== "" ? Battery.timeToEmpty + " remaining" : "")
++                                text: Battery.isPluggedIn ? (Battery.timeToFull !== "" ? I18n.t("battery.full_in", Battery.timeToFull) : I18n.t("battery.fully_charged")) : (Battery.timeToEmpty !== "" ? I18n.t("battery.remaining", Battery.timeToEmpty) : "")
 +                                font.family: Styling.defaultFont
 +                                font.pixelSize: Styling.fontSize(-1)
 +                                color: Colors.overBackground
@@ -219,7 +219,7 @@ index c3fcb229..43226190 100644
  
 +                        // Battery percentage display
                          Text {
--                            text: Battery.isPluggedIn ? (Battery.timeToFull !== "" ? "Full in " + Battery.timeToFull : "Fully charged") : (Battery.timeToEmpty !== "" ? Battery.timeToEmpty + " remaining" : "")
+-                            text: Battery.isPluggedIn ? (Battery.timeToFull !== "" ? I18n.t("battery.full_in", Battery.timeToFull) : I18n.t("battery.fully_charged")) : (Battery.timeToEmpty !== "" ? I18n.t("battery.remaining", Battery.timeToEmpty) : "")
 +                            Layout.alignment: Qt.AlignVCenter
 +                            text: Math.round(Battery.percentage) + "%"
                              font.family: Styling.defaultFont
@@ -360,7 +360,7 @@ index c3fcb229..43226190 100644
                      }
                  }
 diff --git a/modules/bar/ControlsButton.qml b/modules/bar/ControlsButton.qml
-index 687f077b..6c20b450 100644
+index 68577a92..843092cc 100644
 --- a/modules/bar/ControlsButton.qml
 +++ b/modules/bar/ControlsButton.qml
 @@ -87,166 +87,176 @@ Item {
@@ -666,7 +666,7 @@ index 687f077b..6c20b450 100644
 -    }
  }
 diff --git a/modules/bar/LayoutSelectorButton.qml b/modules/bar/LayoutSelectorButton.qml
-index a523e24b..7377a42e 100644
+index d500e29a..22228652 100644
 --- a/modules/bar/LayoutSelectorButton.qml
 +++ b/modules/bar/LayoutSelectorButton.qml
 @@ -111,87 +111,89 @@ Item {
@@ -828,7 +828,7 @@ index a523e24b..7377a42e 100644
                      }
                  }
 diff --git a/modules/bar/clock/Clock.qml b/modules/bar/clock/Clock.qml
-index 1cad557d..6be1a9c4 100644
+index 99304687..edf81930 100644
 --- a/modules/bar/clock/Clock.qml
 +++ b/modules/bar/clock/Clock.qml
 @@ -154,16 +154,18 @@ Item {
@@ -855,7 +855,7 @@ index 1cad557d..6be1a9c4 100644
  
          onIsOpenChanged: {
              if (isOpen && !WeatherService.dataAvailable) {
-@@ -171,427 +173,431 @@ Item {
+@@ -171,436 +173,440 @@ Item {
              }
          }
  
@@ -931,10 +931,16 @@ index 1cad557d..6be1a9c4 100644
 -                    anchors.topMargin: 16
 -                    spacing: 4
 -
--                    // Helper function to capitalize first letter
--                    function capitalizeMonth(date) {
--                        var month = date.toLocaleDateString(Qt.locale(), "MMMM");
--                        return month.charAt(0).toUpperCase() + month.slice(1);
+-                    function getMonthName(date) {
+-                        var keys = [
+-                            "calendar.month.january", "calendar.month.february",
+-                            "calendar.month.march", "calendar.month.april",
+-                            "calendar.month.may", "calendar.month.june",
+-                            "calendar.month.july", "calendar.month.august",
+-                            "calendar.month.september", "calendar.month.october",
+-                            "calendar.month.november", "calendar.month.december"
+-                        ];
+-                        return I18n.t(keys[date.getMonth()]);
 +                    // Update date every minute
 +                    Timer {
 +                        interval: 60000
@@ -952,7 +958,7 @@ index 1cad557d..6be1a9c4 100644
 -                            id: monthText
 -                            anchors.left: parent.left
 -                            anchors.leftMargin: 4
--                            text: calendarContent.capitalizeMonth(calendarWrapper.currentDate)
+-                            text: calendarContent.getMonthName(calendarWrapper.currentDate)
 -                            color: Colors.outline
 -                            font.family: Config.theme.font
 -                            font.pixelSize: Styling.fontSize(0)
@@ -974,10 +980,16 @@ index 1cad557d..6be1a9c4 100644
 -                            font.family: Config.theme.font
 -                            font.pixelSize: Styling.fontSize(-1)
 -                            visible: text !== ""
-+                        // Helper function to capitalize first letter
-+                        function capitalizeMonth(date) {
-+                            var month = date.toLocaleDateString(Qt.locale(), "MMMM");
-+                            return month.charAt(0).toUpperCase() + month.slice(1);
++                        function getMonthName(date) {
++                            var keys = [
++                                "calendar.month.january", "calendar.month.february",
++                                "calendar.month.march", "calendar.month.april",
++                                "calendar.month.may", "calendar.month.june",
++                                "calendar.month.july", "calendar.month.august",
++                                "calendar.month.september", "calendar.month.october",
++                                "calendar.month.november", "calendar.month.december"
++                            ];
++                            return I18n.t(keys[date.getMonth()]);
                          }
 -                    }
  
@@ -994,7 +1006,7 @@ index 1cad557d..6be1a9c4 100644
 +                                id: monthText
 +                                anchors.left: parent.left
 +                                anchors.leftMargin: 4
-+                                text: calendarContent.capitalizeMonth(calendarWrapper.currentDate)
++                                text: calendarContent.getMonthName(calendarWrapper.currentDate)
 +                                color: Colors.outline
 +                                font.family: Config.theme.font
 +                                font.pixelSize: Styling.fontSize(0)
@@ -1033,13 +1045,16 @@ index 1cad557d..6be1a9c4 100644
 -                                }
 -                                property bool isToday: index === calendarWrapper.currentDayOfWeek
 -
--                                // Day abbreviation from locale
 -                                Text {
 -                                    anchors.horizontalCenter: parent.horizontalCenter
 -                                    text: {
--                                        var dayName = dayColumn.dayDate.toLocaleDateString(Qt.locale(), "ddd");
--                                        // Capitalize first letter and limit to 2 chars
--                                        return (dayName.charAt(0).toUpperCase() + dayName.slice(1, 2)).replace(".", "");
+-                                        var keys = [
+-                                            "calendar.day.mon", "calendar.day.tue",
+-                                            "calendar.day.wed", "calendar.day.thu",
+-                                            "calendar.day.fri", "calendar.day.sat",
+-                                            "calendar.day.sun"
+-                                        ];
+-                                        return I18n.t(keys[dayColumn.index]);
 -                                    }
 -                                    color: Colors.overBackground
 -                                    font.family: Config.theme.font
@@ -1075,16 +1090,19 @@ index 1cad557d..6be1a9c4 100644
                                      }
 +                                    property bool isToday: index === calendarWrapper.currentDayOfWeek
  
-+                                    // Day abbreviation from locale
                                      Text {
 -                                        anchors.centerIn: parent
 -                                        text: dayColumn.dayDate.getDate()
 -                                        color: dayColumn.isToday ? Colors.background : Colors.overBackground
 +                                        anchors.horizontalCenter: parent.horizontalCenter
 +                                        text: {
-+                                            var dayName = dayColumn.dayDate.toLocaleDateString(Qt.locale(), "ddd");
-+                                            // Capitalize first letter and limit to 2 chars
-+                                            return (dayName.charAt(0).toUpperCase() + dayName.slice(1, 2)).replace(".", "");
++                                            var keys = [
++                                                "calendar.day.mon", "calendar.day.tue",
++                                                "calendar.day.wed", "calendar.day.thu",
++                                                "calendar.day.fri", "calendar.day.sat",
++                                                "calendar.day.sun"
++                                            ];
++                                            return I18n.t(keys[dayColumn.index]);
 +                                        }
 +                                        color: Colors.overBackground
                                          font.family: Config.theme.font
@@ -1666,7 +1684,7 @@ index 1cad557d..6be1a9c4 100644
                                              }
                                          }
                                      }
-@@ -600,22 +606,22 @@ Item {
+@@ -609,22 +615,22 @@ Item {
                          }
                      }
                  }
@@ -1760,10 +1778,10 @@ index 83464b58..0392b197 100644
              SysTrayItem {
                  required property SystemTrayItem modelData
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
-index 528a20b3..14d1eaf1 100644
+index eb6e9ccd..fe444c5d 100644
 --- a/modules/globals/GlobalStates.qml
 +++ b/modules/globals/GlobalStates.qml
-@@ -560,6 +560,58 @@ Singleton {
+@@ -605,6 +605,58 @@ Singleton {
          }
      }
  
@@ -2103,7 +2121,7 @@ index de25678a..c47a5c65 100644
                  }
                  
 diff --git a/modules/services/WeatherService.qml b/modules/services/WeatherService.qml
-index 9eceffa4..fdb36830 100644
+index 9efcfcfe..5c6dafb0 100644
 --- a/modules/services/WeatherService.qml
 +++ b/modules/services/WeatherService.qml
 @@ -8,7 +8,7 @@ Singleton {
@@ -2194,7 +2212,7 @@ index 9eceffa4..fdb36830 100644
          if (code === 82)
              return "🌧️";
          if (code >= 85 && code <= 86)
-@@ -442,7 +469,6 @@ Singleton {
+@@ -451,7 +478,6 @@ Singleton {
                  }
                  root.forecast = forecastData;
  
@@ -2202,7 +2220,7 @@ index 9eceffa4..fdb36830 100644
                  root.weatherDescription = getWeatherDescription(root.weatherCode);
                  root.calculateSunPosition();
                  root.dataAvailable = true;
-@@ -519,6 +545,7 @@ Singleton {
+@@ -528,6 +554,7 @@ Singleton {
      Component.onCompleted: {
          var now = new Date();
          currentHour = now.getHours() + now.getMinutes() / 60;

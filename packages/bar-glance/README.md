@@ -69,4 +69,5 @@ Works with Ambxst `>=1.3.0`. One new config key: `bar.systrayExclude`.
 
 ## Changelog
 
+- 1.1.2: ported to Ambxst 1.3.6 (base 480a10ca), which is now the minimum: the battery and calendar popouts keep upstream's new native translations (`I18n.t`). No behaviour change.
 - 1.1.1: verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.

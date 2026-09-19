@@ -54,5 +54,6 @@ Changes take effect the next time Settings is opened; no reload needed.
 
 ## Changelog
 
+- 1.1.1: verified on Ambxst 1.3.6 (base 480a10ca); patch applies verbatim, no source changes.
 - 1.1.0: float at map time via a fixed-size hint (no more tile-then-float flash); settings held in a startup singleton; constraints released after placement so the window stays resizable; the compositor-state fallback from 1.0.0 is gone (it mis-tiled the window).
 - 1.0.0: initial release, verified on Ambxst 1.3.3 (base af9f8ad4).

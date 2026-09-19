@@ -49,5 +49,6 @@ Requires `git` and `curl`, both of which Ambxst already uses.
 
 ## Changelog
 
+- 1.0.2: verified on Ambxst 1.3.6 (base 480a10ca); patch applies verbatim, no source changes.
 - 1.0.1: the button itself reports "No updates" and crossfades back; no banner message.
 - 1.0.0: initial release.
