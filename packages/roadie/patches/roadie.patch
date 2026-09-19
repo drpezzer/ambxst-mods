@@ -2017,7 +2017,7 @@ index ac44b52a..b862e2d5 100644
                              RowLayout {
                                  Layout.fillWidth: true
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-index 099acb04..ac7b3cf4 100644
+index 099acb04..b44b5482 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 +++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 @@ -24,6 +24,13 @@ PanelWindow {
@@ -2236,7 +2236,7 @@ index 099acb04..ac7b3cf4 100644
                  }
              }
          }
-@@ -1055,6 +1139,18 @@ PanelWindow {
+@@ -1055,9 +1139,33 @@ PanelWindow {
              anchors.fill: parent
              source: wallpaper.effectiveWallpaper
          }
@@ -2252,10 +2252,25 @@ index 099acb04..ac7b3cf4 100644
 +            opacity: ShellTransitions.curtain
 +            visible: opacity > 0
 +        }
++
++        // roadie: the stock WallpaperImage reports its first decoded image
++        // itself. A mod that swaps in a renderer of its own never does, which
++        // left the entrance waiting on its 1.5 s fallback at every start; an
++        // item without the marker counts as shown a beat after its path is set.
++        Timer {
++            interval: 250
++            running: wallImage.roadieReportsShown !== true && wallpaper.effectiveWallpaper !== ""
++            onTriggered: ShellTransitions.wallpaperShown(wallpaper.currentScreenName)
++        }
      }
  
      component WallpaperImage: Item {
-@@ -1204,6 +1300,11 @@ PanelWindow {
++        // roadie: tells the curtain this renderer calls wallpaperShown itself.
++        readonly property bool roadieReportsShown: true
+         property string source
+         property string previousSource
+ 
+@@ -1204,6 +1312,11 @@ PanelWindow {
                      fillMode: Image.PreserveAspectCrop
                      asynchronous: true
                      smooth: true
@@ -2267,7 +2282,7 @@ index 099acb04..ac7b3cf4 100644
                      sourceSize.width: wallpaper.width
                      sourceSize.height: wallpaper.height
                      layer.enabled: parent.tint
-@@ -1228,7 +1329,11 @@ PanelWindow {
+@@ -1228,7 +1341,11 @@ PanelWindow {
                  tint: wallpaper.tintEnabled
                  onRequestVideoSync: wallpaper.requestVideoSync()
  

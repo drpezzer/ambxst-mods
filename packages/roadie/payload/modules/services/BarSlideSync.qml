@@ -183,8 +183,18 @@ Singleton {
         landedGuard.stop();
         const cbs = root.pending;
         root.pending = [];
-        for (const cb of cbs)
-            cb();
+        // Each callback on its own: one queued by a bar whose screen has gone
+        // away since (a monitor unplugged or replaced mid-slide) throws from
+        // its dead context, and an uncaught throw ended the loop -- every bar
+        // queued behind it kept its target and never moved. A screen plugged
+        // in after all the others had gone came up without a bar that way.
+        for (const cb of cbs) {
+            try {
+                cb();
+            } catch (e) {
+                console.warn("BarSlideSync: dropped a slide callback from a bar that no longer exists:", e);
+            }
+        }
     }
 
     Process {
