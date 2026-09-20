@@ -464,6 +464,22 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.0.6: the rounded screen corners no longer come back over a fullscreen
+  game when focus moves to another monitor. The corners' own check misses a
+  window on a special workspace unless its monitor is the focused one; they
+  now go by the same per-output "covered" state as the bar, frame and notch.
+  And showing the notch (or a hovered bar or dock) over a fullscreen window no
+  longer rounds all four corners of that screen: the frame's inner radius is one
+  value for every corner and came back with the single strip under the notch;
+  it now stays square for as long as the screen is covered.
+  The notch also no longer brings the frame's strip back on its side over a
+  fullscreen window (it read as a black bar sliding in across the game): it
+  sits at the very edge of the screen, its own curved ears meeting that edge.
+  An OPENED notch (launcher, dashboard, power menu, tools) over a fullscreen
+  window, which already brought the bar and its pills in, now brings the frame
+  back with them -- gutter and corners as one motion, the notch riding down
+  onto its strip -- and sends it away again when the notch closes. Nothing is
+  reserved for it, so the window underneath does not resize.
 - 1.0.5: a fullscreen video left with Escape after a trip to another workspace
   could leave the screen "covered", bar and all away, until the next workspace
   switch. The shell reads fullscreen state from two independently clocked
