@@ -275,7 +275,14 @@ Singleton {
         blockLoading: true
         printErrors: false
     }
-    readonly property bool firstStart: !markerFile.loaded
+    // waitForJob: `loaded` on its own is not synchronous (blockLoading only
+    // makes text() wait), and for the first ~400 ms of EVERY start this read
+    // true -- every reload began as a boot, with the bar held away and then
+    // sliding in on its own, straight into the fullscreen detection.
+    readonly property bool firstStart: {
+        markerFile.waitForJob();
+        return !markerFile.loaded;
+    }
     property bool startKnown: false
     property string loginService: ""
     property bool externalLocker: false

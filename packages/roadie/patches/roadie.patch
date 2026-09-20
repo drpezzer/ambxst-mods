@@ -34,7 +34,7 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index 9d43848a..165f74a2 100644
+index 9d43848a..a1e2340e 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
 @@ -23,11 +23,22 @@ import "." as Bar
@@ -60,7 +60,7 @@ index 9d43848a..165f74a2 100644
      // Auto-hide properties
      onPinnedChanged: {
          if (Config.bar && Config.bar.pinnedOnStartup !== pinned) {
-@@ -63,9 +74,457 @@ Item {
+@@ -63,9 +74,550 @@ Item {
          return toplevel.fullscreen === true;
      }
  
@@ -116,7 +116,16 @@ index 9d43848a..165f74a2 100644
 +    // edge at full opacity, timed to land with the windows, ease-in-out on
 +    // the way out and ease-out on the way home -- which is how the shell's own
 +    // enter and leave read.
-+    readonly property int fsSlideDuration: Math.round((Config.animDuration !== undefined ? Config.animDuration : 300) * 1.6)
++    //
++    // How long depends on how much is moving. A bar contained in the frame is
++    // a slab the width (or height) of the screen with the frame's wrap around
++    // it, and 1.6 x animDuration suits that mass; the same time on a strip of
++    // pills with nothing behind them read as sluggish. So: contained in the
++    // frame 1.6, a frame or a bar background without that 1.2, pills alone
++    // (no frame, no bar background) 0.9.
++    readonly property bool slideHasFrame: (Config.bar && Config.bar.frameEnabled !== undefined) ? Config.bar.frameEnabled : false
++    readonly property real fsSlideFactor: root.actualContainBar ? 1.6 : ((root.slideHasFrame || Config.showBackground) ? 1.2 : 0.9)
++    readonly property int fsSlideDuration: Math.round((Config.animDuration !== undefined ? Config.animDuration : 300) * root.fsSlideFactor)
 +
 +    // 1 = in place, 0 = past the screen edge.
 +    property real fsProgress: 1
@@ -190,10 +199,23 @@ index 9d43848a..165f74a2 100644
 +            // Hyprland the callback runs synchronously.
 +            root.fsTarget = want ? 0 : 1;
 +            BarSlideSync.tune(root.fsSlideDuration, function() {
-+                if (root.barAway !== want)
++                // An abandoned move must not leave its intent behind: fsTarget
++                // was set above, before the compositor round trip, and the
++                // "already heading there" guards (here, in fsAutoHide and in
++                // fsRevealCheck) compare against it. A fullscreen state that
++                // flickered during those ~60 ms -- closing a game tends to
++                // report gone, back, gone -- dropped the slide here with
++                // fsTarget still saying 1, and every later attempt then
++                // believed the bar was on its way in: it stayed out until a
++                // workspace switch went round the guard.
++                if (root.barAway !== want) {
++                    root.fsTarget = -1;
 +                    return; // superseded by a newer change
-+                if (root.screenFullscreen)
++                }
++                if (root.screenFullscreen) {
++                    root.fsTarget = -1;
 +                    return; // this screen became the covered one meanwhile; fsStage owns it
++                }
 +                root.zoneDuration = root.fsDuration;
 +                root.zoneEasing = root.fsEasing;
 +                root.zoneBezier = root.fsBezier;
@@ -236,8 +258,10 @@ index 9d43848a..165f74a2 100644
 +        root.fsBezier = BarSlideSync.bezier.concat([1, 1]);
 +        root.fsTarget = want ? 1 : 0;
 +        BarSlideSync.tune(root.fsSlideDuration, function() {
-+            if (root.reveal !== want)
++            if (root.reveal !== want) {
++                root.fsTarget = -1; // see fsRetarget: no stale intent
 +                return; // superseded
++            }
 +            root.zoneDuration = root.fsDuration;
 +            root.zoneEasing = root.fsEasing;
 +            root.zoneBezier = root.fsBezier;
@@ -247,6 +271,64 @@ index 9d43848a..165f74a2 100644
 +    }
 +
 +    onBarAwayChanged: root.fsRetarget(true)
++
++    // ─── the last word ─────────────────────────────────────────────────
++    // Everything above reacts to changes, several of them through an async
++    // round trip, in handler orders QML does not define. Once things have
++    // been quiet for longer than any of it takes, compare where the bar is
++    // with where it should be and put it right: a pinned bar that is not
++    // away must be fully in, with its space; one that is away (or covered)
++    // and not held up by a hover or an open notch must be fully out. A
++    // warning says so, because it means a race got past the rest.
++    property int settleTries: 0
++    Timer {
++        id: settleTimer
++        interval: root.fsSlideDuration + (Config.animDuration !== undefined ? Config.animDuration : 300) + 500
++        onTriggered: root.fsSettle()
++    }
++    function fsSettleArm() {
++        root.settleTries = 0;
++        settleTimer.restart();
++    }
++    onStageChanged: root.fsSettleArm()
++    Connections {
++        target: root
++        function onBarAwayChanged() { root.fsSettleArm(); }
++        function onScreenFullscreenChanged() { root.fsSettleArm(); }
++        function onRevealChanged() { root.fsSettleArm(); }
++    }
++    function fsSettle() {
++        if (!root.pinned || root.stage !== "")
++            return;
++        const shouldBeIn = !root.barAway && !root.screenFullscreen;
++        let wrong = false;
++        if (shouldBeIn)
++            wrong = root.fsProgress < 1 || root.zoneProgress < 1;
++        else if (!root.reveal)
++            wrong = root.fsProgress > 0 || root.zoneProgress > 0;
++        if (!wrong) {
++            root.settleTries = 0;
++            return;
++        }
++        root.settleTries += 1;
++        console.warn("BarContent: bar stranded on", (root.screen ? root.screen.name : "?"), "-- should be", shouldBeIn ? "in" : "out",
++                     "fsProgress", root.fsProgress, "zoneProgress", root.zoneProgress, "fsTarget", root.fsTarget, "try", root.settleTries);
++        root.fsTarget = -1;
++        if (root.settleTries >= 3) {
++            // The synced slide keeps failing: take the end state outright.
++            root.fsDuration = 0;
++            root.zoneDuration = 0;
++            root.fsTarget = shouldBeIn ? 1 : 0;
++            root.fsProgress = root.fsTarget;
++            root.zoneProgress = root.fsTarget;
++            return;
++        }
++        if (root.screenFullscreen)
++            root.fsStage(true);
++        else
++            root.fsRetarget(true);
++        settleTimer.restart();
++    }
 +
 +    // ─── the covered screen ────────────────────────────────────────────
 +    // On the screen a fullscreen window itself covers, the chrome leaves and
@@ -314,8 +396,19 @@ index 9d43848a..165f74a2 100644
 +        }
 +        const anim = (Config.animDuration !== undefined ? Config.animDuration : 0);
 +        if (covered) {
-+            if (root.fsProgress <= 0) {
-+                // Already out (a fast close and re-open): straight to the frame.
++            if (root.fsProgress <= 0 && root.fsTarget !== 1) {
++                // Already out and staying out (a fast close and re-open):
++                // straight to the frame.
++                //
++                // "Staying out" matters. A slide back in that has been ordered
++                // but has not moved a pixel yet -- fsTarget 1 with fsProgress
++                // still 0: the compositor round trip, a shell that is still
++                // starting, a fullscreen state that reports gone, back, gone as
++                // a game closes -- used to pass for "already out" here. The
++                // bar was never sent out again, its slide in then finished over
++                // the fullscreen window, and the mirror image of the same
++                // collision left it out for good after the window had closed.
++                root.fsTarget = 0;
 +                root.stage = "out-bar";
 +                root.fsStageAdvance();
 +            } else if (root.fsProgress < 1) {
@@ -519,7 +612,7 @@ index 9d43848a..165f74a2 100644
  
      onShouldAutoHideChanged: {
          if (!shouldAutoHide) {
-@@ -82,7 +541,7 @@ Item {
+@@ -82,7 +634,7 @@ Item {
  
      // Check if notch hover is active (for synchronized reveal when bar is at same side)
      // NOTE: We access Visibilities.notchPanels directly because UnifiedShellPanel registers itself as the panel ref
@@ -528,7 +621,7 @@ index 9d43848a..165f74a2 100644
      readonly property string notchPosition: (Config.notchPosition !== undefined ? Config.notchPosition : "top")
      readonly property bool notchHoverActive: {
          if (barPosition !== notchPosition)
-@@ -103,7 +562,7 @@ Item {
+@@ -103,7 +655,7 @@ Item {
      }
  
      // Check if notch is open (dashboard, powermenu, etc.)
@@ -537,7 +630,7 @@ index 9d43848a..165f74a2 100644
      readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
  
      // Radius logic for "Squished" style
-@@ -117,8 +576,18 @@ Item {
+@@ -117,8 +669,18 @@ Item {
          if (!shouldAutoHide)
              return true;
  
@@ -557,7 +650,7 @@ index 9d43848a..165f74a2 100644
              return false;
          }
  
-@@ -264,6 +733,9 @@ Item {
+@@ -264,6 +826,9 @@ Item {
          Item {
              id: bar
  
@@ -567,7 +660,7 @@ index 9d43848a..165f74a2 100644
              anchors {
                  top: (root.barPosition === "top" || root.orientation === "vertical") ? parent.top : undefined
                  bottom: (root.barPosition === "bottom" || root.orientation === "vertical") ? parent.bottom : undefined
-@@ -280,8 +752,10 @@ Item {
+@@ -280,8 +845,10 @@ Item {
              // layer.enabled: true
              // layer.effect: Shadow {}
  
@@ -580,7 +673,7 @@ index 9d43848a..165f74a2 100644
              Behavior on opacity {
                  enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
                  NumberAnimation {
-@@ -291,10 +765,12 @@ Item {
+@@ -291,10 +858,12 @@ Item {
              }
  
              // Slide animation
@@ -594,7 +687,7 @@ index 9d43848a..165f74a2 100644
                      if (root.barPosition === "left")
                          return root.reveal ? 0 : -bar.width - (root.frameOffset + root.leftOuterMargin);
                      if (root.barPosition === "right")
-@@ -304,6 +780,8 @@ Item {
+@@ -304,6 +873,8 @@ Item {
                  y: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -603,7 +696,7 @@ index 9d43848a..165f74a2 100644
                      if (root.barPosition === "top")
                          return root.reveal ? 0 : -bar.height - (root.frameOffset + root.topOuterMargin);
                      if (root.barPosition === "bottom")
-@@ -311,20 +789,20 @@ Item {
+@@ -311,20 +882,20 @@ Item {
                      return 0;
                  }
                  Behavior on x {
@@ -627,7 +720,7 @@ index 9d43848a..165f74a2 100644
  
              states: [
                  State {
-@@ -374,7 +852,7 @@ Item {
+@@ -374,7 +945,7 @@ Item {
                          spacing: 4
  
                          // Obtener referencia al notch de esta pantalla

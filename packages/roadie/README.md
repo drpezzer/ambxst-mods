@@ -464,6 +464,21 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.0.4: **the bar no longer gets stranded.** Closing a fullscreen window could
+  leave the bar out until you switched workspace and back, and reloading the
+  shell with a game up could leave it in over the game. Same collision both
+  ways: a slide that had been ordered but had not moved a pixel yet (the
+  compositor round trip, a starting shell, a fullscreen state that reports
+  gone, back, gone as a game closes) was mistaken for a bar that was already
+  where it should be, and an abandoned slide left its intent behind, so every
+  later attempt believed it was "already heading there". Both are fixed, and a
+  settle check now compares where the bar is with where it should be about a
+  second after things go quiet and puts it right (it logs a warning if it ever
+  has to). Also: every reload briefly started as a boot (the boot marker was
+  read asynchronously); it is read synchronously now. **The bar's slide is
+  faster where less is moving:** contained in the frame 1.6 x animDuration
+  (unchanged), a frame or a bar background without that 1.2, pills alone with
+  no frame and no bar background 0.9.
 - 1.0.3: with the frame turned off, coming back from a workspace (or a game)
   that had a fullscreen window no longer leaves the screen barless for a full
   animation length before the bar slides in. The return is staged "frame
