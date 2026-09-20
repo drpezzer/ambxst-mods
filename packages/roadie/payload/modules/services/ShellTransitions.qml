@@ -37,57 +37,23 @@ Singleton {
 
     readonly property string modId: "drpezzer.roadie"
 
-    // ─── settings (Settings > Mods > Ambxst Roadie) ────────────────
-    property bool enterAnimation: true
-    property int enterDuration: 650
-    property int leaveDuration: 900
-    property bool veilEnabled: true
+    // ─── settings (Settings > Roadie, RoadieSettings) ──────────────────
+    // "stock" is upstream: the shell simply appears (enter) or is restarted
+    // with no way out (leave, every channel at 0 ms).
+    readonly property bool enterAnimation: RoadieSettings.enterMode === "roadie"
+    readonly property int enterDuration: RoadieSettings.enterDuration
+    readonly property int leaveDuration: RoadieSettings.leaveMode === "roadie" ? RoadieSettings.leaveDuration : 0
+    readonly property bool veilEnabled: RoadieSettings.veilEnabled
     // "stock" | "quiet" | "off", see the on-screen display section.
-    property string osd: "quiet"
+    readonly property string osd: RoadieSettings.osd
     // Boot: whether to lock (see the boot section). "auto" | "always" | "never"
-    property string bootLock: "auto"
-
-    function applyValues(values) {
-        if (!values)
-            return;
-        if (["stock", "quiet", "off"].indexOf(values.osd) !== -1)
-            root.osd = values.osd;
-        if (values.enterAnimation !== undefined)
-            root.enterAnimation = !!values.enterAnimation;
-        if (values.veilEnabled !== undefined)
-            root.veilEnabled = !!values.veilEnabled;
-        if (["auto", "always", "never"].indexOf(values.bootLock) !== -1)
-            root.bootLock = values.bootLock;
-        const d = Number(values.enterDuration);
-        if (!isNaN(d) && d >= 0)
-            root.enterDuration = d;
-        const l = Number(values.leaveDuration);
-        if (!isNaN(l) && l >= 0)
-            root.leaveDuration = l;
-    }
-
-    property bool settingsLoaded: false
-
-    function loadSettings() {
-        if (typeof ModsService === "undefined" || typeof ModsService.getSettings !== "function") {
-            root.settingsLoaded = true;
-            return;
-        }
-        ModsService.getSettings(root.modId, (settings, error) => {
-            if (!error && settings)
-                root.applyValues(settings.values);
-            root.settingsLoaded = true;
-        });
-    }
+    readonly property string bootLock: RoadieSettings.bootLock
+    // The settings are read synchronously now; kept for the lock timer.
+    readonly property bool settingsLoaded: true
 
     Connections {
-        target: ModsService
-        function onSettingChanged(modId, key, value) {
-            if (modId !== root.modId)
-                return;
-            const values = {};
-            values[key] = value;
-            root.applyValues(values);
+        target: RoadieSettings
+        function onValuesChanged() {
             root.scheduleSync();
         }
     }
@@ -1001,7 +967,6 @@ Singleton {
     }
 
     Component.onCompleted: {
-        loadSettings();
         if (root.hyprland)
             windowsProbe.running = true;
         // This singleton is created on first use, which is usually after the

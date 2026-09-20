@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.roadie",
   "name": "Ambxst Roadie",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "The crew that keeps the show running while the stage changes. Boot: the screen stays in the background colour until the shell is ready, then the wallpaper and frame come in and the shell locks (unless you logged in through a greeter or an external locker is up), the bar following after you unlock. Shell start and reload: the wallpaper fades in while the frame, bar, notch and dock slide into place and the windows make room on one staged timeline; a reload through `ambxst run reload` (or the optional `ambxst` wrapper in extras/) plays it in reverse before the restart, and a tiny detached helper covers a cold kill the same way. Monitors coming and going: hotplug without a shell reload (panels unregister by the screen name latched at creation, stale unregisters are ignored, the wallpaper-manager role passes to a surviving screen, ~15 screen.name bindings are null-guarded during teardown). Focus and fullscreen: a pinned bar can live on the focused screen only and slide across when focus moves (Dual Screen Single Bar, switchable), a bar, dock or frame that hides for a fullscreen window releases the space it held, fullscreen detection sees games on an open special workspace, and the notch and dock count that workspace's windows. On Hyprland the compositor's window animation is matched to each of these moves for its duration. Shutting down: Reboot and Power Off from the power menu swell the notch into the whole screen, a line from a film or show fades in (a goodbye for a shutdown, a back-in-a-second for a reboot), and the command runs once it has been up long enough to read; Escape backs out. Also: no AI sidebar sweep or corner flash at start, and no volume or brightness pop-ups on their own after a start. Replaces Ambxst Clean Load and Multi-monitor fixes (it is both, and more); it cannot be enabled together with either.",
   "license": "MIT",
   "author": "drpezzer",
@@ -14,7 +14,8 @@
     "ambxst": ">=1.3.6 <2.0.0",
     "testedBaseCommits": [
       "8de8cd4b0e725984cb6e618b2b1028a2fdef2113",
-      "480a10cab5c7e381b7910ef70281b7e67ed2c8a1"
+      "480a10cab5c7e381b7910ef70281b7e67ed2c8a1",
+      "7f0ac49b82497c6d273f7cd7e49d302904f440ed"
     ]
   },
   "dependencies": [],
@@ -31,11 +32,9 @@
     "Reads Hyprland monitor state through Quickshell.Hyprland",
     "On Hyprland, runs `hyprctl eval` to retune the windowsMove animation for the duration of a shell transition or a bar slide, then restores it; remembers the originals in ~/.local/state/ambxst/",
     "Runs the power menu's own reboot / power off command itself, a few seconds after the click, and keeps a small state file of quotes already shown in ~/.local/state/ambxst/",
-    "At boot, reads the login session's PAM service name over `loginctl` and looks for a running external locker, to decide whether to lock; locks with the Ambxst lockscreen"
+    "At boot, reads the login session's PAM service name over `loginctl` and looks for a running external locker, to decide whether to lock; locks with the Ambxst lockscreen",
+    "Keeps its options in ~/.config/ambxst/roadie.json (Settings > Roadie)"
   ],
-  "settings": {
-    "schema": "settings.json"
-  },
   "operations": [
     {
       "type": "overlay",
@@ -66,6 +65,21 @@
       "type": "overlay",
       "source": "payload/modules/widgets/dashboard/controls/RoadieQuotesEditor.qml",
       "target": "modules/widgets/dashboard/controls/RoadieQuotesEditor.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/RoadieSettings.qml",
+      "target": "modules/services/RoadieSettings.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/controls/RoadiePanel.qml",
+      "target": "modules/widgets/dashboard/controls/RoadiePanel.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/RoadieDdc.qml",
+      "target": "modules/services/RoadieDdc.qml"
     },
     {
       "type": "patch",

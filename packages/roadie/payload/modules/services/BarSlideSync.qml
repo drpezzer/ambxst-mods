@@ -30,37 +30,9 @@ Singleton {
 
     readonly property string modId: "drpezzer.roadie"
 
-    // Settings (settings.json). followFocus: a pinned bar shows only on the
-    // focused screen and slides across when focus moves.
-    property bool followFocus: true
-
-    function applyValues(values) {
-        if (!values)
-            return;
-        if (values.followFocus !== undefined)
-            root.followFocus = !!values.followFocus;
-    }
-
-    function loadSettings() {
-        if (typeof ModsService === "undefined" || typeof ModsService.getSettings !== "function")
-            return;
-        ModsService.getSettings(root.modId, (settings, error) => {
-            if (error || !settings)
-                return;
-            root.applyValues(settings.values);
-        });
-    }
-
-    Connections {
-        target: typeof ModsService !== "undefined" ? ModsService : null
-        function onSettingChanged(modId, key, value) {
-            if (modId !== root.modId)
-                return;
-            const values = {};
-            values[key] = value;
-            root.applyValues(values);
-        }
-    }
+    // followFocus (Settings > Roadie): a pinned bar shows only on the focused
+    // screen and slides across when focus moves.
+    readonly property bool followFocus: RoadieSettings.followFocus
 
     readonly property bool hyprland: (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "") !== ""
     readonly property bool animate: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
@@ -311,7 +283,6 @@ Singleton {
     }
 
     Component.onCompleted: {
-        root.loadSettings();
         if (root.hyprland)
             startProbe.running = true;
     }

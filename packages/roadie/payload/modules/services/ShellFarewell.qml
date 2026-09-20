@@ -36,50 +36,15 @@ import qs.modules.services
 Singleton {
     id: root
 
-    // ─── settings (Settings > Mods > Ambxst Roadie) ────────────────────
-    property bool farewellEnabled: true
-    property int farewellDuration: 900
-    property int farewellHold: 1500
-    property bool showSource: false
-
-    function applyValues(values) {
-        if (!values)
-            return;
-        if (values.farewellEnabled !== undefined)
-            root.farewellEnabled = !!values.farewellEnabled;
-        if (values.farewellSource !== undefined)
-            root.showSource = !!values.farewellSource;
-        const d = Number(values.farewellDuration);
-        if (values.farewellDuration !== undefined && !isNaN(d) && d >= 0)
-            root.farewellDuration = d;
-        const h = Number(values.farewellHold);
-        if (values.farewellHold !== undefined && !isNaN(h) && h >= 0)
-            root.farewellHold = h;
-    }
-
-    function loadSettings() {
-        if (typeof ModsService === "undefined" || typeof ModsService.getSettings !== "function")
-            return;
-        ModsService.getSettings(ShellTransitions.modId, (settings, error) => {
-            if (error || !settings)
-                return;
-            root.applyValues(settings.values);
-        });
-    }
-
-    Connections {
-        target: ModsService
-        function onSettingChanged(modId, key, value) {
-            if (modId !== ShellTransitions.modId)
-                return;
-            const values = {};
-            values[key] = value;
-            root.applyValues(values);
-        }
-    }
+    // ─── settings (Settings > Roadie, RoadieSettings) ──────────────────
+    // farewellMode: "stock" = no farewell, the command runs at once;
+    // "immediate" = no expansion or fades, sheet and quote are simply there.
+    readonly property bool farewellEnabled: RoadieSettings.farewellMode !== "stock"
+    readonly property int farewellDuration: RoadieSettings.farewellMode === "immediate" ? 0 : RoadieSettings.farewellDuration
+    readonly property int farewellHold: RoadieSettings.farewellHold
+    readonly property bool showSource: RoadieSettings.farewellSource
 
     Component.onCompleted: {
-        root.loadSettings();
         // The bag's directory does not exist on a machine no other Ambxst
         // state has been written on yet.
         stateDir.running = true;
@@ -110,7 +75,8 @@ Singleton {
     // Bar pills and dock: gone by the time the notch is 70% of the way.
     readonly property real chromeOpacity: Math.max(0, 1 - root.expand / 0.7)
 
-    readonly property bool animate: (Config.animDuration !== undefined ? Config.animDuration : 300) > 0
+    // Immediate (Settings > Roadie) turns every fade of the farewell off too.
+    readonly property bool animate: (Config.animDuration !== undefined ? Config.animDuration : 300) > 0 && RoadieSettings.farewellMode !== "immediate"
     readonly property int expandMs: root.animate ? root.farewellDuration : 0
     readonly property int holdMs: root.farewellHold + root.quote.length * 40
 

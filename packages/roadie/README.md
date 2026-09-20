@@ -189,8 +189,7 @@ farewell backs out on its own.
 
 ![the quote editor under the mod's settings](media/quote-editor.png)
 
-Open **Settings > Mods**, select **Ambxst Roadie**, and under its settings you
-will find **Farewell quotes**: type a line (and, if you like, where it is from),
+Open **Settings > Roadie** and scroll to **Farewell quotes**: type a line (and, if you like, where it is from),
 press Add. Your lines are listed there with a Remove button, each built-in line
 can be hidden and shown again from **Show list**, and **Use only your own
 lines** drops the built-in ones altogether. Everything applies at once, no
@@ -392,23 +391,42 @@ Works with Ambxst `>=1.3.0`.
 
 ## Settings
 
-Under Settings > Mods > Ambxst Roadie:
+Roadie has its own page in the Settings window, **Roadie**, just above Ambxst.
+Everything applies as you change it, and it is kept in
+`~/.config/ambxst/roadie.json` (only what differs from the defaults; edit it by
+hand if you like, it is watched).
 
-- **Bar follows the focused screen** (on). Dual Screen Single Bar; the same
-  switch is in Settings > Theme > General. Off: every screen keeps its bar.
-- **Animate the shell in on start** (on). Off gives the stock pop-in.
-- **Enter duration** (650 ms). The base E of the table above.
-- **Leave duration** (900 ms). The base L.
-- **Cover a cold kill with the veil helper** (on). Starts or stops the helper
-  on the next reload.
-- **Lock after boot** (Auto / Always / Never). See Booting.
-- **On-screen display** (Quiet at start). *Quiet at start* hides the volume,
-  microphone and brightness pop-ups for the initial reads after a start and
-  shows them for real changes; *As stock* always shows them; *Off* never does.
-- **Say goodbye on reboot and power off** (on). Off: both run at once, as stock.
-- **Farewell expansion** (900 ms) and **Farewell reading time** (1500 ms, plus
-  40 ms per character).
-- **Show where the quote is from** (off). A small line under the quote.
+**Animations.** Everything Roadie changes has a mode: **Roadie** (its own
+animation, with a duration you can type; clearing the field goes back to normal,
+and where normal is derived from Ambxst's animation speed the field reads
+"auto"), **Stock** (what plain Ambxst does there) and, where that is a
+different thing, **Immediate**.
+
+| | Roadie, normally | Stock |
+|---|---|---|
+| Shell start | 650 ms (the frame; wallpaper and bar are paced from it) | everything appears at once |
+| Shell reload, the way out | 900 ms | the shell is restarted with no way out |
+| Bar slide (focus moving between screens, fullscreen, auto-hide) | auto: 1.6 x Ambxst's animation speed contained in the frame, 1.2 with a frame or bar background, 0.9 for pills alone | Ambxst's quick hide and reveal, not staged, not synced with the windows · or **Immediate** |
+| Frame around a fullscreen window | auto: Ambxst's animation speed | drops and returns at once |
+| Notch over a fullscreen window | peeking: hangs off the screen edge, square corners; opened: the frame comes back with the bar | the frame's strip returns under the notch, all four corners round |
+| Farewell on reboot and power off | 900 ms to fill the screen, then 1500 ms + 40 ms per character to read | no farewell · or **Immediate** (no expansion or fades) |
+
+**Behaviour.** Bar follows the focused screen (on; stock: off) · Show where the
+quote is from (off) · Lock after boot (Auto / Always / Never; stock: Never) ·
+Volume and brightness pop-ups (Quiet at start / As stock / Off) · Remember the
+monitors' brightness channels for the session (on; stock: off) · Cover a cold
+kill with the veil helper (on; stock: off).
+
+**Stock everything** in the title bar sets all of the above to plain Ambxst in
+one go, for anyone who wants Roadie only for its fixes -- the stranded bar, the
+stale fullscreen detection, corners over a game on an unfocused monitor and the
+monitor hotplug fixes have no switch. The button beside it resets the page to
+Roadie's defaults.
+
+**Farewell quotes.** The editor described above: add, remove, hide built-in
+lines, use only your own.
+
+Options set in Settings > Mods before 1.1.0 are carried over the first time.
 
 ## Install
 
@@ -464,6 +482,26 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.1.0: **No more lag spike after a reload.** Every shell start, Ambxst asks
+  the monitors over DDC which I2C bus is which (`ddcutil detect`) and what their
+  brightness is. DDC traffic blocks the display driver: on an NVIDIA desktop with
+  two DDC monitors that froze the compositor for 1.2 s in total, two seconds into
+  every reload and under the shell's own entrance, and wrote a level the monitor
+  already had ten seconds later for another 0.4 s. Roadie now remembers the
+  buses and levels for the session (in `$XDG_RUNTIME_DIR`, keyed by the connected
+  monitors; a changed monitor set or a wake from suspend asks again) and skips
+  writes that would change nothing. Measured against Hyprland's request socket:
+  1565 ms of stalls per reload before, 0 after. Switch: Settings > Roadie,
+  "Remember the monitors' brightness channels for the session".
+- 1.1.0: **Settings > Roadie.** Every option moved out of Settings > Mods (and
+  the "bar follows focus" switch out of Theme) into a page of its own above
+  Ambxst, with the quote editor. Everything Roadie changes has a mode --
+  **Roadie** with a duration you can type, **Stock** for what plain Ambxst
+  does, **Immediate** where that differs -- and **Stock everything** leaves only
+  the fixes. The bar slide and the fullscreen frame can now be timed too (they
+  were derived only). Options live in `~/.config/ambxst/roadie.json` and are
+  read synchronously at start, so nothing depends on the mod manager's settings
+  call any more; what you had set before is imported once.
 - 1.0.6: the rounded screen corners no longer come back over a fullscreen
   game when focus moves to another monitor. The corners' own check misses a
   window on a special workspace unless its monitor is the focused one; they
