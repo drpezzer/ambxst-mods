@@ -495,8 +495,8 @@ Item {
                     choices: [{ label: "Quiet at start", value: "quiet" }, { label: "As stock", value: "stock" }, { label: "Off", value: "off" }]
                 }
                 ToggleRow {
-                    label: "Remember the monitors' brightness channels for the session"
-                    hint: "Ambxst asks every monitor for its DDC channel and brightness at each start, which freezes the whole desktop for about a second on some GPUs. On: a reload reuses what this session already learned (a changed monitor set or a wake from suspend asks again). Off is stock."
+                    label: "Remember the monitors' brightness channels"
+                    hint: "Ambxst asks every monitor for its DDC channel and brightness at each start, which freezes the whole desktop for about a second on some GPUs. On: a reload reuses what this session already learned, and the first start after a boot reuses the channels if the same monitors sit on the same adapters, then checks the brightness a few seconds after the entrance (a changed monitor set or a wake from suspend asks again). Off is stock."
                     checked: RoadieSettings.ddcCache
                     onToggled: value => RoadieSettings.set("ddcCache", value)
                 }

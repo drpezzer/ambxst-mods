@@ -1563,7 +1563,7 @@ index 5a80e6bd..c3b9019b 100644
  
      NotchContent {
 diff --git a/modules/services/Brightness.qml b/modules/services/Brightness.qml
-index 9f01e78b..9c0785de 100644
+index 9f01e78b..00d689db 100644
 --- a/modules/services/Brightness.qml
 +++ b/modules/services/Brightness.qml
 @@ -28,6 +28,9 @@ Singleton {
@@ -1576,7 +1576,7 @@ index 9f01e78b..9c0785de 100644
              ddcDetectTimer.restart();
          }
      }
-@@ -100,6 +103,15 @@ Singleton {
+@@ -100,6 +103,20 @@ Singleton {
          repeat: false
          onTriggered: {
              if (!SuspendManager.isSuspending) {
@@ -1584,6 +1584,11 @@ index 9f01e78b..9c0785de 100644
 +                // better part of a second (see RoadieDdc). Within a session the
 +                // answer cannot change unless the monitors do, so a reload
 +                // reuses it.
++                if (RoadieDdc.busy) {
++                    // The copy from an earlier boot is still being checked.
++                    ddcDetectTimer.restart();
++                    return;
++                }
 +                const cached = RoadieDdc.cachedMonitors();
 +                if (cached) {
 +                    root.ddcMonitors = cached;
@@ -1592,7 +1597,7 @@ index 9f01e78b..9c0785de 100644
                  ddcProc.running = true;
              }
          }
-@@ -149,7 +161,11 @@ Singleton {
+@@ -149,7 +166,11 @@ Singleton {
                  });
              }
          }
@@ -1605,7 +1610,7 @@ index 9f01e78b..9c0785de 100644
      }
  
      Process {
-@@ -191,6 +207,8 @@ Singleton {
+@@ -191,6 +212,8 @@ Singleton {
          readonly property bool isDdc: !useBrightnessctl && !!ddcEntry
          readonly property string busNum: isDdc ? ddcEntry.busNum : ""
          property int rawMaxBrightness: 100
@@ -1614,7 +1619,7 @@ index 9f01e78b..9c0785de 100644
          property real brightness
          property bool ready: false
  
-@@ -233,6 +251,21 @@ Singleton {
+@@ -233,6 +256,27 @@ Singleton {
                  return;
              if (isDdc && !busNum)
                  return;
@@ -1630,13 +1635,56 @@ index 9f01e78b..9c0785de 100644
 +                    monitor.hwRaw = known.cur;
 +                    monitor.brightness = known.cur / known.max;
 +                    monitor.ready = true;
++                    // A level from an earlier boot: shown now, checked once
++                    // the entrance is over (see verify()).
++                    if (RoadieDdc.isProvisional(busNum)) {
++                        verifyTimer.interval = RoadieDdc.verifyDelay(busNum);
++                        verifyTimer.restart();
++                    }
 +                    return;
 +                }
 +            }
              monitor.readContext = "init";
              initProc.command = isDdc ? ["ddcutil", "-b", busNum, "getvcp", "10"] : ["sh", "-c", `echo "a b c $(brightnessctl g) $(brightnessctl m)"`];
              initProc.running = true;
-@@ -282,6 +315,11 @@ Singleton {
+@@ -255,10 +299,36 @@ Singleton {
+             initProc.running = true;
+         }
+ 
++        // roadie: check a level remembered from an earlier boot against the
++        // hardware, after the entrance and one monitor at a time. Skipped if
++        // the level was written in the meantime (that settles it too).
++        readonly property Timer verifyTimer: Timer {
++            repeat: false
++            onTriggered: monitor.verify()
++        }
++        function verify() {
++            if (!isDdc || !busNum || !RoadieDdc.isProvisional(busNum))
++                return;
++            if (SuspendManager.isSuspending || initProc.running) {
++                verifyTimer.interval = 3000;
++                verifyTimer.restart();
++                return;
++            }
++            monitor.readContext = "verify";
++            initProc.command = ["ddcutil", "-b", busNum, "getvcp", "10"];
++            initProc.running = true;
++        }
++
+         readonly property Process initProc: Process {
+             onExited: exitCode => {
+                 if (monitor.readContext === "refresh" && exitCode !== 0)
+                     monitor.silentRefreshInFlight = false;
++                // roadie: the remembered bus did not answer -- forget it and
++                // find the monitors the normal way.
++                if (monitor.readContext === "verify" && exitCode !== 0) {
++                    RoadieDdc.invalidate();
++                    ddcDetectTimer.restart();
++                }
+             }
+             stdout: SplitParser {
+                 onRead: data => {
+@@ -282,6 +352,18 @@ Singleton {
                          return;
                      monitor.rawMaxBrightness = maxRaw;
                      const newVal = currentRaw / maxRaw;
@@ -1645,17 +1693,24 @@ index 9f01e78b..9c0785de 100644
 +                    monitor.hwRaw = currentRaw;
 +                    if (monitor.isDdc)
 +                        RoadieDdc.storeLevel(monitor.busNum, currentRaw, maxRaw);
++
++                    if (monitor.readContext === "verify") {
++                        // roadie: only a level that really differs is news.
++                        if (Math.round(monitor.brightness * maxRaw) !== currentRaw)
++                            monitor.brightness = newVal;
++                        return;
++                    }
  
                      if (monitor.readContext === "refresh") {
                          // Echo-skip: ignore hardware reads that match a
-@@ -341,8 +379,17 @@ Singleton {
+@@ -341,8 +423,17 @@ Singleton {
              monitor.lastUserWriteAt = Date.now();
              monitor.lastUserWriteValue = monitor.brightness;
              const rounded = Math.round(monitor.brightness * monitor.rawMaxBrightness);
 +            // roadie: a DDC write the monitor already holds is a compositor
 +            // stall for nothing (a synced slider echoing a level back wrote
 +            // "100" to a monitor at 100, twice, ten seconds into every start).
-+            if (isDdc && RoadieDdc.enabled && rounded === monitor.hwRaw)
++            if (isDdc && RoadieDdc.enabled && rounded === monitor.hwRaw && !RoadieDdc.isProvisional(busNum))
 +                return;
              setProc.command = isDdc ? ["ddcutil", "-b", busNum, "setvcp", "10", rounded] : ["brightnessctl", "--class", "backlight", "s", rounded, "--quiet"];
              setProc.startDetached();

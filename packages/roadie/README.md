@@ -414,7 +414,7 @@ different thing, **Immediate**.
 **Behaviour.** Bar follows the focused screen (on; stock: off) · Show where the
 quote is from (off) · Lock after boot (Auto / Always / Never; stock: Never) ·
 Volume and brightness pop-ups (Quiet at start / As stock / Off) · Remember the
-monitors' brightness channels for the session (on; stock: off) · Cover a cold
+monitors' brightness channels (on; stock: off) · Cover a cold
 kill with the veil helper (on; stock: off).
 
 **Stock everything** in the title bar sets all of the above to plain Ambxst in
@@ -491,8 +491,14 @@ already installed keeps working.
   buses and levels for the session (in `$XDG_RUNTIME_DIR`, keyed by the connected
   monitors; a changed monitor set or a wake from suspend asks again) and skips
   writes that would change nothing. Measured against Hyprland's request socket:
-  1565 ms of stalls per reload before, 0 after. Switch: Settings > Roadie,
-  "Remember the monitors' brightness channels for the session".
+  1565 ms of stalls per reload before, 0 after. The first start after a boot
+  is covered too: the bus map is kept in `~/.cache/ambxst/roadie-ddc.json` and
+  reused only if the same monitors are connected and each bus still has the
+  adapter name the kernel gave it last time (`/sys/bus/i2c/devices/i2c-N/name`);
+  the last known level is shown at once and checked against the monitor about
+  ten seconds in, one monitor at a time, instead of under the entrance (no
+  detect, 346 ms of stalls well after the animation instead of 706 ms inside
+  it). Switch: Settings > Roadie, "Remember the monitors' brightness channels".
 - 1.1.0: **Settings > Roadie.** Every option moved out of Settings > Mods (and
   the "bar follows focus" switch out of Theme) into a page of its own above
   Ambxst, with the quote editor. Everything Roadie changes has a mode --
