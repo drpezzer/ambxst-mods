@@ -464,6 +464,11 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.0.3: with the frame turned off, coming back from a workspace (or a game)
+  that had a fullscreen window no longer leaves the screen barless for a full
+  animation length before the bar slides in. The return is staged "frame
+  first, then the bar", and the frame stage waited even when there was no
+  frame to bring back.
 - 1.0.2: a monitor plugged in after every other screen had gone (all displays off, then one back on) came up without its bar until the next reload: the slide callback of the bar that had just been destroyed threw, and took the callbacks queued behind it down with it. Each one now runs on its own. Also plays well with mods that replace the wallpaper renderer (tested against `positive.wallpaper-transitions`, patches compose in either order). The stock renderer reports its first decoded image as before; a renderer that does not counts as shown 250 ms after its path is set, so the entrance no longer sits on its 1.5 s fallback at every start.
 - 1.0.1: ported to Ambxst 1.3.6 (base 480a10ca), which is now the minimum. The wallpaper-manager handover is rebuilt on upstream's new `Wallpaper.qml` (QtMultimedia backend, tilde expansion, `find -L`); the curtain lifts when the new `VideoWallpaper` item is created, where it used to hook the mpvpaper launch; the assistant sidebar keeps the `slide` driver on top of upstream's new edge anchoring; the power menu and settings index keep upstream's native translations.
 - 1.0.0: first public release. Everything below, verified on Ambxst 1.3.3
