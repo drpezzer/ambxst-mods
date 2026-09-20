@@ -585,6 +585,21 @@ Singleton {
             ShellFarewell.cancel();
         }
 
+        // Why a screen's bar is where it is: per screen, whether the shell
+        // thinks a fullscreen window covers it, which record says so (axctl's
+        // or Hyprland's) and the bar's slide state. Run it while the bar is
+        // stuck and paste the output into a bug report.
+        function coverState(): string {
+            const out = [];
+            const panels = Visibilities.barPanels || {};
+            for (const name in panels) {
+                const pnl = panels[name];
+                if (pnl && typeof pnl.coverReport === "function")
+                    out.push(pnl.coverReport());
+            }
+            return JSON.stringify(out, null, 2);
+        }
+
         function bootPreview(): int {
             markerClear.running = true;
             return root.reload();

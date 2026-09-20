@@ -464,6 +464,17 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.0.5: a fullscreen video left with Escape after a trip to another workspace
+  could leave the screen "covered", bar and all away, until the next workspace
+  switch. The shell reads fullscreen state from two independently clocked
+  sources and OR-ed them, so a stale "fullscreen" in either one stuck. On
+  Hyprland the compositor's own record for a window now has the last word, and
+  those records are refreshed on the event and again once it has settled (a
+  single refresh can be folded into one already in flight, whose reply predates
+  the change). New: `roadie coverState` prints, per screen, whether it counts
+  as covered, which record says so, and the bar's slide state -- run it while
+  the bar is stuck and paste it into a report. The shell log also notes every
+  change (`UnifiedShellPanel: <screen> covered = ...`).
 - 1.0.4: **the bar no longer gets stranded.** Closing a fullscreen window could
   leave the bar out until you switched workspace and back, and reloading the
   shell with a game up could leave it in over the game. Same collision both

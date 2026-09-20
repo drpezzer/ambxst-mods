@@ -1627,7 +1627,7 @@ index 26da91a8..75c3b74d 100644
              if (barEnabled && barPosition === "right" && barPinned) {
                  zone += barSize + barOuterMargin;
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..8ac9ce66 100644
+index 028c2dce..f4492927 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -1689,10 +1689,11 @@ index 028c2dce..8ac9ce66 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,25 +100,123 @@ PanelWindow {
+@@ -89,27 +100,198 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
+-    readonly property bool hasFullscreenWindow: {
 +
 +    // The special workspace this output currently has pulled up, or 0 for none.
 +    //
@@ -1746,8 +1747,23 @@ index 028c2dce..8ac9ce66 100644
 +            // Keep Quickshell's per-window records current for the fullscreen
 +            // scan below (it tracks them itself once primed, this is belt and
 +            // braces for the event that matters most).
-+            if (event.name === "fullscreen")
-+                Hyprland.refreshToplevels();
++            //
++            // One refresh is not enough. A request made while another is in
++            // flight is folded into it, and that reply can predate the change
++            // (seen with the monitors, below): the record then says
++            // "fullscreen" for good, this output stays "covered", and the bar,
++            // frame and notch stay away until some later event -- a workspace
++            // switch, typically -- happens to refresh it. So: now, and again
++            // once the burst of events around a fullscreen change (or a
++            // workspace or focus change, which is when such a refresh is
++            // usually already in flight) has settled.
++            if (event.name === "fullscreen" || event.name === "workspacev2" || event.name === "activewindowv2"
++                    || event.name === "closewindow" || event.name === "movewindowv2") {
++                if (event.name === "fullscreen")
++                    Hyprland.refreshToplevels();
++                toplevelSettle.restart();
++                toplevelSettleLate.restart();
++            }
 +            if (event.name !== "activespecial")
 +                return;
 +            const parts = String(event.data).split(",");
@@ -1760,9 +1776,27 @@ index 028c2dce..8ac9ce66 100644
 +        }
 +    }
 +
-     readonly property bool hasFullscreenWindow: {
++    // What covers this output, if anything: { covered, source, window }. The
++    // source ("axctl" or "hyprland") and the window are kept so a stuck state
++    // can be traced to the record that is holding it (`roadie coverState`).
++    Timer {
++        id: toplevelSettle
++        interval: 120
++        onTriggered: Hyprland.refreshToplevels()
++    }
++    Timer {
++        id: toplevelSettleLate
++        interval: 700
++        onTriggered: Hyprland.refreshToplevels()
++    }
++    readonly property bool hasFullscreenWindow: unifiedPanel.coverInfo.covered
++    onHasFullscreenWindowChanged: console.log("UnifiedShellPanel:", (targetScreen ? targetScreen.name : "?"), "covered =", hasFullscreenWindow,
++                                              hasFullscreenWindow ? ("by " + coverInfo.source + " " + coverInfo.window) : "")
++    readonly property var coverInfo: {
++        const none = { covered: false, source: "", window: "" };
          if (!compositorMonitor)
-             return false;
+-            return false;
++            return none;
  
          const activeWorkspaceId = compositorMonitor.activeWorkspace.id;
          const monId = compositorMonitor.id;
@@ -1771,9 +1805,6 @@ index 028c2dce..8ac9ce66 100644
 -        const toplevel = ToplevelManager.activeToplevel;
 -        if (toplevel && toplevel.fullscreen && AxctlService.focusedMonitor.id === monId) {
 -            return true;
--        }
--
--        // Check all windows on this monitor (robust path)
 +        const specialId = unifiedPanel.openSpecialWorkspaceId;
 +
 +        // There used to be a fast path here: the focused toplevel is
@@ -1799,11 +1830,34 @@ index 028c2dce..8ac9ce66 100644
 +        const onScreen = function(wsId) {
 +            return wsId === activeWorkspaceId || (specialId !== 0 && wsId === specialId);
 +        };
++        // Hyprland's own per-window records, by address. Where it has one
++        // for a window, it has the last word on that window's fullscreen
++        // state: the two sources are clocked independently, and OR-ing them
++        // meant a stale "fullscreen" in EITHER kept the output covered -- a
++        // video left with Escape after a trip to another workspace stayed
++        // "fullscreen" in one of them, and the bar stayed away until the next
++        // workspace switch refreshed it. (The records are refreshed on the
++        // event and again after it settles, above.)
++        const tls = Hyprland.toplevels ? Hyprland.toplevels.values : [];
++        const hyprFs = {};
++        for (let i = 0; i < tls.length; i++) {
++            const o = tls[i].lastIpcObject;
++            if (o && o.address !== undefined)
++                hyprFs[String(o.address)] = Number(o.fullscreen) || 0;
+         }
+-
+-        // Check all windows on this monitor (robust path)
          const wins = CompositorData.windowList;
          for (let i = 0; i < wins.length; i++) {
 -            if (wins[i].monitor === monId && wins[i].fullscreen && wins[i].workspace.id === activeWorkspaceId) {
-+            if (wins[i].monitor === monId && wins[i].fullscreen && onScreen(wins[i].workspace.id))
-+                return true;
+-                return true;
+-            }
++            if (!(wins[i].monitor === monId && wins[i].fullscreen && onScreen(wins[i].workspace.id)))
++                continue;
++            const known = hyprFs[String(wins[i].address)];
++            if (known !== undefined && known < 2)
++                continue; // Hyprland says this window is not fullscreen (any more)
++            return { covered: true, source: "axctl", window: String(wins[i].class) + " " + String(wins[i].address) + " ws " + wins[i].workspace.id };
 +        }
 +        // On Hyprland, also the compositor's own per-window records, which
 +        // Quickshell refreshes straight off the `fullscreen` event. axctl's
@@ -1811,19 +1865,43 @@ index 028c2dce..8ac9ce66 100644
 +        // monitor hotplug (no geometry, is_fullscreen stuck false), and a
 +        // game that goes fullscreen on such a window would otherwise never
 +        // be noticed. Hyprland's monitor ids are the ones axctl reports.
-+        const tls = Hyprland.toplevels ? Hyprland.toplevels.values : [];
 +        for (let i = 0; i < tls.length; i++) {
 +            const o = tls[i].lastIpcObject;
 +            if (!o || o.monitor !== monId)
 +                continue;
 +            // 2 = fullscreen, 1 = maximized (which leaves the frame in place).
 +            if (Number(o.fullscreen) >= 2 && o.workspace && onScreen(o.workspace.id))
-                 return true;
--            }
++                return { covered: true, source: "hyprland", window: String(o.class) + " " + String(o.address) + " ws " + o.workspace.id };
          }
-         return false;
+-        return false;
++        return none;
++    }
++
++    // Everything the bar's slide depends on, for `roadie coverState`.
++    function coverReport() {
++        return {
++            screen: targetScreen ? targetScreen.name : "",
++            covered: unifiedPanel.coverInfo.covered,
++            source: unifiedPanel.coverInfo.source,
++            window: unifiedPanel.coverInfo.window,
++            activeWorkspace: compositorMonitor ? compositorMonitor.activeWorkspace.id : null,
++            openSpecial: unifiedPanel.openSpecialWorkspaceId,
++            bar: {
++                pinned: barContent.pinned,
++                barAway: barContent.barAway,
++                screenFullscreen: barContent.screenFullscreen,
++                reveal: barContent.reveal,
++                stage: barContent.stage,
++                fsTarget: barContent.fsTarget,
++                fsProgress: barContent.fsProgress,
++                zoneProgress: barContent.zoneProgress,
++                slideMs: barContent.fsSlideDuration
++            }
++        };
      }
-@@ -120,22 +229,47 @@ PanelWindow {
+ 
+     // Proxy properties for Bar/Notch synchronization
+@@ -120,22 +302,47 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -1883,7 +1961,7 @@ index 028c2dce..8ac9ce66 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -151,6 +285,10 @@ PanelWindow {
+@@ -151,6 +358,10 @@ PanelWindow {
          // Full-screen capture when any module/popup is open
          item: unifiedPanel.needsFullScreenInput ? fullScreenMask : null
          regions: [
@@ -1894,7 +1972,7 @@ index 028c2dce..8ac9ce66 100644
              Region {
                  item: barContent.visible ? barContent.barHitbox : null
              },
-@@ -221,21 +359,25 @@ PanelWindow {
+@@ -221,21 +432,25 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
