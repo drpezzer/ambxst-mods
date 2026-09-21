@@ -1,5 +1,5 @@
 diff --git a/config/Config.qml b/config/Config.qml
-index 4eaad957..99278d6d 100644
+index ab5ce35c..62c9b2da 100644
 --- a/config/Config.qml
 +++ b/config/Config.qml
 @@ -549,6 +549,11 @@ Singleton {
@@ -1723,24 +1723,17 @@ index 99304687..edf81930 100644
              }
          }
 diff --git a/modules/bar/systray/SysTray.qml b/modules/bar/systray/SysTray.qml
-index 83464b58..0392b197 100644
+index ee1392e0..7a37207a 100644
 --- a/modules/bar/systray/SysTray.qml
 +++ b/modules/bar/systray/SysTray.qml
-@@ -3,6 +3,7 @@ import QtQuick.Layouts
- import Quickshell.Services.SystemTray
- import qs.modules.theme
- import qs.modules.components
-+import qs.config
- 
-     StyledRect {
-     variant: "bg"
-@@ -25,6 +26,24 @@ import qs.modules.components
+@@ -19,7 +19,23 @@ StyledRect {
      // Orientación derivada de la barra
      property bool vertical: bar.orientation === "vertical"
  
+-    readonly property var allItems: SystemTray.items?.values ?? []
 +    // Tray items minus anything Config.bar.systrayExclude matches, so an app the
-+    // shell has a native widget for doesn't also sit in the tray.
-+    readonly property var trayItems: {
++    // shell has a native widget for doesn't also sit in the tray (or its overflow popup).
++    readonly property var allItems: {
 +        const items = SystemTray.items?.values ?? [];
 +        const excluded = Config.bar?.systrayExclude ?? [];
 +        if (!excluded || excluded.length === 0)
@@ -1755,28 +1748,9 @@ index 83464b58..0392b197 100644
 +            });
 +        });
 +    }
-+
-     // Hide completely when empty - check both orientations
-     readonly property bool hasItems: rowRepeater.count > 0 || columnRepeater.count > 0
- 
-@@ -43,7 +62,7 @@ import qs.modules.components
- 
-         Repeater {
-             id: rowRepeater
--            model: SystemTray.items
-+            model: root.trayItems
- 
-             SysTrayItem {
-                 required property SystemTrayItem modelData
-@@ -62,7 +81,7 @@ import qs.modules.components
- 
-         Repeater {
-             id: columnRepeater
--            model: SystemTray.items
-+            model: root.trayItems
- 
-             SysTrayItem {
-                 required property SystemTrayItem modelData
+     readonly property var hiddenIds: StateService.systrayHidden
+     readonly property var visibleItems: allItems.filter(item => !hiddenIds.includes(item.id))
+     readonly property var overflowItems: allItems.filter(item => hiddenIds.includes(item.id))
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
 index eb6e9ccd..fe444c5d 100644
 --- a/modules/globals/GlobalStates.qml

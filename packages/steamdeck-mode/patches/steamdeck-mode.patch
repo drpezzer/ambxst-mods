@@ -110,11 +110,11 @@ index 2ad87376..33876037 100644
          id: mouseArea
          anchors.fill: parent
 diff --git a/modules/widgets/dashboard/widgets/QuickControls.qml b/modules/widgets/dashboard/widgets/QuickControls.qml
-index bc4a6acc..eb167351 100644
+index daf05a90..3b2bf525 100644
 --- a/modules/widgets/dashboard/widgets/QuickControls.qml
 +++ b/modules/widgets/dashboard/widgets/QuickControls.qml
 @@ -124,6 +124,38 @@ StyledRect {
-                     tooltipText: GameModeClient.toggled ? "Game Mode: On" : "Game Mode: Off"
+                     tooltipText: GameModeClient.toggled ? I18n.t("controls.game_mode_on") : I18n.t("controls.game_mode_off")
                      onClicked: GameModeClient.toggle()
                  }
 +

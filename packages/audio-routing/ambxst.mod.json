@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.audio-routing",
   "name": "Audio routing",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A fourth dashboard tab under the vitals: every program playing audio, which output it goes to, a volume slider and mute for each, and a dropdown to move it elsewhere, including into EasyEffects. Same again for microphones. Master rows set the default device; per-device rows appear when programs are split across outputs. Follows the Ambxst theme live. Also adds the 'audio' / 'dashboard-audio' IPC commands.",
   "license": "MIT",
   "author": "drpezzer",
@@ -16,7 +16,9 @@
       "6f9e93cb81767ff14c4867c349fc176d8d9e6697",
       "af9f8ad4f42d7cd77f57a7c75f6a2a5d1fb59674",
       "8de8cd4b0e725984cb6e618b2b1028a2fdef2113",
-      "480a10cab5c7e381b7910ef70281b7e67ed2c8a1"
+      "480a10cab5c7e381b7910ef70281b7e67ed2c8a1",
+      "7f0ac49b82497c6d273f7cd7e49d302904f440ed",
+      "c62a7acc443dbb1c9045e83466402528cc522af2"
     ]
   },
   "dependencies": [],
