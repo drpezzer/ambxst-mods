@@ -1,5 +1,5 @@
 diff --git a/config/Config.qml b/config/Config.qml
-index 4e4834ee..3265184d 100644
+index ab5ce35c..1634de0d 100644
 --- a/config/Config.qml
 +++ b/config/Config.qml
 @@ -141,6 +141,14 @@ Singleton {
@@ -31,10 +31,10 @@ index ec7003db..c0ed2ade 100644
      "animDuration": 300,
      "shadowOpacity": 0.5,
 diff --git a/modules/bar/systray/SysTrayItem.qml b/modules/bar/systray/SysTrayItem.qml
-index 0b725b1a..6aa40765 100644
+index 346f18af..27fb8065 100644
 --- a/modules/bar/systray/SysTrayItem.qml
 +++ b/modules/bar/systray/SysTrayItem.qml
-@@ -169,6 +169,9 @@ MouseArea {
+@@ -254,6 +254,9 @@ MouseArea {
      Tinted {
          sourceItem: trayIcon
          anchors.fill: trayIcon
@@ -45,10 +45,10 @@ index 0b725b1a..6aa40765 100644
  
      StyledToolTip {
 diff --git a/modules/bar/workspaces/Workspaces.qml b/modules/bar/workspaces/Workspaces.qml
-index 48f68cdd..9db984c1 100644
+index a46e1af0..527f66ce 100644
 --- a/modules/bar/workspaces/Workspaces.qml
 +++ b/modules/bar/workspaces/Workspaces.qml
-@@ -528,6 +528,9 @@ Item {
+@@ -565,6 +565,9 @@ Item {
                          Tinted {
                              sourceItem: mainAppIcon
                              anchors.fill: mainAppIcon
@@ -58,7 +58,7 @@ index 48f68cdd..9db984c1 100644
                          }
                      }
                  }
-@@ -665,6 +668,9 @@ Item {
+@@ -702,6 +705,9 @@ Item {
                          Tinted {
                              sourceItem: mainAppIconVert
                              anchors.fill: mainAppIconVert
@@ -191,10 +191,10 @@ index 3132417b..c5aa8c1b 100644
                  }
  
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
-index 528a20b3..9b6985f2 100644
+index eb6e9ccd..2076dd5f 100644
 --- a/modules/globals/GlobalStates.qml
 +++ b/modules/globals/GlobalStates.qml
-@@ -231,6 +231,7 @@ Singleton {
+@@ -276,6 +276,7 @@ Singleton {
      readonly property var _simpleThemeProps: [
          "roundness", "oledMode", "lightMode", "font", "fontSize", "monoFont", "monoFontSize",
          "tintIcons", "enableCorners", "animDuration",
@@ -203,10 +203,10 @@ index 528a20b3..9b6985f2 100644
      ]
      readonly property var _srVariantProps: [
 diff --git a/modules/widgets/dashboard/controls/ThemePanel.qml b/modules/widgets/dashboard/controls/ThemePanel.qml
-index e622dff3..0eb26925 100644
+index ac44b52a..d7db19b1 100644
 --- a/modules/widgets/dashboard/controls/ThemePanel.qml
 +++ b/modules/widgets/dashboard/controls/ThemePanel.qml
-@@ -402,6 +402,146 @@ Item {
+@@ -415,6 +415,146 @@ Item {
                                  }
                              }
  
@@ -353,8 +353,23 @@ index e622dff3..0eb26925 100644
                              // Enable Corners toggle
                              RowLayout {
                                  Layout.fillWidth: true
+diff --git a/modules/widgets/defaultview/NotificationIndicator.qml b/modules/widgets/defaultview/NotificationIndicator.qml
+index a8a61a86..87322803 100644
+--- a/modules/widgets/defaultview/NotificationIndicator.qml
++++ b/modules/widgets/defaultview/NotificationIndicator.qml
+@@ -64,7 +64,9 @@ Item {
+             textFormat: Text.RichText
+             font.family: Icons.font
+             font.pixelSize: 18
+-            color: hovered ? Styling.srItem("overprimary") : (Notifications.list.length > 0 ? Colors.error : Colors.overBackground)
++            // True Matugen Icons: an unread bell in the theme's primary instead of
++            // the error tone, which stays red whatever the wallpaper.
++            color: hovered ? Styling.srItem("overprimary") : (Notifications.list.length > 0 ? (Config.theme.trueMatugenIcons ? Colors.primary : Colors.error) : Colors.overBackground)
+ 
+             HoverHandler {
+                 onHoveredChanged: root.hovered = hovered
 diff --git a/modules/widgets/launcher/LauncherView.qml b/modules/widgets/launcher/LauncherView.qml
-index 9af6e933..98e93517 100644
+index 0f9a071d..c80a3ae8 100644
 --- a/modules/widgets/launcher/LauncherView.qml
 +++ b/modules/widgets/launcher/LauncherView.qml
 @@ -751,6 +751,17 @@ Rectangle {
