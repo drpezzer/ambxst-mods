@@ -1723,7 +1723,7 @@ index 99304687..edf81930 100644
              }
          }
 diff --git a/modules/bar/systray/SysTray.qml b/modules/bar/systray/SysTray.qml
-index ee1392e0..7a37207a 100644
+index ee1392e0..535885a9 100644
 --- a/modules/bar/systray/SysTray.qml
 +++ b/modules/bar/systray/SysTray.qml
 @@ -19,7 +19,23 @@ StyledRect {
@@ -1751,6 +1751,160 @@ index ee1392e0..7a37207a 100644
      readonly property var hiddenIds: StateService.systrayHidden
      readonly property var visibleItems: allItems.filter(item => !hiddenIds.includes(item.id))
      readonly property var overflowItems: allItems.filter(item => hiddenIds.includes(item.id))
+@@ -28,7 +44,7 @@ StyledRect {
+     readonly property bool hasItems: allItems.length > 0
+ 
+     // Menu popup currently opened from an icon inside the overflow popup
+-    property var activeChildMenu: null
++    property var activeChildMenu: overflowPopup.activeChildMenu
+ 
+     // When the nested menu closes it drops the shared focus grab, so
+     // the overflow popup must take it back
+@@ -233,7 +249,11 @@ StyledRect {
+         }
+     }
+ 
+-    BarPopup {
++    // Overflow popout — a floating pill next to the bar, or grown out of the
++    // frame when the bar is contained by it. See BarPopout. The hidden icons
++    // and the drop zones move with it, so bar <-> overflow drags work in both
++    // forms (attached, both ends of the drag are in the panel's own surface).
++    BarPopout {
+         id: overflowPopup
+         anchorItem: root.vertical ? chevronColumn : chevronRow
+         bar: root.bar
+@@ -246,9 +266,6 @@ StyledRect {
+         readonly property int gridWidth: columns * 20 + (columns - 1) * 8
+         readonly property int gridHeight: rows * 20 + (rows - 1) * 8
+ 
+-        contentWidth: (root.overflowItems.length > 0 ? gridWidth : hintLabel.implicitWidth) + popupPadding * 2
+-        contentHeight: (root.overflowItems.length > 0 ? gridHeight : hintLabel.implicitHeight) + popupPadding * 2
+-
+         // A nested tray menu must not clear this popup's focus grab
+         extraGrabWindows: root.activeChildMenu ? [root.activeChildMenu] : []
+ 
+@@ -256,68 +273,74 @@ StyledRect {
+             if (isOpen)
+                 return;
+             const child = root.activeChildMenu;
+-            root.activeChildMenu = null;
++            overflowPopup.activeChildMenu = null;
+             if (child)
+                 child.close();
+         }
+ 
+-        ColumnLayout {
+-            anchors.centerIn: parent
+-            spacing: 8
++        Item {
++            implicitWidth: root.overflowItems.length > 0 ? overflowPopup.gridWidth : hintLabel.implicitWidth
++            implicitHeight: root.overflowItems.length > 0 ? overflowPopup.gridHeight : hintLabel.implicitHeight
+ 
+-            Grid {
+-                id: iconsGrid
+-                visible: root.overflowItems.length > 0
+-                columns: overflowPopup.columns
++            ColumnLayout {
++                anchors.centerIn: parent
+                 spacing: 8
+ 
+-                Repeater {
+-                    model: root.overflowItems
+-
+-                    SysTrayItem {
+-                        required property SystemTrayItem modelData
+-                        bar: root.bar
+-                        item: modelData
+-                        inOverflow: true
+-                        overflowPopupRef: overflowPopup
++                Grid {
++                    id: iconsGrid
++                    visible: root.overflowItems.length > 0
++                    columns: overflowPopup.columns
++                    spacing: 8
++
++                    Repeater {
++                        model: root.overflowItems
++
++                        SysTrayItem {
++                            required property SystemTrayItem modelData
++                            bar: root.bar
++                            item: modelData
++                            inOverflow: true
++                            overflowPopupRef: overflowPopup
++                        }
+                     }
+                 }
+-            }
+ 
+-            Text {
+-                id: hintLabel
+-                visible: root.overflowItems.length === 0
+-                text: I18n.t("bar.systray.overflow_empty")
+-                font.family: Config.theme.font
+-                font.pixelSize: Styling.fontSize(-1)
+-                color: Colors.outline
++                Text {
++                    id: hintLabel
++                    visible: root.overflowItems.length === 0
++                    text: I18n.t("bar.systray.overflow_empty")
++                    font.family: Config.theme.font
++                    font.pixelSize: Styling.fontSize(-1)
++                    color: Colors.outline
++                }
+             }
+-        }
+ 
+-        // Drop zone for hiding bar icons: dropping a visible item
+-        // over the popup card moves it into the overflow grid
+-        DropArea {
+-            id: popupDropArea
+-            anchors.fill: parent
+-            keys: ["text/x-ambxst-tray-item"]
++            // Drop zone for hiding bar icons: dropping a visible item
++            // over the popup card moves it into the overflow grid
++            DropArea {
++                id: popupDropArea
++                anchors.fill: parent
++                keys: ["text/x-ambxst-tray-item"]
+ 
+-            onDropped: drop => {
+-                const id = drop.getDataAsString("text/x-ambxst-tray-item");
+-                if (id && !root.hiddenIds.includes(id))
+-                    root.hideItem(id);
++                onDropped: drop => {
++                    const id = drop.getDataAsString("text/x-ambxst-tray-item");
++                    if (id && !root.hiddenIds.includes(id))
++                        root.hideItem(id);
++                }
+             }
+-        }
+ 
+-        Rectangle {
+-            anchors.fill: parent
+-            radius: Styling.radius(8)
+-            color: Colors.primary
+-            opacity: popupDropArea.containsDrag ? 0.15 : 0
+-
+-            Behavior on opacity {
+-                enabled: Config.animDuration > 0
+-                NumberAnimation {
+-                    duration: Config.animDuration / 2
++            Rectangle {
++                anchors.fill: parent
++                anchors.margins: -overflowPopup.popupPadding
++                radius: overflowPopup.contentRadius + overflowPopup.popupPadding
++                color: Colors.primary
++                opacity: popupDropArea.containsDrag ? 0.15 : 0
++
++                Behavior on opacity {
++                    enabled: Config.animDuration > 0
++                    NumberAnimation {
++                        duration: Config.animDuration / 2
++                    }
+                 }
+             }
+         }
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
 index eb6e9ccd..fe444c5d 100644
 --- a/modules/globals/GlobalStates.qml

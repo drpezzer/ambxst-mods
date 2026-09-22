@@ -51,6 +51,19 @@ Item {
     // StyledRect variant for the floating pill's background. Attached, the fill
     // is always the frame's own, or the seam would show.
     property string variant: "popup"
+    // Floating pill only: its distance from the bar, and whether its shadow
+    // margins let pointer input through (a drag from the bar has to be able
+    // to cross them without breaking its grab). Attached, there is no gap and
+    // no margin, so neither means anything.
+    property int visualMargin: 8
+    property bool clickThroughMargins: false
+    // Windows (a nested tray menu, say) that must not clear the floating
+    // pill's focus grab while they are open. The attached form has no grab —
+    // the panel's backdrop closes it — so nested popups leave it alone anyway.
+    property list<var> extraGrabWindows: []
+    // A nested popup opened from inside the contents, for hosts that track
+    // one (the tray registers its per-icon menus here).
+    property var activeChildMenu: null
 
     // Contents, instantiated by whichever host is in use.
     default property Component content
@@ -120,6 +133,13 @@ Item {
             root.open();
     }
 
+    // Re-assert the floating pill's focus grab after a nested popup took it
+    // over and closed. Nothing to do attached.
+    function refreshFocusGrab(): void {
+        if (!root.attached)
+            pill.refreshFocusGrab();
+    }
+
     // Toggling "contain bar" swaps which host owns the contents underneath an
     // open popout, which would otherwise leave the abandoned one on screen.
     onAttachedChanged: {
@@ -136,6 +156,9 @@ Item {
             anchorItem: root.anchorItem
             bar: root.bar
             popupPadding: root.popupPadding
+            visualMargin: root.visualMargin
+            clickThroughMargins: root.clickThroughMargins
+            extraGrabWindows: root.extraGrabWindows
             variant: root.variant
 
             contentWidth: (pillContent.item?.implicitWidth ?? 0) + root.popupPadding * 2

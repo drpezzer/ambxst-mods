@@ -4,8 +4,8 @@ More of your system readable straight from the bar, without opening the apps
 behind it.
 
 - **Frame-attached popouts.** With *contain bar* on, the clock/calendar,
-  audio and brightness controls, battery and power-profile picker, and the
-  tiling layout switcher grow out of the frame like part of it instead of
+  audio and brightness controls, battery and power-profile picker, the
+  tiling layout switcher and the tray's hidden-icons popup grow out of the frame like part of it instead of
   floating as separate pills. With *contain bar* off they stay floating pills,
   as stock.
 - **Bluetooth in the bar.** An indicator that opens a frame-attached flyout on
@@ -53,10 +53,11 @@ click anywhere outside it closes it.
   `BluetoothDeviceRow.qml`, `BluetoothBatteryIndicator.qml`,
   `modules/services/BluetoothControl.qml`, `BluetoothBattery.qml`.
 - `modules/bar/clock/Clock.qml`, `ControlsButton.qml`, `BatteryIndicator.qml`,
-  `LayoutSelectorButton.qml` — popouts move from `BarPopup` to `BarPopout`.
+  `LayoutSelectorButton.qml`, `systray/SysTray.qml` — popouts (and the tray's
+  overflow popup) move from `BarPopup` to `BarPopout`.
 - `modules/bar/BarContent.qml` — the two Bluetooth indicators join the bar.
 - `modules/bar/systray/SysTray.qml`, `config/Config.qml`, `config/defaults/bar.js`
-  — the `bar.systrayExclude` filter, default `["blueman"]`.
+  — also the `bar.systrayExclude` filter, default `["blueman"]`.
 - `modules/services/BluetoothDevice.qml`, `BluetoothService.qml` — pairing,
   trust and battery plumbing.
 - `modules/services/WeatherService.qml` — day/night glyph selection on its own
@@ -69,6 +70,7 @@ Works with Ambxst `>=1.3.8` (1.1.2 is the last release for 1.3.6 and 1.3.7). One
 
 ## Changelog
 
+- 1.2.0: the tray's overflow popup (Ambxst 1.3.8's hidden-icons grid) is a frame-attached popout too: with *contain bar* on it grows out of the frame beside the chevron on whichever side the bar is, and with it off it stays the floating pill Ambxst ships. Drag and drop into and out of it works in both forms; a hidden icon's own menu still opens from inside it. `BarPopout` gained the pass-throughs this needs (`visualMargin`, `clickThroughMargins`, `extraGrabWindows`, `activeChildMenu`, `refreshFocusGrab()`).
 - 1.1.4: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.1.3: ported to Ambxst 1.3.8 (base c62a7acc), which is now the minimum: upstream rewrote the tray around an overflow popup, so `bar.systrayExclude` now filters upstream's single item list and an excluded app stays out of both the bar and the popup. No behaviour change.
 - 1.1.2: ported to Ambxst 1.3.6 (base 480a10ca), which is now the minimum: the battery and calendar popouts keep upstream's new native translations (`I18n.t`). No behaviour change.
