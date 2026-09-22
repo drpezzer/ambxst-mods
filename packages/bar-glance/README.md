@@ -69,6 +69,7 @@ Works with Ambxst `>=1.3.8` (1.1.2 is the last release for 1.3.6 and 1.3.7). One
 
 ## Changelog
 
+- 1.1.4: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.1.3: ported to Ambxst 1.3.8 (base c62a7acc), which is now the minimum: upstream rewrote the tray around an overflow popup, so `bar.systrayExclude` now filters upstream's single item list and an excluded app stays out of both the bar and the popup. No behaviour change.
 - 1.1.2: ported to Ambxst 1.3.6 (base 480a10ca), which is now the minimum: the battery and calendar popouts keep upstream's new native translations (`I18n.t`). No behaviour change.
 - 1.1.1: verified on Ambxst 1.3.3 (base af9f8ad4); patch applies verbatim, no source changes.

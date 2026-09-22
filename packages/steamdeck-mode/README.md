@@ -74,6 +74,7 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- 1.0.6: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.0.5: verified on Ambxst 1.3.7 and 1.3.8 (bases 7f0ac49b, c62a7acc); patch regenerated on the 1.3.8 base so it applies without a 3-way merge, same changes line for line.
 - 1.0.4: verified on Ambxst 1.3.6 (base 480a10ca); patch applies verbatim, no source changes.
 - 1.0.3: fix the Quick Controls button doing nothing on 1.3. Upstream renamed `CaffeineService` to `CaffeineClient` (backed by the daemon), so `enable()` threw a ReferenceError on its first line before the mode could turn on. Caffeine is now read from `CaffeineClient.inhibit` and set with `CaffeineClient.setInhibit()`.

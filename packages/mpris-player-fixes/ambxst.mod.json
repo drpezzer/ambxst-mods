@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.mpris-player-fixes",
   "name": "MPRIS player fixes",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Browser-player fixes for the compact, full and lock players: seek bars no longer pin at the end when a player (Firefox, Zen, YouTube tabs) reports no track length; Zen gets its own player icon (it shares Firefox's MPRIS bus name); and cover art falls back to the YouTube thumbnail from xesam:url when mpris:artUrl is empty. Ships a companion userscript that keeps Firefox and Zen publishing position and length on every site. A Patch browser button on the mod's row in Settings > Mods walks you through installing Violentmonkey and the userscript in your browser and shows Patched once both are in place.",
   "license": "MIT",
   "author": "drpezzer",
@@ -18,7 +18,8 @@
       "8de8cd4b0e725984cb6e618b2b1028a2fdef2113",
       "480a10cab5c7e381b7910ef70281b7e67ed2c8a1",
       "7f0ac49b82497c6d273f7cd7e49d302904f440ed",
-      "c62a7acc443dbb1c9045e83466402528cc522af2"
+      "c62a7acc443dbb1c9045e83466402528cc522af2",
+      "2a704c438ddc0b94a11f4e4cf32a16220b62141f"
     ]
   },
   "dependencies": [],

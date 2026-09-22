@@ -482,6 +482,7 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.1.2: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.1.1: verified on Ambxst 1.3.8 (base c62a7acc); patch applies verbatim, no source changes.
 - 1.1.0: **No more lag spike after a reload.** Every shell start, Ambxst asks
   the monitors over DDC which I2C bus is which (`ddcutil detect`) and what their

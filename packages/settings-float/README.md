@@ -54,6 +54,7 @@ Changes take effect the next time Settings is opened; no reload needed.
 
 ## Changelog
 
+- 1.1.3: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.1.2: verified on Ambxst 1.3.7 and 1.3.8 (bases 7f0ac49b, c62a7acc); patch applies verbatim, no source changes.
 - 1.1.1: verified on Ambxst 1.3.6 (base 480a10ca); patch applies verbatim, no source changes.
 - 1.1.0: float at map time via a fixed-size hint (no more tile-then-float flash); settings held in a startup singleton; constraints released after placement so the window stays resizable; the compositor-state fallback from 1.0.0 is gone (it mis-tiled the window).
