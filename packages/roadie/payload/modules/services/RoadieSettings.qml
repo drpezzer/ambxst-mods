@@ -34,6 +34,7 @@ Singleton {
     readonly property var defaults: ({
         // behaviour
         followFocus: true,      // stock: false
+        notifyFollowFocus: true, // stock: false
         veilEnabled: true,      // stock: false
         ddcCache: true,         // stock: false (ask the monitors again on every start)
         osd: "quiet",           // quiet | stock | off
@@ -67,6 +68,7 @@ Singleton {
     // Plain Ambxst everywhere (the fixes stay).
     readonly property var stockValues: ({
         followFocus: false,
+        notifyFollowFocus: false,
         veilEnabled: false,
         ddcCache: false,
         osd: "stock",
@@ -96,6 +98,7 @@ Singleton {
     }
 
     readonly property bool followFocus: !!root.get("followFocus")
+    readonly property bool notifyFollowFocus: !!root.get("notifyFollowFocus")
     readonly property bool veilEnabled: !!root.get("veilEnabled")
     readonly property bool ddcCache: !!root.get("ddcCache")
     readonly property string osd: ["quiet", "stock", "off"].indexOf(root.get("osd")) !== -1 ? root.get("osd") : "quiet"

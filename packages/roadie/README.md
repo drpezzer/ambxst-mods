@@ -321,6 +321,16 @@ Left edge of a 4K screen, real time. The whole sequence: [demo.mp4](media/demo.m
   in **Settings > Theme > General** (and the mod's own settings page,
   `followFocus`) turns it off; off restores a bar on every screen with the
   sympathy hide.
+- **Notifications on one screen.** Stock pops every notification in every
+  screen's notch at once. Now the notch on the focused screen pops it and the
+  others stay quiet. If a fullscreen window covers the focused screen and
+  another screen is free, it goes to that screen instead -- the one focus was
+  on last if it qualifies, else the first free one -- so a game is never
+  interrupted while there is somewhere else to look. With a single screen, or
+  every screen covered, it stays on the focused screen: the dashboard's bell
+  already silences notifications for anyone who would rather not see them
+  over a game. A switch in **Settings > Roadie** (`notifyFollowFocus`) turns
+  it off; off is stock.
 - **An auto-hide (unpinned) bar gets the same slide.** Reveal and hide are
   the deliberate slide -- pills and frame slab together, no cross-fade --
   and the bar's space comes and goes with it, so the windows shrink as it
@@ -335,9 +345,10 @@ One patch, fifteen files: `Bar.qml`, `BarContent.qml`, `DockContent.qml`,
 `Visibilities.qml`, `GlobalStates.qml`, `UnifiedShellPanel.qml`,
 `Wallpaper.qml`, `OverviewPopup.qml`, `PresetsPopup.qml`, `ThemePanel.qml`
 (the Dual Screen Single Bar switch), `SettingsIndex.qml` (its search entry),
-`shell.qml`; plus one new file, `modules/services/BarSlideSync.qml`, the
+`shell.qml`; plus new files under `modules/services/`: `BarSlideSync.qml`, the
 singleton that holds Hyprland's `windowsMove` during a bar slide and carries
-the mod's settings. One mod setting, `followFocus` (settings.json); no new
+the mod's settings, and `NotificationRouter.qml`, which picks the screen a
+notification pops on. One mod setting, `followFocus` (settings.json); no new
 config keys. Reads
 Hyprland monitor state through `Quickshell.Hyprland` for the
 special-workspace check; on Hyprland runs `hyprctl eval` for the window
@@ -411,7 +422,8 @@ different thing, **Immediate**.
 | Notch over a fullscreen window | peeking: hangs off the screen edge, square corners; opened: the frame comes back with the bar | the frame's strip returns under the notch, all four corners round |
 | Farewell on reboot and power off | 900 ms to fill the screen, then 1500 ms + 40 ms per character to read | no farewell · or **Immediate** (no expansion or fades) |
 
-**Behaviour.** Bar follows the focused screen (on; stock: off) · Show where the
+**Behaviour.** Bar follows the focused screen (on; stock: off) · Notifications
+follow the focused screen (on; stock: off) · Show where the
 quote is from (off) · Lock after boot (Auto / Always / Never; stock: Never) ·
 Volume and brightness pop-ups (Quiet at start / As stock / Off) · Remember the
 monitors' brightness channels (on; stock: off) · Cover a cold
@@ -482,6 +494,7 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.2.0: **Notifications on one screen.** The notch pops a notification on the focused screen only; if a fullscreen window covers it and another screen is free, on that screen instead; with one screen (or all covered) it stays put. Settings > Roadie > "Notifications follow the focused screen" (`notifyFollowFocus`, on; stock: off). New `modules/services/NotificationRouter.qml`; `UnifiedShellPanel.qml` reports each screen's fullscreen state to it; `NotchContent.qml` / `Notch.qml` take the routed flag.
 - 1.1.2: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.1.1: verified on Ambxst 1.3.8 (base c62a7acc); patch applies verbatim, no source changes.
 - 1.1.0: **No more lag spike after a reload.** Every shell start, Ambxst asks

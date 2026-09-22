@@ -478,6 +478,12 @@ Item {
                     onToggled: value => RoadieSettings.set("followFocus", value)
                 }
                 ToggleRow {
+                    label: "Notifications follow the focused screen"
+                    hint: "The notch pops a notification on the screen that has focus only. If a window is fullscreen there and another screen is free, it goes to that screen instead; with one screen it stays where it is (the dashboard's bell silences them). Off (stock): every screen pops it."
+                    checked: RoadieSettings.notifyFollowFocus
+                    onToggled: value => RoadieSettings.set("notifyFollowFocus", value)
+                }
+                ToggleRow {
                     label: "Show where the quote is from"
                     checked: RoadieSettings.farewellSource
                     onToggled: value => RoadieSettings.set("farewellSource", value)

@@ -1135,17 +1135,25 @@ index eb6e9ccd..be55c9ab 100644
      }
  
 diff --git a/modules/notch/Notch.qml b/modules/notch/Notch.qml
-index 557c3261..ad389e7f 100644
+index 557c3261..b4cc1e4c 100644
 --- a/modules/notch/Notch.qml
 +++ b/modules/notch/Notch.qml
-@@ -54,10 +54,24 @@ Item {
+@@ -43,7 +43,8 @@ Item {
+     // Screen-specific visibility properties passed from parent
+     property var visibilities
+     readonly property bool screenNotchOpen: visibilities ? (visibilities.launcher || visibilities.dashboard || visibilities.powermenu || visibilities.tools) : false
+-    readonly property bool hasActiveNotifications: Notifications.popupList.length > 0
++    // roadie: NotchContent overrides this with its per-screen routing.
++    property bool hasActiveNotifications: Notifications.popupList.length > 0
+ 
+     property int defaultHeight: Config.showBackground ? (screenNotchOpen || hasActiveNotifications ? Math.max(stackContainer.height, 44) : 44) : (screenNotchOpen || hasActiveNotifications ? Math.max(stackContainer.height, 40) : 40)
+     property int islandHeight: screenNotchOpen || hasActiveNotifications ? Math.max(stackContainer.height, 36) : 36
+@@ -54,10 +55,24 @@ Item {
      readonly property int cornerSize: Config.roundness > 0 ? Config.roundness + 4 : 0
      readonly property int totalCornerWidth: Config.notchTheme === "default" ? cornerSize * 2 : 0
  
 -    implicitWidth: screenNotchOpen ? Math.max(stackContainer.width + totalCornerWidth, 290) : stackContainer.width + totalCornerWidth
 -    implicitHeight: Config.notchTheme === "default" ? defaultHeight : (Config.notchTheme === "island" ? islandHeight : defaultHeight)
--
--    Behavior on implicitWidth {
 +    // roadie: the farewell. `farewell` runs 0 -> 1 and swells the notch from
 +    // whatever size it has to past the screen edges (the rounded corners and
 +    // the concave ears travel outwards and leave the screen), so the power
@@ -1156,7 +1164,8 @@ index 557c3261..ad389e7f 100644
 +    property real farewellWidth: 0
 +    property real farewellHeight: 0
 +    readonly property real farewellRadius: Config.roundness > 0 ? Config.roundness + 20 : 0
-+
+ 
+-    Behavior on implicitWidth {
 +    property real baseWidth: screenNotchOpen ? Math.max(stackContainer.width + totalCornerWidth, 290) : stackContainer.width + totalCornerWidth
 +    property real baseHeight: Config.notchTheme === "default" ? defaultHeight : (Config.notchTheme === "island" ? islandHeight : defaultHeight)
 +
@@ -1167,7 +1176,7 @@ index 557c3261..ad389e7f 100644
          enabled: (screenNotchOpen || stackViewInternal.busy) && Config.animDuration > 0
          NumberAnimation {
              duration: Config.animDuration
-@@ -66,7 +80,7 @@ Item {
+@@ -66,7 +81,7 @@ Item {
          }
      }
  
@@ -1176,7 +1185,7 @@ index 557c3261..ad389e7f 100644
          enabled: (screenNotchOpen || stackViewInternal.busy) && Config.animDuration > 0
          NumberAnimation {
              duration: Config.animDuration
-@@ -296,6 +310,8 @@ Item {
+@@ -296,6 +311,8 @@ Item {
  
          Item {
              id: stackContainer
@@ -1185,7 +1194,7 @@ index 557c3261..ad389e7f 100644
              anchors.centerIn: parent
              width: stackViewInternal.currentItem ? stackViewInternal.currentItem.implicitWidth + (screenNotchOpen ? 32 : 0) : (screenNotchOpen ? 32 : 0)
              height: stackViewInternal.currentItem ? stackViewInternal.currentItem.implicitHeight + (screenNotchOpen ? 32 : 0) : (screenNotchOpen ? 32 : 0)
-@@ -470,7 +486,10 @@ Item {
+@@ -470,7 +487,10 @@ Item {
          readonly property int borderWidth: borderData[1]
          readonly property color borderColor: Config.resolveColor(borderData[0])
  
@@ -1198,7 +1207,7 @@ index 557c3261..ad389e7f 100644
          onPaint: {
              if (Config.notchTheme !== "default")
 diff --git a/modules/notch/NotchContent.qml b/modules/notch/NotchContent.qml
-index 3c7d32c9..74f7b5fc 100644
+index 3c7d32c9..a9d23096 100644
 --- a/modules/notch/NotchContent.qml
 +++ b/modules/notch/NotchContent.qml
 @@ -23,22 +23,32 @@ Item {
@@ -1239,7 +1248,19 @@ index 3c7d32c9..74f7b5fc 100644
  
      // Check if bar is pinned (use bar state directly)
      readonly property bool barPinned: {
-@@ -99,6 +109,9 @@ Item {
+@@ -89,7 +99,10 @@ Item {
+ 
+     // Notch state properties
+     readonly property bool screenNotchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
+-    readonly property bool hasActiveNotifications: Notifications.popupList.length > 0
++    // roadie: only the screen NotificationRouter picked pops the notification
++    // (the focused one, or a free one when that is covered by a fullscreen
++    // window); an empty target is every screen, as stock.
++    readonly property bool hasActiveNotifications: Notifications.popupList.length > 0 && (NotificationRouter.target === "" || NotificationRouter.target === (screen?.name ?? ""))
+ 
+     // Hover state with delay to prevent flickering
+     property bool hoverActive: false
+@@ -99,6 +112,9 @@ Item {
  
      // Reveal logic:
      readonly property bool reveal: {
@@ -1249,7 +1270,7 @@ index 3c7d32c9..74f7b5fc 100644
          // If keepHidden is true, ONLY show on interaction
          // UNLESS notch and bar are on same side (e.g. both top), then keepHidden is IGNORED for sync consistency
          if (((Config.notch && Config.notch.keepHidden !== undefined) ? Config.notch.keepHidden : false) && barPosition !== notchPosition) {
-@@ -166,7 +179,7 @@ Item {
+@@ -166,7 +182,7 @@ Item {
      Loader {
          id: persistentDashboardViewLoader
          active: false
@@ -1258,7 +1279,7 @@ index 3c7d32c9..74f7b5fc 100644
      }
  
      // Persistent power menu view
-@@ -233,6 +246,8 @@ Item {
+@@ -233,6 +249,8 @@ Item {
          // Animation container for reveal/hide
          Item {
              id: notchAnimationContainer
@@ -1267,7 +1288,7 @@ index 3c7d32c9..74f7b5fc 100644
              anchors.horizontalCenter: parent.horizontalCenter
              anchors.top: root.notchPosition === "top" ? parent.top : undefined
              anchors.bottom: root.notchPosition === "bottom" ? parent.bottom : undefined
-@@ -251,7 +266,7 @@ Item {
+@@ -251,7 +269,7 @@ Item {
              }
  
              // Slide animation (slide up when hidden)
@@ -1276,7 +1297,7 @@ index 3c7d32c9..74f7b5fc 100644
                  y: {
                      if (root.reveal) return 0;
                      if (root.notchPosition === "top")
-@@ -266,7 +281,7 @@ Item {
+@@ -266,21 +284,33 @@ Item {
                          easing.type: Easing.OutCubic
                      }
                  }
@@ -1285,7 +1306,11 @@ index 3c7d32c9..74f7b5fc 100644
  
              // Center notch
              Notch {
-@@ -277,10 +292,21 @@ Item {
+                 id: notchContainer
+                 unifiedEffectActive: root.unifiedEffectActive
++                hasActiveNotifications: root.hasActiveNotifications
+                 parentHovered: root.isMouseOverNotch
+                 anchors.horizontalCenter: parent.horizontalCenter
                  anchors.top: root.notchPosition === "top" ? parent.top : undefined
                  anchors.bottom: root.notchPosition === "bottom" ? parent.bottom : undefined
  
@@ -1310,7 +1335,7 @@ index 3c7d32c9..74f7b5fc 100644
  
                  // layer.enabled: true
                  // layer.effect: Shadow {}
-@@ -411,95 +437,141 @@ Item {
+@@ -411,95 +441,141 @@ Item {
          }
      }
  
@@ -1908,7 +1933,7 @@ index 26da91a8..75c3b74d 100644
              if (barEnabled && barPosition === "right" && barPinned) {
                  zone += barSize + barOuterMargin;
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 028c2dce..f4492927 100644
+index 028c2dce..9dfe6e29 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,6 +2,7 @@ import QtQuick
@@ -1970,7 +1995,7 @@ index 028c2dce..f4492927 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,27 +100,198 @@ PanelWindow {
+@@ -89,27 +100,202 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
@@ -2071,8 +2096,12 @@ index 028c2dce..f4492927 100644
 +        onTriggered: Hyprland.refreshToplevels()
 +    }
 +    readonly property bool hasFullscreenWindow: unifiedPanel.coverInfo.covered
-+    onHasFullscreenWindowChanged: console.log("UnifiedShellPanel:", (targetScreen ? targetScreen.name : "?"), "covered =", hasFullscreenWindow,
-+                                              hasFullscreenWindow ? ("by " + coverInfo.source + " " + coverInfo.window) : "")
++    onHasFullscreenWindowChanged: {
++        console.log("UnifiedShellPanel:", (targetScreen ? targetScreen.name : "?"), "covered =", hasFullscreenWindow,
++                    hasFullscreenWindow ? ("by " + coverInfo.source + " " + coverInfo.window) : "");
++        // roadie: NotificationRouter routes notch notifications around covered screens.
++        NotificationRouter.setCovered(registeredScreenName, hasFullscreenWindow);
++    }
 +    readonly property var coverInfo: {
 +        const none = { covered: false, source: "", window: "" };
          if (!compositorMonitor)
@@ -2182,7 +2211,7 @@ index 028c2dce..f4492927 100644
      }
  
      // Proxy properties for Bar/Notch synchronization
-@@ -120,22 +302,47 @@ PanelWindow {
+@@ -120,22 +306,49 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -2213,6 +2242,7 @@ index 028c2dce..f4492927 100644
 +        if (!registeredScreenName)
 +            return;
 +
++        NotificationRouter.setCovered(registeredScreenName, hasFullscreenWindow);
 +        Visibilities.registerBarPanel(registeredScreenName, unifiedPanel);
 +        Visibilities.registerNotchPanel(registeredScreenName, unifiedPanel);
 +        Visibilities.registerDockPanel(registeredScreenName, dockContent);
@@ -2233,6 +2263,7 @@ index 028c2dce..f4492927 100644
 +        if (!registeredScreenName)
 +            return;
 +
++        NotificationRouter.forget(registeredScreenName);
 +        Visibilities.unregisterBarPanel(registeredScreenName, unifiedPanel);
 +        Visibilities.unregisterNotchPanel(registeredScreenName, unifiedPanel);
 +        Visibilities.unregisterDockPanel(registeredScreenName, dockContent);
@@ -2242,7 +2273,7 @@ index 028c2dce..f4492927 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -151,6 +358,10 @@ PanelWindow {
+@@ -151,6 +364,10 @@ PanelWindow {
          // Full-screen capture when any module/popup is open
          item: unifiedPanel.needsFullScreenInput ? fullScreenMask : null
          regions: [
@@ -2253,7 +2284,7 @@ index 028c2dce..f4492927 100644
              Region {
                  item: barContent.visible ? barContent.barHitbox : null
              },
-@@ -221,21 +432,25 @@ PanelWindow {
+@@ -221,21 +438,25 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
