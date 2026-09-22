@@ -35,7 +35,6 @@ the shell fails to start within eight seconds Ambxst rolls back on its own.
 | [multi-monitor-fixes](packages/multi-monitor-fixes) | *Superseded by roadie.* Dual Screen Single Bar (the bar follows the focused screen, windows moving in step), staged chrome exit on a screen a fullscreen window covers, auto-hide bars on the same slide, monitor hotplug without a reload, wallpaper-manager handoff, notch and fullscreen-detection fixes |
 | [clean-load](packages/clean-load) | *Superseded by roadie.* Staged leave and enter animations around a shell reload |
 | [audio-routing](packages/audio-routing) | Notch tab for per-app outputs, volumes and microphones, with EasyEffects as a first-class route |
-| [vram-diet](packages/vram-diet) | Cuts the shell's GPU memory footprint (827 to 439 MiB on a two-monitor 3440x1440 setup) with no visual change |
 | [mod-updater](packages/mod-updater) | Update checking for Settings > Mods: a Check for updates button, per-mod Update buttons, optional automatic checks and installs |
 | [settings-float](packages/settings-float) | Opens the Settings window floating and centred, sized to the screen, through Ambxst's own compositor abstraction (Hyprland, Niri, Mango) |
 
