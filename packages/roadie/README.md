@@ -494,6 +494,7 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.2.1: notification routing only considers screens that have a shell panel and are connected, so a screen left out of `bar.screenList` (no notch there) is never chosen and a focused screen without one counts as covered; a panel rebuilt during a hot-plug no longer has its state dropped by the old panel's teardown.
 - 1.2.0: **Notifications on one screen.** The notch pops a notification on the focused screen only; if a fullscreen window covers it and another screen is free, on that screen instead; with one screen (or all covered) it stays put. Settings > Roadie > "Notifications follow the focused screen" (`notifyFollowFocus`, on; stock: off). New `modules/services/NotificationRouter.qml`; `UnifiedShellPanel.qml` reports each screen's fullscreen state to it; `NotchContent.qml` / `Notch.qml` take the routed flag.
 - 1.1.2: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.1.1: verified on Ambxst 1.3.8 (base c62a7acc); patch applies verbatim, no source changes.

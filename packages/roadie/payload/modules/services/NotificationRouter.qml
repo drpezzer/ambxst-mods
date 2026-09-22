@@ -17,13 +17,18 @@ import qs.modules.services
 //     all: better a popup over the game than a notification nobody sees
 //     (the bell in the dashboard silences them if that is a bother).
 //
-// An empty target means "every screen", which is also the answer whenever the
-// focused screen is unknown, so nothing is ever lost to a gap in the data.
-// Each UnifiedShellPanel reports whether its screen is covered.
+// Only screens that have a shell panel count (each UnifiedShellPanel reports
+// its screen here, so a screen left out of bar.screenList is never chosen --
+// it has no notch to pop anything in), and only while they are connected. A
+// focused screen without a panel counts as covered. An empty target means
+// "every screen", which is also the answer whenever the focused screen is
+// unknown or nothing has registered yet, so nothing is ever lost to a gap in
+// the data.
 Singleton {
     id: root
 
-    // Screen name -> true while a fullscreen window covers it.
+    // Screen name -> true while a fullscreen window covers it. A key exists for
+    // every screen with a live shell panel.
     property var covered: ({})
 
     function setCovered(name, isCovered) {
@@ -36,8 +41,12 @@ Singleton {
         root.covered = next;
     }
 
+    // A panel going away. Skipped while its screen is still connected: a
+    // panel recreated for the same screen may have reported already (a
+    // hot-plug rebuilds panels before the old ones are torn down), and the
+    // stale entry of a screen that is really gone is filtered out below.
     function forget(name) {
-        if (!name || !(name in root.covered))
+        if (!name || !(name in root.covered) || root.connectedNames.indexOf(name) !== -1)
             return;
         const next = Object.assign({}, root.covered);
         delete next[name];
@@ -57,7 +66,7 @@ Singleton {
         root.currentName = root.focusedName;
     }
 
-    readonly property var screenNames: {
+    readonly property var connectedNames: {
         const names = [];
         const screens = Quickshell.screens;
         for (let i = 0; i < screens.length; i++)
@@ -65,20 +74,27 @@ Singleton {
         return names;
     }
 
+    // Screens that can show a notification: registered by a panel and connected.
+    readonly property var candidates: {
+        const connected = root.connectedNames;
+        return Object.keys(root.covered).filter(n => connected.indexOf(n) !== -1);
+    }
+
     readonly property string target: {
         if (!RoadieSettings.notifyFollowFocus)
             return "";
-        const names = root.screenNames;
+        const names = root.candidates;
         if (names.length <= 1)
             return "";
         const focused = root.focusedName;
-        if (!focused || names.indexOf(focused) === -1)
+        if (!focused)
             return "";
-        if (!root.covered[focused])
+        const focusedHasNotch = names.indexOf(focused) !== -1;
+        if (focusedHasNotch && !root.covered[focused])
             return focused;
         const free = names.filter(n => n !== focused && !root.covered[n]);
         if (free.length === 0)
-            return focused;
+            return focusedHasNotch ? focused : "";
         if (free.indexOf(root.previousName) !== -1)
             return root.previousName;
         return free[0];
