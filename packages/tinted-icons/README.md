@@ -71,6 +71,7 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- 2.3.1: with True Matugen Icons on, the dashboard's clear-notifications broom uses the palette's tertiary accent (idle and pressed) instead of the error tone, so it follows the wallpaper without matching the primary the icons are tinted with. Off, it stays stock. Patch now also touches modules/widgets/dashboard/widgets/NotificationHistory.qml.
 - 2.3.0: with True Matugen Icons on, the notch's notification bell lights up in the theme's primary colour when there are unread notifications, instead of the palette's error tone (which is red on every wallpaper). Off, it stays stock. Patch now also touches modules/widgets/defaultview/NotificationIndicator.qml.
 - 2.2.4: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 2.2.3: verified on Ambxst 1.3.7 and 1.3.8 (bases 7f0ac49b, c62a7acc); patch applies verbatim, no source changes.
