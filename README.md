@@ -37,6 +37,7 @@ the shell fails to start within eight seconds Ambxst rolls back on its own.
 | [audio-routing](packages/audio-routing) | Notch tab for per-app outputs, volumes and microphones, with EasyEffects as a first-class route |
 | [mod-updater](packages/mod-updater) | Update checking for Settings > Mods: a Check for updates button, per-mod Update buttons, optional automatic checks and installs |
 | [settings-float](packages/settings-float) | Opens the Settings window floating and centred, sized to the screen, through Ambxst's own compositor abstraction (Hyprland, Niri, Mango) |
+| [live-notifications](packages/live-notifications) | Notifications that replace themselves (`notify-send -r`, download and copy progress) update in place in the notch and the history instead of freezing on their first text |
 
 More are on the way as they are ported from a long-running personal fork.
 

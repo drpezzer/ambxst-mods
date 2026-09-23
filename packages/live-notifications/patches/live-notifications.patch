@@ -1,0 +1,82 @@
+diff --git a/modules/services/Notifications.qml b/modules/services/Notifications.qml
+index 10f81f97..b15c2fb3 100644
+--- a/modules/services/Notifications.qml
++++ b/modules/services/Notifications.qml
+@@ -67,7 +67,77 @@ Singleton {
+                         root.discardNotification(id);
+                     }
+                 });
++
++                // live-notifications mod: a Notify call that carries replaces_id
++                // updates this same Notification object in place (Quickshell never
++                // re-emits onNotification for it), so mirror the fields that were
++                // copied above and bring the popup back with a fresh timer. The
++                // signals of one update all fire together; coalesce them.
++                notification.summaryChanged.connect(scheduleLiveRefresh);
++                notification.bodyChanged.connect(scheduleLiveRefresh);
++                notification.appIconChanged.connect(scheduleLiveRefresh);
++                notification.imageChanged.connect(scheduleLiveRefresh);
++                notification.urgencyChanged.connect(scheduleLiveRefresh);
++                notification.actionsChanged.connect(scheduleLiveRefresh);
++            }
++        }
++
++        // live-notifications mod
++        property bool liveRefreshPending: false
++
++        function scheduleLiveRefresh() {
++            if (liveRefreshPending)
++                return;
++            liveRefreshPending = true;
++            Qt.callLater(liveRefresh);
++        }
++
++        function liveRefresh() {
++            liveRefreshPending = false;
++            if (!notification)
++                return;
++            summary = notification.summary ?? "";
++            body = notification.body ?? "";
++            urgency = notification.urgency.toString() ?? "normal";
++            actions = notification.actions.map(action => ({
++                        "identifier": action.identifier,
++                        "text": action.text
++                    }));
++            const newAppIcon = notification.appIcon ?? "";
++            if (newAppIcon !== appIcon) {
++                appIcon = newAppIcon;
++                cachedAppIcon = "";
++                if (appIcon && !appIcon.startsWith("data:")) {
++                    root.cacheImageAsBase64(appIcon, function (cachedData) {
++                        cachedAppIcon = cachedData;
++                    });
++                }
++            }
++            const newImage = notification.image ?? "";
++            if (newImage !== image) {
++                image = newImage;
++                cachedImage = "";
++                if (image && !image.startsWith("data:")) {
++                    root.cacheImageAsBase64(image, function (cachedData) {
++                        cachedImage = cachedData;
++                    });
++                }
++            }
++            time = Date.now();
++            if (timer) {
++                timer.stop();
++                timer.destroy();
++                timer = null;
++            }
++            if (!root.popupInhibited) {
++                popup = true;
++                timer = notifTimerComponent.createObject(root, {
++                    "id": id,
++                    "interval": notification.expireTimeout < 0 ? 5000 : notification.expireTimeout
++                });
+             }
++            root.triggerListChange();
++            root.saveNotifications();
+         }
+ 
+         Component.onDestruction: {
