@@ -2385,36 +2385,6 @@ index cfed4f6c..34965b2c 100644
                  duration: Config.animDuration
                  easing.type: Easing.OutCubic
              }
-diff --git a/modules/widgets/dashboard/controls/SettingsTab.qml b/modules/widgets/dashboard/controls/SettingsTab.qml
-index aaef9eca..5014101f 100644
---- a/modules/widgets/dashboard/controls/SettingsTab.qml
-+++ b/modules/widgets/dashboard/controls/SettingsTab.qml
-@@ -261,6 +261,13 @@ Rectangle {
-             section: 10,
-             isIcon: true
-         },
-+        {
-+            // roadie: its own page (RoadiePanel.qml), above Ambxst.
-+            icon: Icons.lightning,
-+            label: "Roadie",
-+            section: 11,
-+            isIcon: true
-+        },
-         {
-             icon: Qt.resolvedUrl("../../../../assets/ambxst/ambxst-icon.svg"),
-             label: I18n.t("settings.ambxst"),
-@@ -606,6 +613,11 @@ Rectangle {
-                 {
-                     component: "ModsPanel.qml",
-                     section: 10
-+                },
-+                {
-+                    // roadie (the list is indexed by section id)
-+                    component: "RoadiePanel.qml",
-+                    section: 11
-                 }
-             ]
- 
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 index 099acb04..b44b5482 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
@@ -2871,3 +2841,38 @@ index 888996d3..13253a03 100644
              required property ShellScreen modelData
              sourceComponent: PresetsPopup {
                  screen: presetsLoader.modelData
+diff --git a/modules/widgets/dashboard/controls/SettingsTab.qml b/modules/widgets/dashboard/controls/SettingsTab.qml
+index aaef9ec..03ee0f0 100644
+--- a/modules/widgets/dashboard/controls/SettingsTab.qml
++++ b/modules/widgets/dashboard/controls/SettingsTab.qml
+@@ -261,6 +261,17 @@ Rectangle {
+             section: 10,
+             isIcon: true
+         },
++        {
++            // roadie: its own page (RoadiePanel.qml), above Ambxst. The section
++            // id is wherever the panel entry sits in panelComponents (the panel
++            // Loader indexes that list by position), read when asked rather than
++            // claimed as a number, so other mods adding pages before or after
++            // this one, in any load order, cannot make it open the wrong panel.
++            icon: Icons.lightning,
++            label: "Roadie",
++            get section() { return contentArea.panelComponents.findIndex(p => p && p.roadiePanel); },
++            isIcon: true
++        },
+         {
+             icon: Qt.resolvedUrl("../../../../assets/ambxst/ambxst-icon.svg"),
+             label: I18n.t("settings.ambxst"),
+@@ -606,6 +617,12 @@ Rectangle {
+                 {
+                     component: "ModsPanel.qml",
+                     section: 10
++                },
++                {
++                    // roadie (see the sidebar entry): section = its own position.
++                    component: "RoadiePanel.qml",
++                    roadiePanel: true,
++                    get section() { return contentArea.panelComponents.findIndex(p => p && p.roadiePanel); }
+                 }
+             ]
+ 

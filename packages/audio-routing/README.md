@@ -67,14 +67,28 @@ captures the sink's monitor, which PipeWire taps before volume.
 
 - New: `modules/services/AudioRouting.qml`, the three files under
   `modules/widgets/dashboard/audio/`, `scripts/easyeffects_output.py`.
-- `modules/widgets/dashboard/Dashboard.qml` — registers the tab.
-- `modules/services/GlobalShortcuts.qml` — the `audio` / `dashboard-audio` commands.
+- `modules/widgets/dashboard/Dashboard.qml` — adds the tab, as insertions
+  only: when the dashboard completes, the tab's icon is appended to the tab
+  list and the index it lands on is the tab's (`AudioRouting.dashboardTab`), so
+  another mod adding a tab the same way, before or after in load order, gets
+  the next one instead of the same one. The highlight's position bindings are
+  replaced so a fourth tab is not drawn on the controls button.
+- `modules/services/GlobalShortcuts.qml` — the `audio` / `dashboard-audio`
+  commands, opening whatever index the tab took.
 - `nix/packages/media.nix` — `pulseaudio` for `pactl` on Nix.
 
 Works with Ambxst `>=1.3.0`. No new config keys.
 
 ## Changelog
 
+- 1.1.0: **The tab no longer claims index 3, and the patch no longer rewrites
+  anything.** 1.0.x replaced the tab list, the highlight's `if (idx <= 2)` and
+  the focus helper in `Dashboard.qml`, so any other mod adding a tab could not
+  be built alongside it, and used `toggleDashboardTab(3)`, which another mod
+  could claim too. Now every hunk is an insertion: the tab is appended to the
+  tab list when the dashboard completes and takes whatever index it lands on;
+  `ambxst run audio` opens that index. Composes with other tab-adding mods in
+  any load order. No dependency.
 - 1.0.4: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.0.3: verified on Ambxst 1.3.7 and 1.3.8 (bases 7f0ac49b, c62a7acc); patch applies verbatim, no source changes.
 - 1.0.2: verified on Ambxst 1.3.6 (base 480a10ca); patch applies verbatim, no source changes.

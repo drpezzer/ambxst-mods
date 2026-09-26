@@ -32,6 +32,14 @@ import qs.modules.theme
  *    feeds — `terminalSink()` resolves that.
  */
 Singleton {
+    // The dashboard tab index this shell gave the audio tab, taken when the
+    // notch's Dashboard completes (see the Dashboard.qml hunk); -1 until then.
+    property int dashboardTab: -1
+    // Set by the `audio` IPC command when it arrives before any Dashboard has
+    // been created (the notch builds it on first open); the Dashboard hunk
+    // then lands on the tab as soon as it has its index.
+    property bool openPending: false
+
     id: root
 
     readonly property string eeSinkName: "easyeffects_sink"

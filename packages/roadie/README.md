@@ -348,7 +348,11 @@ One patch, fifteen files: `Bar.qml`, `BarContent.qml`, `DockContent.qml`,
 `shell.qml`; plus new files under `modules/services/`: `BarSlideSync.qml`, the
 singleton that holds Hyprland's `windowsMove` during a bar slide and carries
 the mod's settings, and `NotificationRouter.qml`, which picks the screen a
-notification pops on. One mod setting, `followFocus` (settings.json); no new
+notification pops on. `SettingsTab.qml` gets the Roadie sidebar entry and
+panel entry as pure insertions, and the entry's section id is looked up
+(the panel's own position in the panel list) rather than claimed as a number,
+so other mods adding pages, in any load order, cannot make it open the wrong
+panel. One mod setting, `followFocus` (settings.json); no new
 config keys. Reads
 Hyprland monitor state through `Quickshell.Hyprland` for the
 special-workspace check; on Hyprland runs `hyprctl eval` for the window
@@ -456,7 +460,7 @@ ambxst mods enable drpezzer.roadie
 ambxst reload
 ```
 
-Works with Ambxst `>=1.3.0`. Coming from the two old mods: settings do not
+Works with Ambxst `>=1.3.6`. Coming from the two old mods: settings do not
 carry over (a mod's settings are keyed by its id), so copy the values from
 `~/.config/ambxst/mods/drpezzer.clean-load.json` and
 `drpezzer.multi-monitor-fixes.json` into `drpezzer.roadie.json`, or set them
@@ -494,6 +498,15 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.3.0: **Settings page no longer claims a section id.** The Roadie entry
+  used to be inserted as `section: 11`, and Ambxst's panel Loader indexes the
+  panel list by position: another mod adding a page ahead of it in load order
+  would have shifted the panel one slot and the sidebar entry would have opened
+  that mod's panel (or its own entry, ours). Both entries are still pure
+  insertions, but `section` is now a getter that returns the Roadie panel's
+  own position in the panel list at the moment it is read, so it is right in
+  any load order next to any other page-adding mod. No dependency, no other
+  file touched.
 - 1.2.1: notification routing only considers screens that have a shell panel and are connected, so a screen left out of `bar.screenList` (no notch there) is never chosen and a focused screen without one counts as covered; a panel rebuilt during a hot-plug no longer has its state dropped by the old panel's teardown.
 - 1.2.0: **Notifications on one screen.** The notch pops a notification on the focused screen only; if a fullscreen window covers it and another screen is free, on that screen instead; with one screen (or all covered) it stays put. Settings > Roadie > "Notifications follow the focused screen" (`notifyFollowFocus`, on; stock: off). New `modules/services/NotificationRouter.qml`; `UnifiedShellPanel.qml` reports each screen's fullscreen state to it; `NotchContent.qml` / `Notch.qml` take the routed flag.
 - 1.1.2: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
