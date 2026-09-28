@@ -405,6 +405,29 @@ Testing hotplug without real hardware: `hyprctl output create headless` and
 
 Works with Ambxst `>=1.3.9`.
 
+## Screens that stay at their brightness
+
+Ambxst dims when you are away: its first idle rule lowers the brightness of
+every screen that can be dimmed to 10% after 2.5 minutes without input and
+puts it back when you return. That saves a laptop's battery. On a desktop it
+mostly means monitors changing brightness by themselves, over DDC, which is
+slow and on some GPUs stalls the desktop for a moment each way.
+
+**Settings > Roadie > Dim the screens when idle:**
+
+| | |
+|---|---|
+| **As stock** (default) | every machine dims |
+| **Laptops only** | dims where there is a battery, leaves a desktop alone |
+| **Never** | the screens stay at the brightness you set |
+
+The idle rules themselves (Settings > System) are not edited: a rule whose
+command changes the brightness (`ambxst brightness`, `brightnessctl`,
+`xbacklight`, `light`, `ddcutil setvcp`) is passed over while dimming is off,
+together with its restore command, and works again the moment you switch it
+back. Locking, screen off and suspend are not affected. The shell log notes
+each time a rule was left alone.
+
 ## The Settings window floats
 
 The Ambxst Settings window opens as a centred floating window, sized to the
@@ -546,7 +569,8 @@ follow the focused screen (on; stock: off) · Show where the
 quote is from (off) · Lock after boot (Auto / Always / Never; stock: Never) ·
 Volume and brightness pop-ups (Quiet at start / As stock / Off) · Remember the
 monitors' brightness channels (on; stock: off) · Cover a cold
-kill with the veil helper (on; stock: off) · Settings opens as a floating
+kill with the veil helper (on; stock: off) · Dim the screens when idle (As
+stock / Laptops only / Never) · Settings opens as a floating
 window (on; stock: off), with its width and height in percent of the screen
 (41, 66).
 
@@ -636,6 +660,13 @@ What you had set in either mod is carried over.
 
 ## Changelog
 
+- 1.6.0: **Dim the screens when idle: As stock / Laptops only / Never**
+  (Settings > Roadie, `idleDim`). Ambxst's idle rule that lowers the
+  brightness after 2.5 minutes can be kept for machines with a battery or
+  turned off, so a desktop's monitors stay at the brightness you set. The idle
+  rules are not edited; brightness rules are passed over, restore command
+  included, and everything else (lock, screen off, suspend) runs as before.
+  `IdleService.qml` joins the patch (insertions only). Default is stock.
 - 1.5.0: **Settings Float is part of Roadie now.** The Settings window opens
   floating and centred, sized to its screen, exactly as that mod did it (the
   fixed-size hint until the compositor has placed the window). Its switch and

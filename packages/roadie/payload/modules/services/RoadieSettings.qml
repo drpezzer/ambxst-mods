@@ -43,6 +43,7 @@ Singleton {
         veilEnabled: true,      // stock: false
         ddcCache: true,         // stock: false (ask the monitors again on every start)
         osd: "quiet",           // quiet | stock | off
+        idleDim: "always",      // always (stock) | battery (machines with one) | never
         bootLock: "auto",       // auto | always | never (stock: never)
         farewellSource: false,
         farewellHold: 1500,
@@ -87,6 +88,7 @@ Singleton {
         veilEnabled: false,
         ddcCache: false,
         settingsFloat: false,
+        idleDim: "always",
         osd: "stock",
         bootLock: "never",
         enterMode: "stock",
@@ -118,6 +120,7 @@ Singleton {
     readonly property bool veilEnabled: !!root.get("veilEnabled")
     readonly property bool ddcCache: !!root.get("ddcCache")
     readonly property string osd: ["quiet", "stock", "off"].indexOf(root.get("osd")) !== -1 ? root.get("osd") : "quiet"
+    readonly property string idleDim: ["always", "battery", "never"].indexOf(root.get("idleDim")) !== -1 ? root.get("idleDim") : "always"
     readonly property string bootLock: ["auto", "always", "never"].indexOf(root.get("bootLock")) !== -1 ? root.get("bootLock") : "auto"
     readonly property bool farewellSource: !!root.get("farewellSource")
     readonly property int farewellHold: root.ms("farewellHold")

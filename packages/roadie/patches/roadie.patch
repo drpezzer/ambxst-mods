@@ -1765,6 +1765,54 @@ index b1aa3be4..343e3657 100644
              
              // Media
              case "media-seek-backward": seekActivePlayer(-mediaSeekStepMs); break;
+diff --git a/modules/services/IdleService.qml b/modules/services/IdleService.qml
+index 14402e87..11b98b01 100644
+--- a/modules/services/IdleService.qml
++++ b/modules/services/IdleService.qml
+@@ -108,12 +108,36 @@ Singleton {
+         }
+     }
+ 
++    // roadie: "Dim the screens when idle" (Settings > Roadie). An idle
++    // listener that lowers the brightness is passed over when dimming is off,
++    // or when it is for machines with a battery and this one has none. It is
++    // never marked as triggered, so its onResume (which puts a SAVED
++    // brightness back) does not run either. Every other listener -- lock,
++    // screen off, suspend -- is untouched, and so is the list itself.
++    property var roadieSkipped: []
++    function roadieSkipsListener(listener) {
++        const mode = RoadieSettings.idleDim;
++        if (mode === "always")
++            return false;
++        if (mode === "battery" && Battery.available)
++            return false;
++        return /(^|[\s;&|(\/])(ambxst\s+brightness|brightnessctl|xbacklight|light\s+-[SUA]|ddcutil\s+setvcp)(\s|$)/.test(String((listener && listener.onTimeout) || ""));
++    }
++
+     function checkListeners() {
+         let listeners = Config.system.idle.listeners;
+         for (let i = 0; i < listeners.length; i++) {
+             let listener = listeners[i];
+             let tVal = listener.timeout || 60;
+ 
++            if (root.roadieSkipsListener(listener)) {
++                if (root.elapsedIdleTime >= tVal && !root.roadieSkipped.includes(i)) {
++                    console.log("Idle timer " + tVal + "s reached, left alone (Roadie, idle dimming " + RoadieSettings.idleDim + "): " + listener.onTimeout);
++                    root.roadieSkipped.push(i);
++                }
++                continue;
++            }
++
+             // If time matches and hasn't been triggered yet
+             if (root.elapsedIdleTime >= tVal && !root.triggeredListeners.includes(i)) {
+                 if (listener.onTimeout) {
+@@ -143,5 +167,6 @@ Singleton {
+         // Reset counters
+         root.elapsedIdleTime = 0;
+         root.triggeredListeners = [];
++        root.roadieSkipped = [];
+     }
+ }
 diff --git a/modules/services/Visibilities.qml b/modules/services/Visibilities.qml
 index ee97b092..378ef7ed 100644
 --- a/modules/services/Visibilities.qml

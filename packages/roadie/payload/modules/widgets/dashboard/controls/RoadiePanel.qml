@@ -569,6 +569,12 @@ Item {
                     choices: [{ label: "Auto", value: "auto" }, { label: "Always", value: "always" }, { label: "Never", value: "never" }]
                 }
                 ChoiceRow {
+                    label: "Dim the screens when idle"
+                    hint: "Ambxst lowers the brightness of every screen that can be dimmed after a while without input (to 10% after 2.5 minutes, unless you changed that rule under Settings > System) and puts it back when you return. Laptops only keeps that where there is a battery to save; Never leaves the screens at the brightness you set. Locking, screen off and suspend are not affected."
+                    settingKey: "idleDim"
+                    choices: [{ label: "As stock", value: "always" }, { label: "Laptops only", value: "battery" }, { label: "Never", value: "never" }]
+                }
+                ChoiceRow {
                     label: "Volume and brightness pop-ups"
                     hint: "Quiet hides the ones the shell makes by itself while reading its initial state after a start."
                     settingKey: "osd"
