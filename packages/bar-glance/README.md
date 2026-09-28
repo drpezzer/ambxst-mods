@@ -70,6 +70,7 @@ Works with Ambxst `>=1.3.8` (1.1.2 is the last release for 1.3.6 and 1.3.7). One
 
 ## Changelog
 
+- 1.2.1: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.2.0: the tray's overflow popup (Ambxst 1.3.8's hidden-icons grid) is a frame-attached popout too: with *contain bar* on it grows out of the frame beside the chevron on whichever side the bar is, and with it off it stays the floating pill Ambxst ships. Drag and drop into and out of it works in both forms; a hidden icon's own menu still opens from inside it. `BarPopout` gained the pass-throughs this needs (`visualMargin`, `clickThroughMargins`, `extraGrabWindows`, `activeChildMenu`, `refreshFocusGrab()`).
 - 1.1.4: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.1.3: ported to Ambxst 1.3.8 (base c62a7acc), which is now the minimum: upstream rewrote the tray around an overflow popup, so `bar.systrayExclude` now filters upstream's single item list and an excluded app stays out of both the bar and the popup. No behaviour change.

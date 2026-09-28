@@ -35,4 +35,5 @@ gdbus call --session --dest org.freedesktop.Notifications \
 
 ## Changelog
 
+- 1.0.1: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.0.0 (2026-09-22): first release, on Ambxst 1.3.8 (2a704c43).

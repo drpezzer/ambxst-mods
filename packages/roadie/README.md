@@ -268,29 +268,28 @@ Left edge of a 4K screen, real time. The whole sequence: [demo.mp4](media/demo.m
   event): axctl enriches a new window's geometry and fullscreen state a few
   seconds after it appears, and not at all for windows created after a
   monitor hotplug, so a game that went fullscreen straight after launch was
-  missed until then. That
-  fast path is gone altogether: it ANDed the focused toplevel (Wayland) with
-  the focused monitor (axctl), two sources that update independently, so on
-  every swap away from a fullscreen window the *other* screen briefly believed
-  it had one -- its bar pulled out and back and its frame blinked away.
+  missed until then. Ambxst 1.3.9 dropped that fast path itself (it ANDed
+  the focused toplevel with the focused monitor, two sources that update
+  independently, so on every swap away from a fullscreen window the *other*
+  screen briefly believed it had one) and scopes its own check to the
+  monitor. Its scan still matches the active workspace only, and axctl's
+  records only, so the two additions above are what Roadie keeps.
 - **No dead strip where a hidden bar used to be.** Going fullscreen hides the
   bar, the dock and the frame, but their layer-shell exclusive zones stayed
   put, so every window below kept a gap against that screen edge. The
   reservation now follows the chrome, screen for screen.
-- **The bar stays away from the screen the fullscreen window is on.** The bar
-  and dock read fullscreen off the *focused* toplevel, so both came straight
-  back the moment focus moved to another monitor -- over a game that was still
-  fullscreen, and dragging that screen's windows back off the edge with them.
-  Each screen's own fullscreen state is now ORed in, the same per-output check
-  the notch and frame already use, so the screen holding the fullscreen window
-  keeps its chrome away until that window is gone while the other screens get
-  theirs back on the next focus change. On that screen the pointer does not
-  bring them back either: sweeping the cursor off the game towards the next
-  monitor crosses the bar's edge, which flashed it up over the game for the
-  hide delay. `bar.availableOnFullscreen` keeps its meaning on the screens
-  that are only hiding in sympathy, and a notch the user deliberately opens
-  still reveals the bar. On that screen the exit is staged rather than
-  instant -- see "What the fullscreen slide assumes" below.
+- **The bar stays away from the screen the fullscreen window is on.** Up to
+  Ambxst 1.3.8 the bar read fullscreen off the *focused* toplevel, so it hid
+  on every screen at once and came straight back the moment focus moved to
+  another monitor -- over a game that was still fullscreen. Ambxst 1.3.9
+  scopes that to the monitor itself, so this part is stock now; the bar, dock
+  and notch here go by the panel's per-output state, which is the same idea
+  plus the special workspace and Hyprland's records (above). What Roadie
+  still adds on that screen: the pointer does not bring the bar or dock
+  back -- sweeping the cursor off the game towards the next monitor crosses
+  the bar's edge, which flashed it up over the game for the hide delay -- while
+  a notch the user deliberately opens still reveals the bar; and the exit is
+  staged rather than instant, see "What the fullscreen slide assumes" below.
 - **The windows move with the bar.** When the bar slides away for a
   fullscreen window its exclusive zone is released and the compositor moves
   the windows into the space with its own resize animation -- on Hyprland
@@ -315,12 +314,11 @@ Left edge of a 4K screen, real time. The whole sequence: [demo.mp4](media/demo.m
 - **Dual Screen Single Bar.** A pinned bar shows on the focused screen only
   and slides across when focus moves -- out here, in there, on the same
   slide, its space walked with it so the windows on both screens move in
-  step. This makes the old "hide in sympathy with a fullscreen window
-  elsewhere" rule redundant: an unfocused screen has no bar anyway, and the
-  focused screen only hides for a fullscreen window it holds itself. A switch
-  in **Settings > Theme > General** (and the mod's own settings page,
-  `followFocus`) turns it off; off restores a bar on every screen with the
-  sympathy hide.
+  step. The focused screen only hides its bar for a fullscreen window it
+  holds itself. A switch in **Settings > Roadie** (`followFocus`) turns it
+  off; off restores a bar on every screen, each one hiding only for a
+  fullscreen window of its own, as stock does since 1.3.9 (the "hide on every
+  screen in sympathy" rule of earlier versions went with it).
 - **Notifications on one screen.** Stock pops every notification in every
   screen's notch at once. Now the notch on the focused screen pops it and the
   others stay quiet. If a fullscreen window covers the focused screen and
@@ -402,7 +400,7 @@ Testing hotplug without real hardware: `hyprctl output create headless` and
   shell enter/leave, for instance) is never yanked; the original is kept on
   disk so a shell killed mid-slide is restored by the next start.
 
-Works with Ambxst `>=1.3.0`.
+Works with Ambxst `>=1.3.9`.
 
 ## Settings
 
@@ -460,7 +458,8 @@ ambxst mods enable drpezzer.roadie
 ambxst reload
 ```
 
-Works with Ambxst `>=1.3.6`. Coming from the two old mods: settings do not
+Works with Ambxst `>=1.3.9` (Roadie 1.3.0 is the last one for 1.3.6 to
+1.3.8). Coming from the two old mods: settings do not
 carry over (a mod's settings are keyed by its id), so copy the values from
 `~/.config/ambxst/mods/drpezzer.clean-load.json` and
 `drpezzer.multi-monitor-fixes.json` into `drpezzer.roadie.json`, or set them
@@ -498,6 +497,18 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.3.1: **ported to Ambxst 1.3.9** (base 3705f278), which is now the
+  minimum. 1.3.9 scopes its own fullscreen detection to the monitor and drops
+  the focused-toplevel fast path, two things Roadie had been doing on its own,
+  so those are upstream's now and the patch builds on them. Kept, because
+  upstream's check still scans the active workspace and axctl's records only:
+  a game on the output's open special workspace counts, and Hyprland's own
+  window records have the last word. The notch goes by the panel's per-output
+  state again (upstream moved it to its own scan, which would have brought it
+  back over a game on a special workspace). Removed: with "Bar follows the
+  focused screen" off, a fullscreen window no longer hides the bar on the
+  *other* screens in sympathy -- that was stock behaviour being preserved, and
+  stock no longer does it. Everything else applies unchanged.
 - 1.3.0: **Settings page no longer claims a section id.** The Roadie entry
   used to be inserted as `section: 11`, and Ambxst's panel Loader indexes the
   panel list by position: another mod adding a page ahead of it in load order

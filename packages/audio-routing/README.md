@@ -81,6 +81,7 @@ Works with Ambxst `>=1.3.0`. No new config keys.
 
 ## Changelog
 
+- 1.1.1: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.1.0: **The tab no longer claims index 3, and the patch no longer rewrites
   anything.** 1.0.x replaced the tab list, the highlight's `if (idx <= 2)` and
   the focus helper in `Dashboard.qml`, so any other mod adding a tab could not

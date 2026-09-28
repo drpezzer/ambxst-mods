@@ -78,6 +78,7 @@ Works with Ambxst `>=1.3.0`. No new config keys.
 
 ## Changelog
 
+- 1.2.5: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.2.4: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.2.3: verified on Ambxst 1.3.7 and 1.3.8 (bases 7f0ac49b, c62a7acc); patch applies verbatim, no source changes.
 - **1.2.2** — verified on Ambxst 1.3.6 (base 480a10ca); patch applies verbatim, no source changes.
