@@ -24,12 +24,14 @@ import Quickshell.Io
 //
 // Values set in Settings > Mods before 1.1.0 (the mod manager's
 // mods/drpezzer.roadie.json) are imported once, the first time this file is
-// missing.
+// missing. The mod update checks (1.4.0, the former Mod Updater) bring their
+// switches over from mods/drpezzer.mod-updater.json the same way, once.
 Singleton {
     id: root
 
     readonly property string path: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/roadie.json"
     readonly property string legacyPath: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/mods/drpezzer.roadie.json"
+    readonly property string updaterPath: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/mods/drpezzer.mod-updater.json"
 
     readonly property var defaults: ({
         // behaviour
@@ -41,6 +43,11 @@ Singleton {
         bootLock: "auto",       // auto | always | never (stock: never)
         farewellSource: false,
         farewellHold: 1500,
+        // mod updates (stock has none of this, so "Stock everything" leaves it alone)
+        modAutoCheck: false,
+        modAutoInstall: false,
+        modCheckHours: 6,
+        modUpdaterImported: false, // the one-time import below has run
         // modes
         enterMode: "roadie",      // roadie | stock
         leaveMode: "roadie",      // roadie | stock
@@ -105,6 +112,12 @@ Singleton {
     readonly property string bootLock: ["auto", "always", "never"].indexOf(root.get("bootLock")) !== -1 ? root.get("bootLock") : "auto"
     readonly property bool farewellSource: !!root.get("farewellSource")
     readonly property int farewellHold: root.ms("farewellHold")
+    readonly property bool modAutoCheck: !!root.get("modAutoCheck")
+    readonly property bool modAutoInstall: !!root.get("modAutoInstall")
+    readonly property int modCheckHours: {
+        const n = Number(root.get("modCheckHours"));
+        return (isNaN(n) || n < 1) ? root.defaults.modCheckHours : Math.min(168, Math.round(n));
+    }
 
     readonly property string enterMode: root.mode("enterMode")
     readonly property string leaveMode: root.mode("leaveMode")
@@ -139,7 +152,9 @@ Singleton {
         root.set(key, root.defaults[key]);
     }
     function resetAll() {
-        root.values = ({});
+        // The import marker is not a setting: without it the next start would
+        // bring the old Mod Updater switches back.
+        root.values = root.values.modUpdaterImported === true ? ({ modUpdaterImported: true }) : ({});
         root.write();
     }
     function stockAll() {
@@ -190,8 +205,53 @@ Singleton {
         blockLoading: true
         printErrors: false
     }
+    FileView {
+        id: updaterFile
+        path: root.updaterPath
+        blockLoading: true
+        printErrors: false
+    }
+
+    // The switches of the former Mod Updater mod, brought over once.
+    function importUpdater() {
+        if (root.values.modUpdaterImported === true)
+            return;
+        updaterFile.waitForJob();
+        if (!updaterFile.loaded)
+            return; // never installed: nothing to bring over, nothing to remember
+        let old = {};
+        try {
+            old = JSON.parse(updaterFile.text()) || {};
+        } catch (e) {
+            old = {};
+        }
+        const next = Object.assign({}, root.values, { modUpdaterImported: true });
+        const brought = [];
+        if (old.autoCheck === true && next.modAutoCheck === undefined) {
+            next.modAutoCheck = true;
+            brought.push("modAutoCheck");
+        }
+        if (old.autoInstall === true && next.modAutoInstall === undefined) {
+            next.modAutoInstall = true;
+            brought.push("modAutoInstall");
+        }
+        const hours = Number(old.checkIntervalHours);
+        if (!isNaN(hours) && hours >= 1 && Math.round(hours) !== root.defaults.modCheckHours && next.modCheckHours === undefined) {
+            next.modCheckHours = Math.min(168, Math.round(hours));
+            brought.push("modCheckHours");
+        }
+        if (brought.length > 0)
+            console.log("RoadieSettings: imported", brought.join(", "), "from Mod Updater");
+        root.values = next;
+        root.write();
+    }
 
     Component.onCompleted: {
+        root.load();
+        root.importUpdater();
+    }
+
+    function load() {
         file.waitForJob();
         if (file.loaded) {
             root.values = root.parse(file.text());

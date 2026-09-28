@@ -595,6 +595,17 @@ Singleton {
             return JSON.stringify({ enabled: ShellFarewell.farewellEnabled, active: ShellFarewell.active, kind: ShellFarewell.kind, quote: ShellFarewell.quote, source: ShellFarewell.source, screen: ShellFarewell.screenName, expand: ShellFarewell.expand, solid: ShellFarewell.solid, text: ShellFarewell.text, holding: ShellFarewell.holding, committed: ShellFarewell.committed, dryRun: ShellFarewell.dryRun, holdMs: ShellFarewell.holdMs });
         }
 
+        // Mod updates: `updateCheck` looks for newer versions now (as the
+        // panel's button does), `updateState` prints what the last check
+        // found -- which updates can be installed, and which are waiting for
+        // a newer Ambxst.
+        function updateCheck(): void {
+            ModUpdateService.checkForUpdates(false);
+        }
+        function updateState(): string {
+            return JSON.stringify(ModUpdateService.report(), null, 2);
+        }
+
         // Diagnostics: `qs ipc --pid $(cat $XDG_RUNTIME_DIR/ambxst-qs.pid) call roadie state`
         function state(): string {
             return JSON.stringify({

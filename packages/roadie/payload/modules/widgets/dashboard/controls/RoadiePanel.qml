@@ -513,6 +513,84 @@ Item {
                     onToggled: value => RoadieSettings.set("veilEnabled", value)
                 }
 
+                Separator { Layout.fillWidth: true; Layout.topMargin: 6 }
+
+                // ─── mod updates ─────────────────────────────────────
+                SectionTitle { text: "Mod updates" }
+                Hint {
+                    text: "Settings > Mods has a Check for updates button. An update that needs a newer Ambxst than yours says so before anything is installed, and is offered together with the Ambxst update, in the order that keeps your mods working."
+                }
+
+                ToggleRow {
+                    label: "Check for mod updates automatically"
+                    hint: "Shortly after the shell starts and every few hours after that, with a notification when any are found."
+                    checked: RoadieSettings.modAutoCheck
+                    onToggled: value => RoadieSettings.set("modAutoCheck", value)
+                }
+                ToggleRow {
+                    opacity: RoadieSettings.modAutoCheck ? 1 : 0.5
+                    label: "Install mod updates automatically"
+                    hint: "What an automatic check finds is installed right away, then a notification asks you to restart Ambxst. Updates that need a newer Ambxst always wait for you."
+                    checked: RoadieSettings.modAutoInstall
+                    onToggled: value => RoadieSettings.set("modAutoInstall", value)
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    opacity: RoadieSettings.modAutoCheck ? 1 : 0.5
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Hours between automatic checks"
+                        font.family: Config.theme.font
+                        font.pixelSize: Styling.fontSize(0)
+                        color: Colors.overBackground
+                        wrapMode: Text.Wrap
+                    }
+
+                    StyledRect {
+                        variant: hoursInput.activeFocus ? "focus" : "common"
+                        Layout.preferredWidth: 84
+                        Layout.preferredHeight: 32
+                        radius: Styling.radius(-2)
+                        enableShadow: false
+
+                        TextInput {
+                            id: hoursInput
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            font.family: Config.theme.font
+                            font.pixelSize: Styling.fontSize(0)
+                            color: Colors.overBackground
+                            selectByMouse: true
+                            clip: true
+                            verticalAlignment: TextInput.AlignVCenter
+                            horizontalAlignment: TextInput.AlignHCenter
+                            validator: IntValidator { bottom: 1; top: 168 }
+
+                            readonly property string shown: String(RoadieSettings.modCheckHours)
+                            onShownChanged: if (!activeFocus) text = shown
+                            Component.onCompleted: text = shown
+
+                            onEditingFinished: {
+                                const n = parseInt(text.trim(), 10);
+                                if (isNaN(n))
+                                    RoadieSettings.reset("modCheckHours");
+                                else
+                                    RoadieSettings.set("modCheckHours", Math.max(1, Math.min(168, n)));
+                                text = shown;
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "h"
+                        font.family: Config.theme.font
+                        font.pixelSize: Styling.fontSize(0)
+                        color: Colors.overSurfaceVariant
+                    }
+                }
+
                 // ─── farewell quotes ─────────────────────────────────
                 RoadieQuotesEditor {
                     Layout.fillWidth: true

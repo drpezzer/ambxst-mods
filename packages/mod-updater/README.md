@@ -1,5 +1,9 @@
 # Mod Updater
 
+> **Superseded by [Ambxst Roadie](../roadie) 1.4.0.** Roadie carries this mod now, and adds what this one never had: an update that needs a newer Ambxst says so *before* anything is installed, and is offered together with the Ambxst update, in the order that keeps your mods working. All further work happens there. This package stays installable and keeps working, but will not get new features.
+>
+> The two cannot be enabled together. **Moving over**, in Settings > Mods: *Disable* Mod Updater, press *Update to 1.4.0* on Roadie (or install it), restart. In a terminal: `ambxst mods disable drpezzer.mod-updater && ambxst mods update drpezzer.roadie && ambxst reload`. Your switches and the check interval are carried over. While this mod is enabled, updating Roadie to 1.4.0 fails with `mods drpezzer.roadie and drpezzer.mod-updater conflict`; that message means exactly this.
+
 Update checking for Settings > Mods.
 
 - **Check for updates** sits next to the installed-mods search box. It asks each
@@ -49,6 +53,7 @@ Requires `git` and `curl`, both of which Ambxst already uses.
 
 ## Changelog
 
+- 1.0.6: superseded by Ambxst Roadie 1.4.0, which includes it (see the note at the top). No source changes.
 - 1.0.5: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.0.4: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.0.3: verified on Ambxst 1.3.7 and 1.3.8 (bases 7f0ac49b, c62a7acc); patch applies verbatim, no source changes.

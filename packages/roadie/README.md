@@ -5,10 +5,13 @@ starting and reloading, monitors coming and going, focus moving between
 screens, a game going fullscreen. Every one of those is a staged movement
 with the windows in step, instead of a snap, a blink or a stranded panel.
 
-Roadie replaces **Ambxst Clean Load** and **Multi-monitor fixes**: it is both
-of them in one package, plus a boot sequence and a farewell. It patches the
-same files, so it cannot be enabled together with either (the manifest declares
-the conflict) -- disable those two first.
+Roadie replaces **Ambxst Clean Load**, **Multi-monitor fixes** and, since
+1.4.0, **Mod Updater**: it is all of them in one package, plus a boot sequence
+and a farewell. It patches the same files, so it cannot be enabled together
+with any of them (the manifest declares the conflict) -- disable those first.
+It also looks after the mods themselves: it [checks them for
+updates](#mod-updates) and tells you when one needs a newer Ambxst *before*
+anything is installed.
 
 | Shutting down | Booting |
 |---|---|
@@ -402,6 +405,89 @@ Testing hotplug without real hardware: `hyprctl output create headless` and
 
 Works with Ambxst `>=1.3.9`.
 
+## Mod updates
+
+Settings > Mods gets a **Check for updates** button next to the search box.
+It asks each installed mod's source for its current manifest and compares
+versions; with nothing newer it reads *No updates* for a moment, then fades
+back. When newer versions exist it becomes **Install N updates**, and every mod
+with an update gets its own **Update to x.y.z** button next to Enable/Disable.
+Installs go through the mod manager's normal update path, so each one rebuilds
+the generation and the usual "Restart Ambxst" banner and rollback apply.
+
+Two switches (under *Bypass Ambxst version check*, and in Settings > Roadie):
+**Check for mod updates automatically** -- about 90 seconds after the shell
+starts and then every few hours (default 6), with a notification offering *Open
+Mods*, *Later* (snoozes 8 h) and *Update all* -- and **Install mod updates
+automatically**, which installs what a check finds and then offers *Restart
+now*. The shell never restarts itself.
+
+### Updates that need a newer Ambxst
+
+A mod's manifest says which Ambxst versions it is for. When a mod's *new*
+version needs a newer Ambxst than the one you run, there is no good order to do
+things in by hand:
+
+- **Mod first:** the mod manager refuses it, and tells you only after you
+  clicked: `Ambxst 1.3.8 does not match ">=1.3.9 <2.0.0"`.
+- **Ambxst first:** `ambxst update` rebuilds the mods you *have*. The version
+  you have was written for the old Ambxst; if it no longer applies the build
+  fails, **one failing mod fails it for all of them**, and Ambxst starts with
+  no mods at all -- this checker included, since it is one. (Stock Ambxst then
+  also drops the config keys your mods had added.)
+
+So Roadie reads the range from the new version's manifest during the check and
+says so up front:
+
+- the mod's button reads **x.y.z needs Ambxst a.b.c** instead of *Update to
+  x.y.z*, and such an update is never part of *Install N updates* or of an
+  automatic install;
+- a second button appears beside *Check for updates*: **Update Ambxst to a.b.c
+  and its mods** -- or **Waiting for Ambxst a.b.c** if that version is not out
+  yet, in which case there is nothing to do but wait;
+- the update notification says the same, with an *Update Ambxst too* action.
+
+**Update Ambxst and its mods** opens a terminal (Ambxst's installer asks for
+your password), lists what it is about to do, asks, and then:
+
+1. sets the mods that need the new Ambxst aside (disabled; the running shell
+   is not restarted and keeps them on screen) and fetches their new versions
+   -- the manager does not check a disabled mod against the Ambxst version;
+2. runs Ambxst's own installer, the one `ambxst update` runs;
+3. enables those mods again, now at their new versions, and installs the other
+   updates that were waiting;
+4. rebuilds and restarts Ambxst, once.
+
+Until Ambxst itself has been updated, any failure puts everything back as it
+was -- packages, the mod list, the generation -- and the shell is never
+restarted. After that point there is no way back to the old Ambxst, so the
+script carries on and reports what did not go through. The previous packages
+are kept in `~/.cache/ambxst/roadie-update-backup-*` until everything has
+succeeded.
+
+If you have turned on *Bypass Ambxst version check*, nothing is held back: you
+asked for that.
+
+How the latest version is found:
+
+| Source type | Where the latest version comes from |
+|---|---|
+| local directory | `ambxst.mod.json` in the source directory |
+| git clone (plain Git URL) | `git fetch` in the package clone, manifest read from the fetched head |
+| GitHub tree URL (`…/tree/<ref>/<dir>`) | the manifest fetched from raw.githubusercontent.com, no clone needed |
+| archive | cannot be checked |
+
+Only the version field decides; a source that changed without bumping its
+version does not show as an update. The Ambxst version an update would bring
+is read from the `version` file on Ambxst's main branch.
+
+`qs ipc --pid $(cat $XDG_RUNTIME_DIR/ambxst-qs.pid) call roadie updateCheck`
+runs a check and `... call roadie updateState` prints what the last one found.
+
+**For mod authors:** raise `compatibility.ambxst` in the release that needs
+the new Ambxst (`">=1.3.9 <2.0.0"`). That one line is what lets your users be
+told in time.
+
 ## Settings
 
 Roadie has its own page in the Settings window, **Roadie**, just above Ambxst.
@@ -431,6 +517,10 @@ Volume and brightness pop-ups (Quiet at start / As stock / Off) · Remember the
 monitors' brightness channels (on; stock: off) · Cover a cold
 kill with the veil helper (on; stock: off).
 
+**Mod updates.** Check for mod updates automatically (off) · Install mod
+updates automatically (off) · Hours between automatic checks (6). "Stock
+everything" leaves these alone.
+
 **Stock everything** in the title bar sets all of the above to plain Ambxst in
 one go, for anyone who wants Roadie only for its fixes -- the stranded bar, the
 stale fullscreen detection, corners over a game on an unfocused monitor and the
@@ -453,6 +543,7 @@ Paste that into **Settings → Mods**, or:
 ```bash
 ambxst mods disable drpezzer.clean-load            # if you have them
 ambxst mods disable drpezzer.multi-monitor-fixes
+ambxst mods disable drpezzer.mod-updater
 ambxst mods install https://github.com/drpezzer/ambxst-mods/tree/main/packages/roadie
 ambxst mods enable drpezzer.roadie
 ambxst reload
@@ -466,6 +557,15 @@ carry over (a mod's settings are keyed by its id), so copy the values from
 again in the panel. The optional `extras/ambxst-wrapper` (install it as
 `~/.local/bin/ambxst`) answers to both this mod and Clean Load, so a copy you
 already installed keeps working.
+
+**Coming from Mod Updater.** Roadie 1.4.0 cannot be enabled next to it, so an
+update of Roadie from 1.3.x fails with `mods drpezzer.roadie and
+drpezzer.mod-updater conflict` while Mod Updater is enabled. In Settings > Mods:
+**Disable** Mod Updater, then press **Update to 1.4.0** on Roadie (the button
+is still there, the running shell keeps it until it restarts), then restart.
+Or, in a terminal: `ambxst mods disable drpezzer.mod-updater && ambxst mods
+update drpezzer.roadie && ambxst reload`. Your two switches and the interval
+are carried over.
 
 ## Notes
 
@@ -497,6 +597,23 @@ already installed keeps working.
 
 ## Changelog
 
+- 1.4.0: **Mod Updater is part of Roadie now**, and **updates that need a
+  newer Ambxst say so before anything is installed.** The check reads the
+  Ambxst range from each new version's manifest; an update the installed Ambxst
+  does not match is shown as "x.y.z needs Ambxst a.b.c", is never installed on
+  its own (the manager would refuse it, and updating Ambxst first can leave the
+  shell without any mods), and is offered together with the Ambxst update:
+  "Update Ambxst to a.b.c and its mods" opens a terminal that sets those mods
+  aside, fetches their new versions, runs Ambxst's installer, enables them
+  again and restarts once, putting everything back if anything fails before
+  Ambxst itself was updated. See [Mod updates](#mod-updates). New files:
+  `modules/services/ModUpdateService.qml`, `mod_update_check.sh`,
+  `roadie_update.sh`; `ModsPanel.qml` gets the buttons and switches (pure
+  insertions) and `shell.qml` one line. The switches moved to
+  `~/.config/ambxst/roadie.json` (also on the Settings > Roadie page) and are
+  carried over from Mod Updater once. IPC: `updateCheck`, `updateState`.
+  Conflicts with `drpezzer.mod-updater`, which is superseded; needs `git` and
+  `curl`.
 - 1.3.1: **ported to Ambxst 1.3.9** (base 3705f278), which is now the
   minimum. 1.3.9 scopes its own fullscreen detection to the monitor and drops
   the focused-toplevel fast path, two things Roadie had been doing on its own,
