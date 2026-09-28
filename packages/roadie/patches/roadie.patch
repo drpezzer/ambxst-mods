@@ -2370,6 +2370,63 @@ index cfed4f6c..34965b2c 100644
                  duration: Config.animDuration
                  easing.type: Easing.OutCubic
              }
+diff --git a/modules/widgets/config/SettingsWindow.qml b/modules/widgets/config/SettingsWindow.qml
+index 67993a5f..378ffe4f 100644
+--- a/modules/widgets/config/SettingsWindow.qml
++++ b/modules/widgets/config/SettingsWindow.qml
+@@ -38,6 +38,44 @@ FloatingWindow {
+         return null;
+     }
+ 
++    // roadie (the former Settings Float mod): the window opens floating and
++    // centred, sized to its screen. Until it has been placed it declares a
++    // FIXED size (minimum == maximum), derived from the target screen, which is
++    // resolved before the backing window exists. Compositors treat a fixed-size
++    // toplevel as a dialog and float it at map time (Hyprland and Niri also
++    // centre it, keeping clear of bars), so it never tiles first and never
++    // reflows the workspace. Once the compositor reports the window, the
++    // constraints are released so it can be resized by hand.
++    //
++    // There is deliberately NO toggle-floating fallback through the compositor
++    // state: axctl reports a window that was floated at map as not floating
++    // (no floating-change event ever fires for it), so acting on that flag
++    // tiled the window it was meant to float. Values come from
++    // RoadieSettings (read synchronously, long before this window is created
++    // on open), floors at the implicit size above, ceilings at 92% of the
++    // screen.
++    property bool floatLocked: RoadieSettings.settingsFloat
++
++    function floatSize(screenPx, percent, minimum) {
++        const wanted = Math.max(screenPx * percent / 100, minimum);
++        return Math.round(Math.min(wanted, screenPx * 0.92));
++    }
++
++    readonly property int floatW: screen ? floatSize(screen.width, RoadieSettings.settingsFloatWidth, implicitWidth) : implicitWidth
++    readonly property int floatH: screen ? floatSize(screen.height, RoadieSettings.settingsFloatHeight, implicitHeight) : implicitHeight
++
++    minimumSize: floatLocked ? Qt.size(floatW, floatH) : Qt.size(0, 0)
++    maximumSize: floatLocked ? Qt.size(floatW, floatH) : Qt.size(16777215, 16777215)
++
++    // Release the fixed-size hint a moment after the compositor has reported
++    // the window; a floating window keeps floating afterwards.
++    Timer {
++        id: releaseTimer
++        interval: 400
++        repeat: false
++        onTriggered: settingsWindow.floatLocked = false
++    }
++
+     function preparePlacement() {
+         placementTimer.attempts = 0;
+         placementTimer.restart();
+@@ -55,6 +93,7 @@ FloatingWindow {
+                     AxctlService.dispatch(`movetoworkspacesilent ${targetWorkspace}, address:${client.address}`);
+                 }
+                 AxctlService.dispatch(`focuswindow address:${client.address}`);
++                releaseTimer.restart();
+                 return true;
+             }
+         }
 diff --git a/modules/widgets/dashboard/controls/ModsPanel.qml b/modules/widgets/dashboard/controls/ModsPanel.qml
 index 66cbd27d..920bc747 100644
 --- a/modules/widgets/dashboard/controls/ModsPanel.qml

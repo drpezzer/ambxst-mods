@@ -5,9 +5,9 @@ starting and reloading, monitors coming and going, focus moving between
 screens, a game going fullscreen. Every one of those is a staged movement
 with the windows in step, instead of a snap, a blink or a stranded panel.
 
-Roadie replaces **Ambxst Clean Load**, **Multi-monitor fixes** and, since
-1.4.0, **Mod Updater**: it is all of them in one package, plus a boot sequence
-and a farewell. It patches the same files, so it cannot be enabled together
+Roadie replaces **Ambxst Clean Load**, **Multi-monitor fixes**, **Mod
+Updater** (since 1.4.0) and **Settings Float** (since 1.5.0): it is all of
+them in one package, plus a boot sequence and a farewell. It patches the same files, so it cannot be enabled together
 with any of them (the manifest declares the conflict) -- disable those first.
 It also looks after the mods themselves: it [checks them for
 updates](#mod-updates) and tells you when one needs a newer Ambxst *before*
@@ -405,6 +405,37 @@ Testing hotplug without real hardware: `hyprctl output create headless` and
 
 Works with Ambxst `>=1.3.9`.
 
+## The Settings window floats
+
+The Ambxst Settings window opens as a centred floating window, sized to the
+screen it opens on, instead of tiling into whatever workspace is current.
+
+Until the compositor has placed it, the window declares a fixed size (minimum
+equals maximum), derived from the screen it opens on. Compositors treat a
+fixed-size toplevel like a dialog and float it the moment it maps, so it never
+appears as a tile first and never reflows the workspace. Hyprland and Niri also
+centre it on their own, keeping clear of bars. Once the stock placement code
+sees the window in the compositor state, the constraints are released so you
+can resize it by hand. Nothing is added to your compositor config.
+
+| | default |
+|---|---|
+| width | 41% of the screen, at least 900 px, at most 92% |
+| height | 66% of the screen, at least 650 px, at most 92% |
+
+On a 3440x1440 ultrawide that is 1410x950; on 1920x1080 it is 900x713; on a
+1366x768 laptop panel it is 900x650. The switch and the two percentages are on
+the Settings > Roadie page and apply the next time Settings is opened.
+
+- The hint only matters at map time. If you float or tile the window yourself
+  while it is open, Roadie does not fight you.
+- A compositor that does not float fixed-size windows tiles it exactly as
+  stock Ambxst does; add a rule for `org.quickshell` + title `Ambxst Settings`
+  there. Hyprland, Niri and dwl-based compositors honour the hint.
+- There is deliberately no "float it through the compositor" fallback: Ambxst's
+  compositor state reports a window floated at map as not floating, and acting
+  on that flag tiled the window it was meant to float.
+
 ## Mod updates
 
 Settings > Mods gets a **Check for updates** button next to the search box.
@@ -515,7 +546,9 @@ follow the focused screen (on; stock: off) · Show where the
 quote is from (off) · Lock after boot (Auto / Always / Never; stock: Never) ·
 Volume and brightness pop-ups (Quiet at start / As stock / Off) · Remember the
 monitors' brightness channels (on; stock: off) · Cover a cold
-kill with the veil helper (on; stock: off).
+kill with the veil helper (on; stock: off) · Settings opens as a floating
+window (on; stock: off), with its width and height in percent of the screen
+(41, 66).
 
 **Mod updates.** Check for mod updates automatically (off) · Install mod
 updates automatically (off) · Hours between automatic checks (6). "Stock
@@ -544,6 +577,7 @@ Paste that into **Settings → Mods**, or:
 ambxst mods disable drpezzer.clean-load            # if you have them
 ambxst mods disable drpezzer.multi-monitor-fixes
 ambxst mods disable drpezzer.mod-updater
+ambxst mods disable drpezzer.settings-float
 ambxst mods install https://github.com/drpezzer/ambxst-mods/tree/main/packages/roadie
 ambxst mods enable drpezzer.roadie
 ambxst reload
@@ -558,14 +592,19 @@ again in the panel. The optional `extras/ambxst-wrapper` (install it as
 `~/.local/bin/ambxst`) answers to both this mod and Clean Load, so a copy you
 already installed keeps working.
 
-**Coming from Mod Updater.** Roadie 1.4.0 cannot be enabled next to it, so an
-update of Roadie from 1.3.x fails with `mods drpezzer.roadie and
-drpezzer.mod-updater conflict` while Mod Updater is enabled. In Settings > Mods:
-**Disable** Mod Updater, then press **Update to 1.4.0** on Roadie (the button
-is still there, the running shell keeps it until it restarts), then restart.
-Or, in a terminal: `ambxst mods disable drpezzer.mod-updater && ambxst mods
-update drpezzer.roadie && ambxst reload`. Your two switches and the interval
-are carried over.
+**Coming from Mod Updater or Settings Float.** Roadie cannot be enabled next
+to either (1.4.0 took in the first, 1.5.0 the second), so updating Roadie
+while one of them is enabled fails with `mods drpezzer.roadie and
+drpezzer.mod-updater conflict` (or `drpezzer.settings-float`). In Settings >
+Mods: **Disable** the old mod, then press **Update to x.y.z** on Roadie (with
+Mod Updater the button is still there after you disabled it, the running shell
+keeps it until it restarts), then restart. Or, in a terminal:
+
+    ambxst mods disable drpezzer.mod-updater
+    ambxst mods disable drpezzer.settings-float
+    ambxst mods update drpezzer.roadie && ambxst reload
+
+What you had set in either mod is carried over.
 
 ## Notes
 
@@ -597,6 +636,16 @@ are carried over.
 
 ## Changelog
 
+- 1.5.0: **Settings Float is part of Roadie now.** The Settings window opens
+  floating and centred, sized to its screen, exactly as that mod did it (the
+  fixed-size hint until the compositor has placed the window). Its switch and
+  the two percentages moved to the Settings > Roadie page
+  (`settingsFloat`, `settingsFloatWidth`, `settingsFloatHeight` in
+  `roadie.json`; "Stock everything" turns it off) and are carried over once.
+  They are read from Roadie's settings, which are loaded synchronously at
+  start, so the separate start-up singleton and its line in `shell.qml` are
+  gone; `SettingsWindow.qml` joins the patch. Conflicts with
+  `drpezzer.settings-float`, which is superseded.
 - 1.4.0: **Mod Updater is part of Roadie now**, and **updates that need a
   newer Ambxst say so before anything is installed.** The check reads the
   Ambxst range from each new version's manifest; an update the installed Ambxst

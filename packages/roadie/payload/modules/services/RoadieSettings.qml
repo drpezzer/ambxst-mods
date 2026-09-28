@@ -25,13 +25,16 @@ import Quickshell.Io
 // Values set in Settings > Mods before 1.1.0 (the mod manager's
 // mods/drpezzer.roadie.json) are imported once, the first time this file is
 // missing. The mod update checks (1.4.0, the former Mod Updater) bring their
-// switches over from mods/drpezzer.mod-updater.json the same way, once.
+// switches over from mods/drpezzer.mod-updater.json the same way, once, and
+// the floating Settings window (1.5.0, the former Settings Float) its three
+// values from mods/drpezzer.settings-float.json.
 Singleton {
     id: root
 
     readonly property string path: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/roadie.json"
     readonly property string legacyPath: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/mods/drpezzer.roadie.json"
     readonly property string updaterPath: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/mods/drpezzer.mod-updater.json"
+    readonly property string settingsFloatPath: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/mods/drpezzer.settings-float.json"
 
     readonly property var defaults: ({
         // behaviour
@@ -48,6 +51,11 @@ Singleton {
         modAutoInstall: false,
         modCheckHours: 6,
         modUpdaterImported: false, // the one-time import below has run
+        // the Settings window
+        settingsFloat: true,       // stock: false (it tiles)
+        settingsFloatWidth: 41,    // percent of the screen
+        settingsFloatHeight: 66,
+        settingsFloatImported: false,
         // modes
         enterMode: "roadie",      // roadie | stock
         leaveMode: "roadie",      // roadie | stock
@@ -78,6 +86,7 @@ Singleton {
         notifyFollowFocus: false,
         veilEnabled: false,
         ddcCache: false,
+        settingsFloat: false,
         osd: "stock",
         bootLock: "never",
         enterMode: "stock",
@@ -112,6 +121,13 @@ Singleton {
     readonly property string bootLock: ["auto", "always", "never"].indexOf(root.get("bootLock")) !== -1 ? root.get("bootLock") : "auto"
     readonly property bool farewellSource: !!root.get("farewellSource")
     readonly property int farewellHold: root.ms("farewellHold")
+    readonly property bool settingsFloat: !!root.get("settingsFloat")
+    readonly property int settingsFloatWidth: root.percent("settingsFloatWidth")
+    readonly property int settingsFloatHeight: root.percent("settingsFloatHeight")
+    function percent(key) {
+        const n = Number(root.get(key));
+        return (isNaN(n) || n < 20) ? root.defaults[key] : Math.min(100, Math.round(n));
+    }
     readonly property bool modAutoCheck: !!root.get("modAutoCheck")
     readonly property bool modAutoInstall: !!root.get("modAutoInstall")
     readonly property int modCheckHours: {
@@ -152,9 +168,14 @@ Singleton {
         root.set(key, root.defaults[key]);
     }
     function resetAll() {
-        // The import marker is not a setting: without it the next start would
-        // bring the old Mod Updater switches back.
-        root.values = root.values.modUpdaterImported === true ? ({ modUpdaterImported: true }) : ({});
+        // The import markers are not settings: without them the next start
+        // would bring the old mods' values back.
+        const kept = {};
+        if (root.values.modUpdaterImported === true)
+            kept.modUpdaterImported = true;
+        if (root.values.settingsFloatImported === true)
+            kept.settingsFloatImported = true;
+        root.values = kept;
         root.write();
     }
     function stockAll() {
@@ -246,9 +267,51 @@ Singleton {
         root.write();
     }
 
+    FileView {
+        id: settingsFloatFile
+        path: root.settingsFloatPath
+        blockLoading: true
+        printErrors: false
+    }
+
+    // The values of the former Settings Float mod, brought over once.
+    function importSettingsFloat() {
+        if (root.values.settingsFloatImported === true)
+            return;
+        settingsFloatFile.waitForJob();
+        if (!settingsFloatFile.loaded)
+            return; // never installed, or never changed from its defaults
+        let old = {};
+        try {
+            old = JSON.parse(settingsFloatFile.text()) || {};
+        } catch (e) {
+            old = {};
+        }
+        const next = Object.assign({}, root.values, { settingsFloatImported: true });
+        const brought = [];
+        if (old.enabled === false && next.settingsFloat === undefined) {
+            next.settingsFloat = false;
+            brought.push("settingsFloat");
+        }
+        const sizes = { widthPercent: "settingsFloatWidth", heightPercent: "settingsFloatHeight" };
+        for (const from in sizes) {
+            const n = Number(old[from]);
+            const key = sizes[from];
+            if (!isNaN(n) && n >= 20 && Math.round(n) !== root.defaults[key] && next[key] === undefined) {
+                next[key] = Math.min(100, Math.round(n));
+                brought.push(key);
+            }
+        }
+        if (brought.length > 0)
+            console.log("RoadieSettings: imported", brought.join(", "), "from Settings Float");
+        root.values = next;
+        root.write();
+    }
+
     Component.onCompleted: {
         root.load();
         root.importUpdater();
+        root.importSettingsFloat();
     }
 
     function load() {

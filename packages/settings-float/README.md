@@ -1,5 +1,9 @@
 # Settings Float
 
+> **Superseded by [Ambxst Roadie](../roadie) 1.5.0.** Roadie carries this mod now, with its switch and the two sizes on the Settings > Roadie page, and it is where all further work happens. This package stays installable and keeps working, but will not get new features.
+>
+> The two cannot be enabled together. **Moving over**, in Settings > Mods: *Disable* Settings Float, update (or install) Roadie, restart. In a terminal: `ambxst mods disable drpezzer.settings-float && ambxst mods update drpezzer.roadie && ambxst reload`. What you had set here is carried over. While this mod is enabled, updating Roadie to 1.5.0 fails with `mods drpezzer.roadie and drpezzer.settings-float conflict`; that message means exactly this.
+
 Opens the Ambxst Settings window as a centred floating window, sized to the
 screen it opens on, instead of tiling it into whatever workspace is current.
 
@@ -54,6 +58,7 @@ Changes take effect the next time Settings is opened; no reload needed.
 
 ## Changelog
 
+- 1.1.5: superseded by Ambxst Roadie 1.5.0, which includes it (see the note at the top). No source changes.
 - 1.1.4: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.1.3: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
 - 1.1.2: verified on Ambxst 1.3.7 and 1.3.8 (bases 7f0ac49b, c62a7acc); patch applies verbatim, no source changes.

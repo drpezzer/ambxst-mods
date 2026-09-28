@@ -329,6 +329,80 @@ Item {
         }
     }
 
+    // label ......................................... [ 41 ] %
+    component NumberRow: RowLayout {
+        id: numberRow
+        property string label: ""
+        property string hint: ""
+        property string settingKey: ""
+        property int from: 0
+        property int to: 100
+        property string unit: ""
+
+        Layout.fillWidth: true
+        spacing: 8
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 1
+            Text {
+                Layout.fillWidth: true
+                text: numberRow.label
+                font.family: Config.theme.font
+                font.pixelSize: Styling.fontSize(0)
+                color: Colors.overBackground
+                wrapMode: Text.Wrap
+            }
+            Hint {
+                visible: numberRow.hint !== ""
+                text: numberRow.hint
+            }
+        }
+
+        StyledRect {
+            variant: numberInput.activeFocus ? "focus" : "common"
+            Layout.preferredWidth: 84
+            Layout.preferredHeight: 32
+            radius: Styling.radius(-2)
+            enableShadow: false
+
+            TextInput {
+                id: numberInput
+                anchors.fill: parent
+                anchors.margins: 8
+                font.family: Config.theme.font
+                font.pixelSize: Styling.fontSize(0)
+                color: Colors.overBackground
+                selectByMouse: true
+                clip: true
+                verticalAlignment: TextInput.AlignVCenter
+                horizontalAlignment: TextInput.AlignHCenter
+                validator: IntValidator { bottom: numberRow.from; top: numberRow.to }
+
+                readonly property string shown: String(RoadieSettings.get(numberRow.settingKey))
+                onShownChanged: if (!activeFocus) text = shown
+                Component.onCompleted: text = shown
+
+                onEditingFinished: {
+                    const n = parseInt(text.trim(), 10);
+                    if (isNaN(n))
+                        RoadieSettings.reset(numberRow.settingKey); // cleared: the normal value
+                    else
+                        RoadieSettings.set(numberRow.settingKey, Math.max(numberRow.from, Math.min(numberRow.to, n)));
+                    text = shown;
+                }
+            }
+        }
+
+        Text {
+            Layout.preferredWidth: 14
+            text: numberRow.unit
+            font.family: Config.theme.font
+            font.pixelSize: Styling.fontSize(0)
+            color: Colors.overSurfaceVariant
+        }
+    }
+
     component ChoiceRow: RowLayout {
         id: choiceRow
         property string label: ""
@@ -512,6 +586,30 @@ Item {
                     checked: RoadieSettings.veilEnabled
                     onToggled: value => RoadieSettings.set("veilEnabled", value)
                 }
+                ToggleRow {
+                    label: "Settings opens as a floating window"
+                    hint: "Centred and sized to the screen it opens on, without ever showing as a tile first: the window declares a fixed size until the compositor has placed it, which Hyprland, Niri and dwl-based compositors float. No window rule needed. Off (stock): it tiles. Applies the next time Settings is opened."
+                    checked: RoadieSettings.settingsFloat
+                    onToggled: value => RoadieSettings.set("settingsFloat", value)
+                }
+                NumberRow {
+                    visible: RoadieSettings.settingsFloat
+                    label: "Settings window width"
+                    hint: "Percent of the screen. Never below 900 px, never above 92% of the screen."
+                    settingKey: "settingsFloatWidth"
+                    from: 20
+                    to: 100
+                    unit: "%"
+                }
+                NumberRow {
+                    visible: RoadieSettings.settingsFloat
+                    label: "Settings window height"
+                    hint: "Percent of the screen. Never below 650 px, never above 92% of the screen."
+                    settingKey: "settingsFloatHeight"
+                    from: 20
+                    to: 100
+                    unit: "%"
+                }
 
                 Separator { Layout.fillWidth: true; Layout.topMargin: 6 }
 
@@ -534,61 +632,13 @@ Item {
                     checked: RoadieSettings.modAutoInstall
                     onToggled: value => RoadieSettings.set("modAutoInstall", value)
                 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 8
+                NumberRow {
                     opacity: RoadieSettings.modAutoCheck ? 1 : 0.5
-
-                    Text {
-                        Layout.fillWidth: true
-                        text: "Hours between automatic checks"
-                        font.family: Config.theme.font
-                        font.pixelSize: Styling.fontSize(0)
-                        color: Colors.overBackground
-                        wrapMode: Text.Wrap
-                    }
-
-                    StyledRect {
-                        variant: hoursInput.activeFocus ? "focus" : "common"
-                        Layout.preferredWidth: 84
-                        Layout.preferredHeight: 32
-                        radius: Styling.radius(-2)
-                        enableShadow: false
-
-                        TextInput {
-                            id: hoursInput
-                            anchors.fill: parent
-                            anchors.margins: 8
-                            font.family: Config.theme.font
-                            font.pixelSize: Styling.fontSize(0)
-                            color: Colors.overBackground
-                            selectByMouse: true
-                            clip: true
-                            verticalAlignment: TextInput.AlignVCenter
-                            horizontalAlignment: TextInput.AlignHCenter
-                            validator: IntValidator { bottom: 1; top: 168 }
-
-                            readonly property string shown: String(RoadieSettings.modCheckHours)
-                            onShownChanged: if (!activeFocus) text = shown
-                            Component.onCompleted: text = shown
-
-                            onEditingFinished: {
-                                const n = parseInt(text.trim(), 10);
-                                if (isNaN(n))
-                                    RoadieSettings.reset("modCheckHours");
-                                else
-                                    RoadieSettings.set("modCheckHours", Math.max(1, Math.min(168, n)));
-                                text = shown;
-                            }
-                        }
-                    }
-
-                    Text {
-                        text: "h"
-                        font.family: Config.theme.font
-                        font.pixelSize: Styling.fontSize(0)
-                        color: Colors.overSurfaceVariant
-                    }
+                    label: "Hours between automatic checks"
+                    settingKey: "modCheckHours"
+                    from: 1
+                    to: 168
+                    unit: "h"
                 }
 
                 // ─── farewell quotes ─────────────────────────────────
