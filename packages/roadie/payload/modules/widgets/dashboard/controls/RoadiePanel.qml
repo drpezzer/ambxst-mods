@@ -14,24 +14,51 @@ import qs.config
 // lives here (RoadieSettings, ~/.config/ambxst/roadie.json), and everything
 // applies as it is changed.
 //
-// Everything Roadie changes has a mode: Roadie (its own animation, with a
-// duration you can type), Stock (what plain Ambxst does there) and, where that
-// is a different thing, Immediate. Where the normal duration is derived from
-// Ambxst's animation speed the field shows it as "auto"; clearing the field
-// goes back to that. "Stock everything" in the title bar is plain Ambxst with
-// only the fixes left.
+// Three groups, one at a time, behind the switch at the top of the page:
+//   Features       what Roadie does, each with a switch. Off is what plain
+//                  Ambxst does there; the bug fixes have no switch.
+//   Behaviours     how the features that are ON behave.
+//   Customization  durations, sizes and the farewell quotes of the features
+//                  that are ON.
+// The second and third only list what belongs to a feature that is switched
+// on, so a page never shows a knob that does nothing. The page opens on
+// Features the first time and on the group used last after that (kept in
+// roadie.json with everything else, so it outlives the window and a reload).
 Item {
     id: root
 
     property int maxContentWidth: 480
-    readonly property int contentWidth: Math.min(width, maxContentWidth)
     property string currentSection: ""
+
+    readonly property int pageWidth: Math.min(root.width - 16, root.maxContentWidth)
+    // The group on show.
+    readonly property int tab: RoadieSettings.page
+    readonly property var tabNames: ["Features", "Behaviours", "Customization"]
 
     // What BarContent derives when the bar slide is left on automatic.
     readonly property int animBase: Config.animDuration !== undefined ? Config.animDuration : 300
     readonly property bool hasFrame: (Config.bar && Config.bar.frameEnabled !== undefined) ? Config.bar.frameEnabled : false
     readonly property bool containBar: hasFrame && ((Config.bar && Config.bar.containBar !== undefined) ? Config.bar.containBar : false)
     readonly property int barSlideAuto: Math.round(animBase * (containBar ? 1.6 : ((hasFrame || Config.showBackground) ? 1.2 : 0.9)))
+
+    // A feature that has modes is ON in any mode but "stock".
+    function modeOn(key) {
+        return RoadieSettings.mode(key) !== "stock";
+    }
+    function setModeOn(key, on) {
+        RoadieSettings.set(key, on ? "roadie" : "stock");
+    }
+
+    readonly property bool enterOn: root.modeOn("enterMode")
+    readonly property bool leaveOn: root.modeOn("leaveMode")
+    readonly property bool barSlideOn: root.modeOn("barSlideMode")
+    readonly property bool frameOn: root.modeOn("frameMode")
+    readonly property bool farewellOn: root.modeOn("farewellMode")
+    readonly property bool bootLockOn: RoadieSettings.bootLock !== "never"
+
+    readonly property bool anyDuration: root.enterOn || root.leaveOn || RoadieSettings.barSlideMode === "roadie"
+        || root.frameOn || root.farewellOn
+    readonly property bool anyCustom: root.anyDuration || RoadieSettings.settingsFloat || root.farewellOn
 
     component SectionTitle: Text {
         Layout.fillWidth: true
@@ -209,123 +236,158 @@ Item {
         }
     }
 
-    // label ........................ [ Roadie | Stock | Immediate ]
-    //                                         Duration [ 650 ] ms
-    component ModeRow: ColumnLayout {
-        id: modeRow
+    component GroupTitle: Text {
+        Layout.fillWidth: true
+        Layout.topMargin: 8
+        font.family: Config.theme.font
+        font.pixelSize: Styling.fontSize(-1)
+        font.weight: Font.DemiBold
+        font.capitalization: Font.AllUppercase
+        font.letterSpacing: 0.6
+        color: Colors.outline
+    }
+
+    // One of the three groups: what it is for, then its rows.
+    component SettingsGroup: ColumnLayout {
+        id: group
+        property string intro: ""
+        default property alias rows: groupRows.data
+
+        Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
+        Layout.preferredWidth: root.pageWidth
+        Layout.maximumWidth: root.pageWidth
+        spacing: 8
+
+        Hint {
+            visible: group.intro !== ""
+            text: group.intro
+        }
+        ColumnLayout {
+            id: groupRows
+            Layout.fillWidth: true
+            spacing: 10
+        }
+    }
+
+    // label ................................ [ 650 ] ms     ("auto 480" when derived)
+    component DurationRow: RowLayout {
+        id: durationRow
         property string label: ""
         property string hint: ""
-        property string stockHint: ""
-        // Settings keys. modeKey "" = a plain duration; durationKey "" = a mode only.
-        property string modeKey: ""
-        property string durationKey: ""
+        property string settingKey: ""
         // > 0: the normal duration is derived, and 0 in the file means "auto".
         property int autoValue: 0
 
-        readonly property var modes: modeKey !== "" ? (RoadieSettings.modeChoices[modeKey] || []) : []
-        readonly property string mode: modeKey !== "" ? RoadieSettings.mode(modeKey) : "roadie"
-        readonly property int stored: durationKey !== "" ? RoadieSettings.ms(durationKey) : 0
-        readonly property bool isAuto: autoValue > 0 && stored === 0
-        function modeLabel(m) {
-            return m === "roadie" ? "Roadie" : (m === "stock" ? "Stock" : "Immediate");
-        }
+        readonly property int stored: RoadieSettings.ms(durationRow.settingKey)
+        readonly property bool isAuto: durationRow.autoValue > 0 && durationRow.stored === 0
 
         Layout.fillWidth: true
-        spacing: 3
+        spacing: 8
 
-        RowLayout {
+        ColumnLayout {
             Layout.fillWidth: true
-            spacing: 8
-
+            spacing: 1
             Text {
                 Layout.fillWidth: true
-                text: modeRow.label
+                text: durationRow.label
                 font.family: Config.theme.font
                 font.pixelSize: Styling.fontSize(0)
                 color: Colors.overBackground
                 wrapMode: Text.Wrap
             }
-
-            ModeSwitch {
-                visible: modeRow.modeKey !== ""
-                options: modeRow.modes.map(m => modeRow.modeLabel(m))
-                currentIndex: Math.max(0, modeRow.modes.indexOf(modeRow.mode))
-                onPicked: index => RoadieSettings.set(modeRow.modeKey, modeRow.modes[index])
+            Hint {
+                visible: durationRow.hint !== ""
+                text: durationRow.hint
             }
         }
 
-        RowLayout {
-            visible: modeRow.durationKey !== "" && modeRow.mode === "roadie"
-            Layout.fillWidth: true
-            spacing: 8
+        StyledRect {
+            variant: durationInput.activeFocus ? "focus" : "common"
+            Layout.preferredWidth: 84
+            Layout.preferredHeight: 32
+            radius: Styling.radius(-2)
+            enableShadow: false
 
-            Text {
-                Layout.fillWidth: true
-                text: modeRow.modeKey !== "" ? "Duration" : ""
-                horizontalAlignment: Text.AlignRight
-                font.family: Config.theme.font
-                font.pixelSize: Styling.fontSize(-1)
-                color: Colors.overSurfaceVariant
-            }
-
-            StyledRect {
-                variant: durationInput.activeFocus ? "focus" : "common"
-                Layout.preferredWidth: 84
-                Layout.preferredHeight: 32
-                radius: Styling.radius(-2)
-                enableShadow: false
-
-                TextInput {
-                    id: durationInput
-                    anchors.fill: parent
-                    anchors.margins: 8
-                    font.family: Config.theme.font
-                    font.pixelSize: Styling.fontSize(0)
-                    color: Colors.overBackground
-                    selectByMouse: true
-                    clip: true
-                    verticalAlignment: TextInput.AlignVCenter
-                    horizontalAlignment: TextInput.AlignHCenter
-                    validator: IntValidator { bottom: 0; top: 10000 }
-
-                    readonly property string shown: modeRow.isAuto ? "" : String(modeRow.stored)
-                    onShownChanged: if (!activeFocus) text = shown
-                    Component.onCompleted: text = shown
-
-                    onEditingFinished: {
-                        const t = text.trim();
-                        if (t === "") {
-                            RoadieSettings.reset(modeRow.durationKey); // cleared: the normal duration
-                        } else {
-                            const n = parseInt(t, 10);
-                            if (!isNaN(n))
-                                RoadieSettings.set(modeRow.durationKey, Math.max(0, Math.min(10000, n)));
-                        }
-                        text = shown;
-                    }
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    visible: modeRow.isAuto && durationInput.text === "" && !durationInput.activeFocus
-                    text: "auto " + modeRow.autoValue
-                    font.family: Config.theme.font
-                    font.pixelSize: Styling.fontSize(-1)
-                    color: Colors.outline
-                }
-            }
-
-            Text {
-                text: "ms"
+            TextInput {
+                id: durationInput
+                anchors.fill: parent
+                anchors.margins: 8
                 font.family: Config.theme.font
                 font.pixelSize: Styling.fontSize(0)
-                color: Colors.overSurfaceVariant
+                color: Colors.overBackground
+                selectByMouse: true
+                clip: true
+                verticalAlignment: TextInput.AlignVCenter
+                horizontalAlignment: TextInput.AlignHCenter
+                validator: IntValidator { bottom: 0; top: 10000 }
+
+                readonly property string shown: durationRow.isAuto ? "" : String(durationRow.stored)
+                onShownChanged: if (!activeFocus) text = shown
+                Component.onCompleted: text = shown
+
+                onEditingFinished: {
+                    const t = text.trim();
+                    if (t === "") {
+                        RoadieSettings.reset(durationRow.settingKey); // cleared: the normal duration
+                    } else {
+                        const n = parseInt(t, 10);
+                        if (!isNaN(n))
+                            RoadieSettings.set(durationRow.settingKey, Math.max(0, Math.min(10000, n)));
+                    }
+                    text = shown;
+                }
+            }
+
+            Text {
+                anchors.centerIn: parent
+                visible: durationRow.isAuto && durationInput.text === "" && !durationInput.activeFocus
+                text: "auto " + durationRow.autoValue
+                font.family: Config.theme.font
+                font.pixelSize: Styling.fontSize(-1)
+                color: Colors.outline
             }
         }
 
+        Text {
+            Layout.preferredWidth: 20
+            text: "ms"
+            font.family: Config.theme.font
+            font.pixelSize: Styling.fontSize(0)
+            color: Colors.overSurfaceVariant
+        }
+    }
+
+    // label
+    // hint
+    // [ choice | choice | choice ]          (under the text: three choices do
+    //                                        not fit beside it in a column)
+    component ChoiceRow: ColumnLayout {
+        id: choiceRow
+        property string label: ""
+        property string hint: ""
+        property string settingKey: ""
+        property var choices: []   // [{ label, value }]
+
+        Layout.fillWidth: true
+        spacing: 4
+
+        Text {
+            Layout.fillWidth: true
+            text: choiceRow.label
+            font.family: Config.theme.font
+            font.pixelSize: Styling.fontSize(0)
+            color: Colors.overBackground
+            wrapMode: Text.Wrap
+        }
         Hint {
-            visible: text !== ""
-            text: modeRow.mode === "stock" && modeRow.stockHint !== "" ? ("Stock: " + modeRow.stockHint) : modeRow.hint
+            visible: choiceRow.hint !== ""
+            text: choiceRow.hint
+        }
+        ModeSwitch {
+            Layout.topMargin: 2
+            options: choiceRow.choices.map(c => c.label)
+            currentIndex: Math.max(0, choiceRow.choices.findIndex(c => c.value === RoadieSettings.get(choiceRow.settingKey)))
+            onPicked: index => RoadieSettings.set(choiceRow.settingKey, choiceRow.choices[index].value)
         }
     }
 
@@ -403,40 +465,6 @@ Item {
         }
     }
 
-    component ChoiceRow: RowLayout {
-        id: choiceRow
-        property string label: ""
-        property string hint: ""
-        property string settingKey: ""
-        property var choices: []   // [{ label, value }]
-
-        Layout.fillWidth: true
-        spacing: 8
-
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 1
-            Text {
-                Layout.fillWidth: true
-                text: choiceRow.label
-                font.family: Config.theme.font
-                font.pixelSize: Styling.fontSize(0)
-                color: Colors.overBackground
-                wrapMode: Text.Wrap
-            }
-            Hint {
-                visible: choiceRow.hint !== ""
-                text: choiceRow.hint
-            }
-        }
-
-        ModeSwitch {
-            options: choiceRow.choices.map(c => c.label)
-            currentIndex: Math.max(0, choiceRow.choices.findIndex(c => c.value === RoadieSettings.get(choiceRow.settingKey)))
-            onPicked: index => RoadieSettings.set(choiceRow.settingKey, choiceRow.choices[index].value)
-        }
-    }
-
     Flickable {
         id: mainFlickable
         anchors.fill: parent
@@ -447,7 +475,7 @@ Item {
         ColumnLayout {
             id: mainColumn
             width: mainFlickable.width
-            spacing: 8
+            spacing: 10
 
             Item {
                 Layout.fillWidth: true
@@ -455,14 +483,14 @@ Item {
 
                 PanelTitlebar {
                     id: titlebar
-                    width: root.contentWidth
+                    width: root.pageWidth
                     anchors.horizontalCenter: parent.horizontalCenter
                     title: "Roadie"
                     statusText: RoadieSettings.allStock ? "Stock everything" : ""
                     actions: [
                         {
                             icon: Icons.cube,
-                            tooltip: "Stock everything: plain Ambxst animations and behaviour, only Roadie's fixes stay",
+                            tooltip: "Stock everything: every feature off, plain Ambxst with only Roadie's fixes",
                             onClicked: function () {
                                 RoadieSettings.stockAll();
                             }
@@ -478,210 +506,280 @@ Item {
                 }
             }
 
-            ColumnLayout {
-                Layout.preferredWidth: root.contentWidth
-                Layout.maximumWidth: root.contentWidth
+            ModeSwitch {
                 Layout.alignment: Qt.AlignHCenter
-                spacing: 8
-
-                // ─── animations ──────────────────────────────────────
-                SectionTitle { text: "Animations" }
-                Hint {
-                    text: "Roadie is this mod's animation, for the duration beside it (clear the field for the normal one). Stock is what plain Ambxst does. Immediate: it simply happens."
-                }
-
-                ModeRow {
-                    label: "Shell start"
-                    hint: "Wallpaper fades in, the frame grows in, then bar, notch and dock arrive (boot and reload). The frame takes this long; the others are paced from it."
-                    stockHint: "everything appears at once."
-                    modeKey: "enterMode"
-                    durationKey: "enterDuration"
-                }
-                ModeRow {
-                    label: "Shell reload, the way out"
-                    hint: "Bar, notch and dock leave, the frame follows, the wallpaper fades to the background colour, then the shell restarts."
-                    stockHint: "the shell is restarted with no way out."
-                    modeKey: "leaveMode"
-                    durationKey: "leaveDuration"
-                }
-                ModeRow {
-                    label: "Bar slide"
-                    hint: "The bar leaving and returning with the windows: focus moving between screens, a fullscreen window, an auto-hide bar. Automatic follows Ambxst's animation speed and how much is moving (contained in the frame, a frame or bar background, pills alone)."
-                    stockHint: "Ambxst's quick hide and reveal, not staged and not synced with the windows. The bar's space is still released and taken back."
-                    modeKey: "barSlideMode"
-                    durationKey: "barSlideDuration"
-                    autoValue: root.barSlideAuto
-                }
-                ModeRow {
-                    label: "Frame around a fullscreen window"
-                    hint: "The frame collapsing when a window goes fullscreen and growing back when it leaves. Automatic is Ambxst's animation speed."
-                    stockHint: "it drops and returns at once."
-                    modeKey: "frameMode"
-                    durationKey: "frameDuration"
-                    autoValue: Math.max(1, root.animBase)
-                }
-                ModeRow {
-                    label: "Notch over a fullscreen window"
-                    hint: "A peeking notch hangs off the screen edge with square corners; an opened one brings the frame back with the bar."
-                    stockHint: "the frame's strip returns under the notch and all four corners round."
-                    modeKey: "notchCoverMode"
-                }
-                ModeRow {
-                    label: "Farewell on reboot and power off"
-                    hint: "The notch grows into the whole screen and a line from a film or show fades in before the command runs. The duration is the notch filling the screen."
-                    stockHint: "no farewell, the command runs at once."
-                    modeKey: "farewellMode"
-                    durationKey: "farewellDuration"
-                }
-                ModeRow {
-                    visible: RoadieSettings.farewellMode !== "stock"
-                    label: "Farewell, reading time"
-                    hint: "How long the quote stays up before the command runs, on top of 40 ms per character."
-                    durationKey: "farewellHold"
-                }
-
-                Separator { Layout.fillWidth: true; Layout.topMargin: 6 }
-
-                // ─── behaviour ───────────────────────────────────────
-                SectionTitle { text: "Behaviour" }
-
-                ToggleRow {
-                    label: "Bar follows the focused screen"
-                    hint: "A pinned bar shows only on the screen that has focus and slides across when focus moves. Off (stock): every screen keeps its bar."
-                    checked: RoadieSettings.followFocus
-                    onToggled: value => RoadieSettings.set("followFocus", value)
-                }
-                ToggleRow {
-                    label: "Notifications follow the focused screen"
-                    hint: "The notch pops a notification on the screen that has focus only. If a window is fullscreen there and another screen is free, it goes to that screen instead; with one screen it stays where it is (the dashboard's bell silences them). Off (stock): every screen pops it."
-                    checked: RoadieSettings.notifyFollowFocus
-                    onToggled: value => RoadieSettings.set("notifyFollowFocus", value)
-                }
-                ToggleRow {
-                    label: "Show where the quote is from"
-                    checked: RoadieSettings.farewellSource
-                    onToggled: value => RoadieSettings.set("farewellSource", value)
-                }
-                ChoiceRow {
-                    label: "Lock after boot"
-                    hint: "Auto locks once the wallpaper and frame are in, unless you logged in through a greeter (SDDM, GDM, LightDM, greetd, ly...) or an external locker is already up. Never is stock."
-                    settingKey: "bootLock"
-                    choices: [{ label: "Auto", value: "auto" }, { label: "Always", value: "always" }, { label: "Never", value: "never" }]
-                }
-                ChoiceRow {
-                    label: "Dim the screens when idle"
-                    hint: "Ambxst lowers the brightness of every screen that can be dimmed after a while without input (to 10% after 2.5 minutes, unless you changed that rule under Settings > System) and puts it back when you return. Laptops only keeps that where there is a battery to save; Never leaves the screens at the brightness you set. Locking, screen off and suspend are not affected."
-                    settingKey: "idleDim"
-                    choices: [{ label: "As stock", value: "always" }, { label: "Laptops only", value: "battery" }, { label: "Never", value: "never" }]
-                }
-                ChoiceRow {
-                    label: "Volume and brightness pop-ups"
-                    hint: "Quiet hides the ones the shell makes by itself while reading its initial state after a start."
-                    settingKey: "osd"
-                    choices: [{ label: "Quiet at start", value: "quiet" }, { label: "As stock", value: "stock" }, { label: "Off", value: "off" }]
-                }
-                ToggleRow {
-                    label: "Remember the monitors' brightness channels"
-                    hint: "Ambxst asks every monitor for its DDC channel and brightness at each start, which freezes the whole desktop for about a second on some GPUs. On: a reload reuses what this session already learned, and the first start after a boot reuses the channels if the same monitors sit on the same adapters, then checks the brightness a few seconds after the entrance (a changed monitor set or a wake from suspend asks again). Off is stock."
-                    checked: RoadieSettings.ddcCache
-                    onToggled: value => RoadieSettings.set("ddcCache", value)
-                }
-                ToggleRow {
-                    label: "Cover a cold kill with the veil helper"
-                    hint: "A tiny detached helper that shows the wallpaper and frame and plays the way out itself if the shell is killed without leaving first. Off is stock. Takes effect on the next reload."
-                    checked: RoadieSettings.veilEnabled
-                    onToggled: value => RoadieSettings.set("veilEnabled", value)
-                }
-                ToggleRow {
-                    label: "Settings opens as a floating window"
-                    hint: "Centred and sized to the screen it opens on, without ever showing as a tile first: the window declares a fixed size until the compositor has placed it, which Hyprland, Niri and dwl-based compositors float. No window rule needed. Off (stock): it tiles. Applies the next time Settings is opened."
-                    checked: RoadieSettings.settingsFloat
-                    onToggled: value => RoadieSettings.set("settingsFloat", value)
-                }
-                NumberRow {
-                    visible: RoadieSettings.settingsFloat
-                    label: "Settings window width"
-                    hint: "Percent of the screen. Never below 900 px, never above 92% of the screen."
-                    settingKey: "settingsFloatWidth"
-                    from: 20
-                    to: 100
-                    unit: "%"
-                }
-                NumberRow {
-                    visible: RoadieSettings.settingsFloat
-                    label: "Settings window height"
-                    hint: "Percent of the screen. Never below 650 px, never above 92% of the screen."
-                    settingKey: "settingsFloatHeight"
-                    from: 20
-                    to: 100
-                    unit: "%"
-                }
-
-                Separator { Layout.fillWidth: true; Layout.topMargin: 6 }
-
-                // ─── bar and notch ───────────────────────────────────
-                SectionTitle { text: "Bar and notch" }
-
-                ToggleRow {
-                    label: "Bluetooth in the bar"
-                    hint: "An indicator that opens a panel on hover or click: power, scanning, connect, pair, trust and forget per device, and a battery readout for connected devices. blueman's own tray icon is hidden while this is on. Off is stock."
-                    checked: RoadieSettings.bluetoothWidget
-                    onToggled: value => RoadieSettings.set("bluetoothWidget", value)
-                }
-                ToggleRow {
-                    label: "Popouts grow out of the frame"
-                    hint: "With contain bar on, the clock, controls, battery, layout and hidden tray icons popouts are part of the frame instead of floating pills. Off (stock): floating pills."
-                    checked: RoadieSettings.framePopouts
-                    onToggled: value => RoadieSettings.set("framePopouts", value)
-                }
-                ToggleRow {
-                    label: "Audio routing tab in the dashboard"
-                    hint: "A tab under the vitals: every program playing or recording audio, where it goes, its volume, and a dropdown to move it, EasyEffects included. Off is stock. Takes effect on the next reload."
-                    checked: RoadieSettings.audioTab
-                    onToggled: value => RoadieSettings.set("audioTab", value)
-                }
-                Hint {
-                    text: "Icon colours: True Matugen Icons and True Monochrome are under Settings > Theme, with Tint Icons."
-                }
-
-                Separator { Layout.fillWidth: true; Layout.topMargin: 6 }
-
-                // ─── mod updates ─────────────────────────────────────
-                SectionTitle { text: "Mod updates" }
-                Hint {
-                    text: "Settings > Mods has a Check for updates button. An update that needs a newer Ambxst than yours says so before anything is installed, and is offered together with the Ambxst update, in the order that keeps your mods working."
-                }
-
-                ToggleRow {
-                    label: "Check for mod updates automatically"
-                    hint: "Shortly after the shell starts and every few hours after that, with a notification when any are found."
-                    checked: RoadieSettings.modAutoCheck
-                    onToggled: value => RoadieSettings.set("modAutoCheck", value)
-                }
-                ToggleRow {
-                    opacity: RoadieSettings.modAutoCheck ? 1 : 0.5
-                    label: "Install mod updates automatically"
-                    hint: "What an automatic check finds is installed right away, then a notification asks you to restart Ambxst. Updates that need a newer Ambxst always wait for you."
-                    checked: RoadieSettings.modAutoInstall
-                    onToggled: value => RoadieSettings.set("modAutoInstall", value)
-                }
-                NumberRow {
-                    opacity: RoadieSettings.modAutoCheck ? 1 : 0.5
-                    label: "Hours between automatic checks"
-                    settingKey: "modCheckHours"
-                    from: 1
-                    to: 168
-                    unit: "h"
-                }
-
-                // ─── farewell quotes ─────────────────────────────────
-                RoadieQuotesEditor {
-                    Layout.fillWidth: true
-                    Layout.topMargin: 6
-                }
-
-                Item { Layout.preferredHeight: 12 }
+                options: root.tabNames
+                currentIndex: root.tab
+                onPicked: index => RoadieSettings.set("page", index)
             }
+
+            ColumnLayout {
+                Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
+                Layout.preferredWidth: root.pageWidth
+                Layout.maximumWidth: root.pageWidth
+                spacing: 0
+
+                // ═══ FEATURES ════════════════════════════════════════
+                SettingsGroup {
+                    visible: root.tab === 0
+                    intro: "What Roadie does. Off is what plain Ambxst does there. The fixes (monitor hotplug, fullscreen detection, a bar that never gets stranded) have no switch."
+
+                    GroupTitle { text: "Shell" }
+                    ToggleRow {
+                        label: "Staged shell start"
+                        hint: "The wallpaper fades in, the frame grows in, then bar, notch and dock arrive, at boot and after a reload. Off: everything appears at once."
+                        checked: root.enterOn
+                        onToggled: value => root.setModeOn("enterMode", value)
+                    }
+                    ToggleRow {
+                        label: "Staged reload"
+                        hint: "Bar, notch and dock leave, the frame follows and the wallpaper fades out before the shell restarts. Off: it is restarted with no way out."
+                        checked: root.leaveOn
+                        onToggled: value => root.setModeOn("leaveMode", value)
+                    }
+                    ToggleRow {
+                        label: "Cover a sudden restart"
+                        hint: "A tiny helper shows the wallpaper and frame if the shell is killed without leaving first. Takes effect on the next reload."
+                        checked: RoadieSettings.veilEnabled
+                        onToggled: value => RoadieSettings.set("veilEnabled", value)
+                    }
+                    ToggleRow {
+                        label: "Lock after boot"
+                        hint: "The shell locks once the wallpaper and frame are in, and the bar follows when you unlock."
+                        checked: root.bootLockOn
+                        onToggled: value => RoadieSettings.set("bootLock", value ? "auto" : "never")
+                    }
+                    ToggleRow {
+                        label: "Farewell on reboot and power off"
+                        hint: "The notch grows into the whole screen and a line from a film or show fades in before the command runs."
+                        checked: root.farewellOn
+                        onToggled: value => root.setModeOn("farewellMode", value)
+                    }
+
+                    GroupTitle { text: "Screens" }
+                    ToggleRow {
+                        label: "Bar follows the focused screen"
+                        hint: "A pinned bar shows only on the screen that has focus and slides across when focus moves. Off: every screen keeps its bar."
+                        checked: RoadieSettings.followFocus
+                        onToggled: value => RoadieSettings.set("followFocus", value)
+                    }
+                    ToggleRow {
+                        label: "Notifications follow the focused screen"
+                        hint: "One screen pops a notification: the focused one, or a free one if a window is fullscreen there. Off: every screen pops it."
+                        checked: RoadieSettings.notifyFollowFocus
+                        onToggled: value => RoadieSettings.set("notifyFollowFocus", value)
+                    }
+                    ToggleRow {
+                        label: "Staged bar slide"
+                        hint: "The bar leaves and returns with the windows moving in step: focus changing screens, a fullscreen window, an auto-hide bar. Off: Ambxst's quick hide and reveal."
+                        checked: root.barSlideOn
+                        onToggled: value => root.setModeOn("barSlideMode", value)
+                    }
+                    ToggleRow {
+                        label: "Animated frame around fullscreen windows"
+                        hint: "The frame collapses when a window goes fullscreen and grows back when it leaves. Off: it drops and returns at once."
+                        checked: root.frameOn
+                        onToggled: value => root.setModeOn("frameMode", value)
+                    }
+                    ToggleRow {
+                        label: "Notch hangs off the edge over fullscreen"
+                        hint: "Over a fullscreen window a peeking notch sits on the screen edge with square corners, and an opened one brings the frame back with the bar. Off: the frame's strip returns under it."
+                        checked: root.modeOn("notchCoverMode")
+                        onToggled: value => root.setModeOn("notchCoverMode", value)
+                    }
+                    ToggleRow {
+                        label: "Remember the monitors' brightness channels"
+                        hint: "Skips the monitor query Ambxst runs at every start, which freezes the desktop for about a second on some GPUs."
+                        checked: RoadieSettings.ddcCache
+                        onToggled: value => RoadieSettings.set("ddcCache", value)
+                    }
+
+                    GroupTitle { text: "Bar and notch" }
+                    ToggleRow {
+                        label: "Bluetooth in the bar"
+                        hint: "An indicator with a panel for power, scanning and your devices, and a battery readout. Off also brings blueman's tray icon back."
+                        checked: RoadieSettings.bluetoothWidget
+                        onToggled: value => RoadieSettings.set("bluetoothWidget", value)
+                    }
+                    ToggleRow {
+                        label: "Popouts grow out of the frame"
+                        hint: "With contain bar on, the clock, controls, battery, layout and hidden tray icons popouts are part of the frame. Off: floating pills."
+                        checked: RoadieSettings.framePopouts
+                        onToggled: value => RoadieSettings.set("framePopouts", value)
+                    }
+                    ToggleRow {
+                        label: "Audio routing tab in the dashboard"
+                        hint: "Every program playing or recording audio, where it goes, its volume, and a dropdown to move it. Takes effect on the next reload."
+                        checked: RoadieSettings.audioTab
+                        onToggled: value => RoadieSettings.set("audioTab", value)
+                    }
+
+                    GroupTitle { text: "Settings and mods" }
+                    ToggleRow {
+                        label: "Settings opens as a floating window"
+                        hint: "Centred and sized to the screen, never a tile first. Applies the next time Settings is opened."
+                        checked: RoadieSettings.settingsFloat
+                        onToggled: value => RoadieSettings.set("settingsFloat", value)
+                    }
+                    ToggleRow {
+                        label: "Check for mod updates automatically"
+                        hint: "Shortly after the shell starts and every few hours, with a notification when any are found. The Check for updates button in Settings > Mods is always there."
+                        checked: RoadieSettings.modAutoCheck
+                        onToggled: value => RoadieSettings.set("modAutoCheck", value)
+                    }
+
+                    Hint {
+                        Layout.topMargin: 6
+                        text: "Icon colours: True Matugen Icons and True Monochrome are under Settings > Theme, with Tint Icons."
+                    }
+                }
+
+                // ═══ BEHAVIOURS ══════════════════════════════════════
+                SettingsGroup {
+                    visible: root.tab === 1
+                    intro: "How the features that are switched on behave."
+
+                    ChoiceRow {
+                        visible: root.barSlideOn
+                        label: "Bar slide"
+                        hint: "Animated slides the bar with the windows. Immediate: the bar and its space simply come and go."
+                        settingKey: "barSlideMode"
+                        choices: [{ label: "Animated", value: "roadie" }, { label: "Immediate", value: "immediate" }]
+                    }
+                    ChoiceRow {
+                        visible: root.farewellOn
+                        label: "Farewell"
+                        hint: "Animated grows the notch and fades the quote in. Immediate shows the quote with no movement."
+                        settingKey: "farewellMode"
+                        choices: [{ label: "Animated", value: "roadie" }, { label: "Immediate", value: "immediate" }]
+                    }
+                    ToggleRow {
+                        visible: root.farewellOn
+                        label: "Show where the quote is from"
+                        checked: RoadieSettings.farewellSource
+                        onToggled: value => RoadieSettings.set("farewellSource", value)
+                    }
+                    ChoiceRow {
+                        visible: root.bootLockOn
+                        label: "Lock after boot"
+                        hint: "Auto skips the lock if you logged in through a greeter (SDDM, GDM, LightDM, greetd, ly...) or an external locker is already up."
+                        settingKey: "bootLock"
+                        choices: [{ label: "Auto", value: "auto" }, { label: "Always", value: "always" }]
+                    }
+                    ChoiceRow {
+                        label: "Dim the screens when idle"
+                        hint: "Ambxst lowers the brightness after a while without input. Laptops only keeps that where there is a battery; Never leaves the screens as you set them. Locking, screen off and suspend are not affected."
+                        settingKey: "idleDim"
+                        choices: [{ label: "As stock", value: "always" }, { label: "Laptops only", value: "battery" }, { label: "Never", value: "never" }]
+                    }
+                    ChoiceRow {
+                        label: "Volume and brightness pop-ups"
+                        hint: "Quiet hides the ones the shell makes by itself while reading its initial state after a start."
+                        settingKey: "osd"
+                        choices: [{ label: "Quiet at start", value: "quiet" }, { label: "As stock", value: "stock" }, { label: "Off", value: "off" }]
+                    }
+                    ToggleRow {
+                        visible: RoadieSettings.modAutoCheck
+                        label: "Install mod updates automatically"
+                        hint: "What an automatic check finds is installed right away, then a notification asks you to restart. Updates that need a newer Ambxst always wait for you."
+                        checked: RoadieSettings.modAutoInstall
+                        onToggled: value => RoadieSettings.set("modAutoInstall", value)
+                    }
+                    NumberRow {
+                        visible: RoadieSettings.modAutoCheck
+                        label: "Hours between automatic checks"
+                        settingKey: "modCheckHours"
+                        from: 1
+                        to: 168
+                        unit: "h"
+                    }
+                }
+
+                // ═══ CUSTOMIZATION ═══════════════════════════════════
+                SettingsGroup {
+                    visible: root.tab === 2
+                    intro: root.anyCustom ? "Durations, sizes and quotes of the features that are switched on."
+                        : "Nothing to adjust: the features these settings belong to are switched off."
+
+                    GroupTitle {
+                        visible: root.anyDuration
+                        text: "Animation durations"
+                    }
+                    Hint {
+                        visible: root.anyDuration
+                        text: "Clear a field for the normal duration. Auto follows Ambxst's animation speed."
+                    }
+                    DurationRow {
+                        visible: root.enterOn
+                        label: "Shell start"
+                        hint: "The frame takes this long; wallpaper and bar are paced from it."
+                        settingKey: "enterDuration"
+                    }
+                    DurationRow {
+                        visible: root.leaveOn
+                        label: "Reload, the way out"
+                        settingKey: "leaveDuration"
+                    }
+                    DurationRow {
+                        visible: RoadieSettings.barSlideMode === "roadie"
+                        label: "Bar slide"
+                        hint: "Auto also follows how much is moving: contained in the frame, a frame or bar background, pills alone."
+                        settingKey: "barSlideDuration"
+                        autoValue: root.barSlideAuto
+                    }
+                    DurationRow {
+                        visible: root.frameOn
+                        label: "Frame around a fullscreen window"
+                        settingKey: "frameDuration"
+                        autoValue: Math.max(1, root.animBase)
+                    }
+                    DurationRow {
+                        visible: RoadieSettings.farewellMode === "roadie"
+                        label: "Farewell, filling the screen"
+                        settingKey: "farewellDuration"
+                    }
+                    DurationRow {
+                        visible: root.farewellOn
+                        label: "Farewell, reading time"
+                        hint: "How long the quote stays up before the command runs, on top of 40 ms per character."
+                        settingKey: "farewellHold"
+                    }
+
+                    GroupTitle {
+                        visible: RoadieSettings.settingsFloat
+                        text: "Settings window"
+                    }
+                    NumberRow {
+                        visible: RoadieSettings.settingsFloat
+                        label: "Width"
+                        hint: "Percent of the screen. Never below 900 px or above 92%."
+                        settingKey: "settingsFloatWidth"
+                        from: 20
+                        to: 100
+                        unit: "%"
+                    }
+                    NumberRow {
+                        visible: RoadieSettings.settingsFloat
+                        label: "Height"
+                        hint: "Percent of the screen. Never below 650 px or above 92%."
+                        settingKey: "settingsFloatHeight"
+                        from: 20
+                        to: 100
+                        unit: "%"
+                    }
+
+                    // ─── farewell quotes ─────────────────────────────
+                    Loader {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 6
+                        active: root.farewellOn
+                        visible: active
+                        sourceComponent: RoadieQuotesEditor {}
+                    }
+                }
+            }
+
+            Item { Layout.preferredHeight: 12 }
         }
     }
 }

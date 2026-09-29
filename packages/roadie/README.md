@@ -687,50 +687,53 @@ Everything applies as you change it, and it is kept in
 `~/.config/ambxst/roadie.json` (only what differs from the defaults; edit it by
 hand if you like, it is watched).
 
-**Animations.** Everything Roadie changes has a mode: **Roadie** (its own
-animation, with a duration you can type; clearing the field goes back to normal,
-and where normal is derived from Ambxst's animation speed the field reads
-"auto"), **Stock** (what plain Ambxst does there) and, where that is a
-different thing, **Immediate**.
+The page has three groups behind the switch at the top. It opens on
+**Features** the first time and on the group you used last after that.
 
-| | Roadie, normally | Stock |
-|---|---|---|
-| Shell start | 650 ms (the frame; wallpaper and bar are paced from it) | everything appears at once |
-| Shell reload, the way out | 900 ms | the shell is restarted with no way out |
-| Bar slide (focus moving between screens, fullscreen, auto-hide) | auto: 1.6 x Ambxst's animation speed contained in the frame, 1.2 with a frame or bar background, 0.9 for pills alone | Ambxst's quick hide and reveal, not staged, not synced with the windows · or **Immediate** |
-| Frame around a fullscreen window | auto: Ambxst's animation speed | drops and returns at once |
-| Notch over a fullscreen window | peeking: hangs off the screen edge, square corners; opened: the frame comes back with the bar | the frame's strip returns under the notch, all four corners round |
-| Farewell on reboot and power off | 900 ms to fill the screen, then 1500 ms + 40 ms per character to read | no farewell · or **Immediate** (no expansion or fades) |
+**Features** is what Roadie does, each with a switch. Off is what plain Ambxst
+does there.
 
-**Behaviour.** Bar follows the focused screen (on; stock: off) · Notifications
-follow the focused screen (on; stock: off) · Show where the
-quote is from (off) · Lock after boot (Auto / Always / Never; stock: Never) ·
-Volume and brightness pop-ups (Quiet at start / As stock / Off) · Remember the
-monitors' brightness channels (on; stock: off) · Cover a cold
-kill with the veil helper (on; stock: off) · Dim the screens when idle (As
-stock / Laptops only / Never) · Settings opens as a floating
-window (on; stock: off), with its width and height in percent of the screen
-(41, 66).
+| Group | Switches |
+|---|---|
+| Shell | Staged shell start · Staged reload · Cover a sudden restart · Lock after boot · Farewell on reboot and power off |
+| Screens | Bar follows the focused screen · Notifications follow the focused screen · Staged bar slide · Animated frame around fullscreen windows · Notch hangs off the edge over fullscreen · Remember the monitors' brightness channels |
+| Bar and notch | Bluetooth in the bar · Popouts grow out of the frame · Audio routing tab in the dashboard |
+| Settings and mods | Settings opens as a floating window · Check for mod updates automatically |
 
-**Bar and notch.** Bluetooth in the bar (on; stock: off) · Popouts grow out of
-the frame (on; stock: off) · Audio routing tab in the dashboard (on; stock:
-off, applies on the next reload). True Matugen Icons and True Monochrome are
-under Settings > Theme, off by default.
+**Behaviours** is how the features that are switched on behave: Bar slide
+(Animated / Immediate) · Farewell (Animated / Immediate) · Show where the quote
+is from · Lock after boot (Auto / Always) · Dim the screens when idle (As stock
+/ Laptops only / Never) · Volume and brightness pop-ups (Quiet at start / As
+stock / Off) · Install mod updates automatically · Hours between automatic
+checks.
 
-**Mod updates.** Check for mod updates automatically (off) · Install mod
-updates automatically (off) · Hours between automatic checks (6). "Stock
-everything" leaves these alone.
+**Customization** is their durations, sizes and quotes: the animation
+durations (clear a field for the normal one; where that is derived from
+Ambxst's animation speed the field reads "auto"), the Settings window's width
+and height, and the farewell quotes editor.
 
-**Stock everything** in the title bar sets all of the above to plain Ambxst in
-one go, for anyone who wants Roadie only for its fixes -- the stranded bar, the
-stale fullscreen detection, corners over a game on an unfocused monitor and the
+| Duration | Normally |
+|---|---|
+| Shell start | 650 ms (the frame; wallpaper and bar are paced from it) |
+| Reload, the way out | 900 ms |
+| Bar slide | auto: 1.6 x Ambxst's animation speed contained in the frame, 1.2 with a frame or bar background, 0.9 for pills alone |
+| Frame around a fullscreen window | auto: Ambxst's animation speed |
+| Farewell | 900 ms to fill the screen, then 1500 ms + 40 ms per character to read |
+
+Behaviours and Customization only list what belongs to a feature that is
+switched on: turn the farewell off and its style, its durations and the quotes
+editor leave the page with it. Dimming and the pop-ups are always there, since
+they are Ambxst's own.
+
+**Stock everything** in the title bar switches every feature off in one go,
+for anyone who wants Roadie only for its fixes -- the stranded bar, the stale
+fullscreen detection, corners over a game on an unfocused monitor and the
 monitor hotplug fixes have no switch. The button beside it resets the page to
-Roadie's defaults.
+Roadie's defaults. The two icon switches, True Matugen Icons and True
+Monochrome, are under Settings > Theme with Tint Icons.
 
-**Farewell quotes.** The editor described above: add, remove, hide built-in
-lines, use only your own.
-
-Options set in Settings > Mods before 1.1.0 are carried over the first time.
+Options set in Settings > Mods before 1.1.0, and in the mods Roadie has taken
+in since, are carried over the first time.
 
 ## Install
 
@@ -821,7 +824,13 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
   and **Audio routing tab in the dashboard**, each on by default, off with
   "Stock everything". With the Bluetooth widget off, blueman's tray icon comes
   back. The two icon switches stay under Settings > Theme. The manifest's
-  permissions were rewritten as eleven short lines. Conflicts with
+  permissions were rewritten as eleven short lines. **The Settings > Roadie
+  page is three groups now**, Features, Behaviours and Customization, behind a
+  switch at the top that remembers the one you used last; the second and third
+  only list settings of features that are switched on. **Popouts keep clear of
+  the frame's corner:** a tall popout on the last button of the bar (the clock
+  and weather one on a vertical bar) ended 28 px from the screen edge, where
+  its curve ran into the frame's own rounded corner. Conflicts with
   `drpezzer.bar-glance`, `drpezzer.audio-routing` and `drpezzer.tinted-icons`,
   which are superseded; see [Coming from the separate
   mods](#coming-from-the-separate-mods).

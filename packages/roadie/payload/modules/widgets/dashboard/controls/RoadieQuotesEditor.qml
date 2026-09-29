@@ -156,19 +156,27 @@ ColumnLayout {
                 }
             }
 
-            RowLayout {
+            // The line, where it is from, Add: side by side where there is
+            // room, the line on a row of its own in a narrow column.
+            GridLayout {
+                id: addRow
+                readonly property bool narrow: editor.width < 440
                 Layout.fillWidth: true
-                spacing: 6
+                columns: addRow.narrow ? 2 : 3
+                columnSpacing: 6
+                rowSpacing: 6
 
                 Field {
                     id: lineInput
                     Layout.fillWidth: true
+                    Layout.columnSpan: addRow.narrow ? 2 : 1
                     placeholderText: section.kind === "reboot" ? "A line for the way back, e.g. I'll be back." : "A goodbye, e.g. See you in another life, brother."
                     onAccepted: addButton.clicked()
                 }
 
                 Field {
                     id: sourceInput
+                    Layout.fillWidth: addRow.narrow
                     Layout.preferredWidth: 200
                     placeholderText: "From (optional)"
                     onAccepted: addButton.clicked()

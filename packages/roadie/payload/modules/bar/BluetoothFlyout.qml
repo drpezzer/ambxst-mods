@@ -103,7 +103,8 @@ Item {
         // Horizontal bars need more of it: their button sits well along the bar,
         // so the panel lands near a screen corner and a small margin leaves it
         // clinging to the edge. Vertical bars rarely run out of room this way.
-        const margin = barVertical ? fillet + 8 : fillet + 40;
+        // Clear of the frame's own corner at the end of the bar (see BarFlyout).
+        const margin = Math.max(fillet + 40, ((Config.bar?.frameEnabled ?? false) ? (Config.bar?.frameThickness ?? 6) : 0) + Styling.radius(4) + fillet + 12);
         return Math.max(margin, Math.min(raw, Math.max(margin, along - margin - extent)));
     }
 

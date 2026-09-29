@@ -56,6 +56,9 @@ Singleton {
         bluetoothWidget: true,     // stock: false
         framePopouts: true,        // stock: false (floating pills)
         audioTab: true,            // stock: false
+        // Settings > Roadie: the group shown last (0 Features, 1 Behaviours,
+        // 2 Customization). Not a setting of the shell; kept across a reset.
+        page: 0,
         // the Settings window
         settingsFloat: true,       // stock: false (it tiles)
         settingsFloatWidth: 41,    // percent of the screen
@@ -134,6 +137,10 @@ Singleton {
     readonly property bool bluetoothWidget: !!root.get("bluetoothWidget")
     readonly property bool framePopouts: !!root.get("framePopouts")
     readonly property bool audioTab: !!root.get("audioTab")
+    readonly property int page: {
+        const n = Number(root.get("page"));
+        return (isNaN(n) || n < 0 || n > 2) ? 0 : Math.round(n);
+    }
     readonly property bool settingsFloat: !!root.get("settingsFloat")
     readonly property int settingsFloatWidth: root.percent("settingsFloatWidth")
     readonly property int settingsFloatHeight: root.percent("settingsFloatHeight")
@@ -188,6 +195,8 @@ Singleton {
             kept.modUpdaterImported = true;
         if (root.values.settingsFloatImported === true)
             kept.settingsFloatImported = true;
+        if (root.values.page !== undefined)
+            kept.page = root.values.page; // stay on the group being looked at
         root.values = kept;
         root.write();
     }

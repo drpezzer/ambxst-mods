@@ -59,7 +59,7 @@ Item {
     // How far the panel may reach away from the bar, and how far it may run
     // along it. The along-axis limit leaves room for both flares.
     readonly property int maxAcross: Math.max(120, (barVertical ? root.width : root.height) - frameInset - 24)
-    readonly property int maxAlong: Math.max(120, (barVertical ? root.height : root.width) - fillet * 2 - 16)
+    readonly property int maxAlong: Math.max(120, (barVertical ? root.height : root.width) - endMargin * 2)
 
     readonly property int wantWidth: rawContentWidth + contentPadding * 2
     readonly property int wantHeight: rawContentHeight + contentPadding * 2
@@ -96,6 +96,15 @@ Item {
         }
     }
 
+    // How far the panel keeps from the END of the bar. The frame has a band
+    // and a rounded inner corner there, and the panel flares back into the
+    // frame with a fillet of its own: closer than band + corner + fillet and
+    // the two curves run into each other (a tall popout on a vertical bar's
+    // last button used to end 28 px from the screen edge, on top of the
+    // corner). A little air on top of that, so they read as two shapes.
+    readonly property int endBand: (Config.bar?.frameEnabled ?? false) ? (Config.bar?.frameThickness ?? 6) : 0
+    readonly property int endMargin: Math.max(fillet + 40, endBand + Styling.radius(4) + fillet + 12)
+
     // Centred on the button the way the floating pill is, then clamped so the
     // panel can't run off the end of the bar.
     readonly property real anchorPos: {
@@ -104,11 +113,7 @@ Item {
         const raw = GlobalStates.barFlyoutAnchor - extent / 2;
         // Margin along the bar's own axis — frameInset is the thickness of the
         // perpendicular band and means nothing in this direction.
-        //
-        // Horizontal bars need more of it: their buttons sit well along the bar,
-        // so the panel lands near a screen corner and a small margin leaves it
-        // clinging to the edge.
-        const margin = barVertical ? fillet + 8 : fillet + 40;
+        const margin = root.endMargin;
         // Whole pixels: `extent / 2` is fractional for any odd-sized panel, and
         // an off-grid panel rasterises its contents' rounded corners unevenly.
         return Math.round(Math.max(margin, Math.min(raw, Math.max(margin, along - margin - extent))));
