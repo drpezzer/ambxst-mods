@@ -2518,10 +2518,19 @@ index 67993a5f..378ffe4f 100644
              }
          }
 diff --git a/modules/widgets/dashboard/controls/ModsPanel.qml b/modules/widgets/dashboard/controls/ModsPanel.qml
-index 66cbd27d..920bc747 100644
+index 66cbd27d..fc8f603c 100644
 --- a/modules/widgets/dashboard/controls/ModsPanel.qml
 +++ b/modules/widgets/dashboard/controls/ModsPanel.qml
-@@ -121,6 +121,21 @@ Item {
+@@ -83,6 +83,8 @@ Item {
+         "mods.package_source": "Package source",
+         "mods.package_status": "Package status",
+         "mods.permissions": "Declared permissions",
++        "mods.permissions_less": "Show less",
++        "mods.permissions_more": "Show all %1",
+         "mods.rebuild": "Rebuild",
+         "mods.rebuild_required": "Rebuild required: %1",
+         "mods.refresh": "Refresh mod state",
+@@ -121,6 +123,21 @@ Item {
          "mods.unknown_fields": "Manifest keys this Ambxst does not know: %1",
          "mods.untested_base": "%1. You can still enable it.",
          "mods.update": "Update",
@@ -2543,7 +2552,161 @@ index 66cbd27d..920bc747 100644
          "mods.working": "Working…"
      })
  
-@@ -588,6 +603,91 @@ Item {
+@@ -335,6 +352,153 @@ Item {
+         }
+     }
+ 
++    // roadie: the declared permissions, kept short. A mod may declare as many
++    // as it likes, each a sentence, and the row used to print them all: in the
++    // dialog that asks before a mod is enabled, a long list pushed the Enable
++    // button out of the window. Here the list is cut at `collapseAt`
++    // characters (at a word, never mid-word) with "Show all N" under it;
++    // opened, it is one permission per line in a box that stops growing at
++    // `maxListHeight` and scrolls from there. A list that fits is shown whole.
++    component PermissionsRow: RowLayout {
++        id: perms
++        property var permissions: []
++        property int collapseAt: 140
++        property int maxListHeight: 168
++        property bool expanded: false
++
++        readonly property var items: perms.permissions ?? []
++        readonly property string joined: perms.items.join(", ")
++        readonly property bool collapsible: perms.joined.length > perms.collapseAt
++        readonly property string shortened: {
++            if (!perms.collapsible)
++                return perms.joined;
++            const cut = perms.joined.slice(0, perms.collapseAt);
++            const space = cut.lastIndexOf(" ");
++            const kept = space > perms.collapseAt * 0.6 ? cut.slice(0, space) : cut;
++            return kept.replace(/[\s,.;:]+$/, "") + "…";
++        }
++        // Another mod selected: start closed again.
++        onJoinedChanged: perms.expanded = false
++
++        visible: perms.items.length > 0
++        Layout.fillWidth: true
++        spacing: 10
++
++        Text {
++            Layout.preferredWidth: 118
++            Layout.alignment: Qt.AlignTop
++            text: root.tr("mods.permissions")
++            font.family: Config.theme.font
++            font.pixelSize: Styling.fontSize(-2)
++            color: Colors.outline
++            wrapMode: Text.Wrap
++        }
++
++        ColumnLayout {
++            Layout.fillWidth: true
++            Layout.alignment: Qt.AlignTop
++            spacing: 4
++
++            Text {
++                Layout.fillWidth: true
++                visible: !perms.expanded
++                text: perms.shortened
++                font.family: Config.theme.font
++                font.pixelSize: Styling.fontSize(-2)
++                color: Colors.overBackground
++                wrapMode: Text.Wrap
++            }
++
++            Flickable {
++                id: permsFlick
++                Layout.fillWidth: true
++                Layout.preferredHeight: Math.min(permsList.implicitHeight, perms.maxListHeight)
++                visible: perms.expanded
++                contentHeight: permsList.implicitHeight
++                clip: true
++                boundsBehavior: Flickable.StopAtBounds
++
++                readonly property bool scrolls: permsFlick.contentHeight > permsFlick.height + 1
++
++                ScrollBar.vertical: ScrollBar {
++                    id: permsBar
++                    policy: permsFlick.scrolls ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
++                    implicitWidth: 6
++                    padding: 0
++
++                    contentItem: Rectangle {
++                        implicitWidth: 6
++                        radius: 3
++                        color: Styling.srItem("overprimary")
++                        opacity: permsBar.pressed ? 0.9 : (permsBar.hovered ? 0.7 : 0.45)
++                    }
++                    background: Rectangle {
++                        implicitWidth: 6
++                        radius: 3
++                        color: Colors.outline
++                        opacity: 0.18
++                    }
++                }
++
++                ColumnLayout {
++                    id: permsList
++                    width: permsFlick.width - (permsFlick.scrolls ? 14 : 0)
++                    spacing: 5
++
++                    Repeater {
++                        model: perms.expanded ? perms.items : []
++
++                        delegate: RowLayout {
++                            id: permsLine
++                            required property var modelData
++                            Layout.fillWidth: true
++                            spacing: 6
++
++                            Text {
++                                Layout.alignment: Qt.AlignTop
++                                text: "•"
++                                font.family: Config.theme.font
++                                font.pixelSize: Styling.fontSize(-2)
++                                color: Colors.outline
++                            }
++
++                            Text {
++                                Layout.fillWidth: true
++                                text: String(permsLine.modelData)
++                                font.family: Config.theme.font
++                                font.pixelSize: Styling.fontSize(-2)
++                                color: Colors.overBackground
++                                wrapMode: Text.Wrap
++                            }
++                        }
++                    }
++                }
++            }
++
++            Text {
++                id: permsToggle
++                visible: perms.collapsible
++                text: perms.expanded ? root.tr("mods.permissions_less") : root.tr("mods.permissions_more", String(perms.items.length))
++                font.family: Config.theme.font
++                font.pixelSize: Styling.fontSize(-2)
++                font.weight: Font.DemiBold
++                font.underline: permsToggleHover.hovered
++                color: Styling.srItem("overprimary")
++
++                Accessible.role: Accessible.Button
++                Accessible.name: permsToggle.text
++
++                TapHandler {
++                    onTapped: perms.expanded = !perms.expanded
++                }
++                HoverHandler {
++                    id: permsToggleHover
++                    cursorShape: Qt.PointingHandCursor
++                }
++            }
++        }
++    }
++
+     Flickable {
+         id: mainFlickable
+         anchors.fill: parent
+@@ -588,6 +752,91 @@ Item {
                  }
              }
  
@@ -2635,7 +2798,7 @@ index 66cbd27d..920bc747 100644
              RowLayout {
                  Layout.fillWidth: true
                  Layout.topMargin: 2
-@@ -603,6 +703,71 @@ Item {
+@@ -603,6 +852,71 @@ Item {
  
                  Item { Layout.fillWidth: true }
  
@@ -2707,7 +2870,7 @@ index 66cbd27d..920bc747 100644
                  SearchInput {
                      Layout.preferredWidth: 220
                      visible: root.hasInstalledMods
-@@ -788,6 +953,27 @@ Item {
+@@ -788,6 +1102,27 @@ Item {
                                      }
                                  }
  
@@ -2735,6 +2898,34 @@ index 66cbd27d..920bc747 100644
                                  ActionButton {
                                      text: modRow.modelData.enabled ? root.tr("mods.disable") : root.tr("mods.enable")
                                      primary: !modRow.modelData.enabled
+@@ -1020,10 +1355,8 @@ Item {
+                         }
+                     }
+ 
+-                    MetaRow {
+-                        visible: (root.selectedMod?.permissions ?? []).length > 0
+-                        label: root.tr("mods.permissions")
+-                        value: (root.selectedMod?.permissions ?? []).join(", ")
++                    PermissionsRow {
++                        permissions: root.selectedMod?.permissions ?? []
+                     }
+ 
+                     MetaRow {
+@@ -1442,10 +1775,10 @@ Item {
+                     }
+                 }
+ 
+-                MetaRow {
+-                    visible: (root.confirmMod?.permissions ?? []).length > 0
+-                    label: root.tr("mods.permissions")
+-                    value: (root.confirmMod?.permissions ?? []).join(", ")
++                PermissionsRow {
++                    permissions: root.confirmMod?.permissions ?? []
++                    // Opened, the dialog still has to fit the window.
++                    maxListHeight: Math.max(64, Math.min(168, root.height - 480))
+                 }
+ 
+                 MetaRow {
 diff --git a/modules/widgets/dashboard/controls/SettingsTab.qml b/modules/widgets/dashboard/controls/SettingsTab.qml
 index aaef9eca..03ee0f0e 100644
 --- a/modules/widgets/dashboard/controls/SettingsTab.qml

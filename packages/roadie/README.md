@@ -481,6 +481,17 @@ it follows *Tint Icons*, and *True Matugen Icons* / *True Monochrome* where the
 Tinted Icons mod is installed. With none of those on it is the plain icon from
 your icon theme.
 
+### A permissions list that fits
+
+A mod declares what it does in its manifest, one sentence per permission, and
+Settings > Mods printed every one of them, in the mod's details and in the
+dialog that asks before a mod is enabled. With a long list that dialog grew
+past the window and its **Enable** button was out of reach. Now the list is cut
+at about 140 characters (at a word) with **Show all N** under it. Opened, it is
+one permission per line in a box that stops growing and scrolls from there,
+with a scroll bar, and **Show less** closes it. A list that fits is shown
+whole, as before.
+
 ### Updates that need a newer Ambxst
 
 A mod's manifest says which Ambxst versions it is for. When a mod's *new*
@@ -667,6 +678,12 @@ What you had set in either mod is carried over.
 
 ## Changelog
 
+- 1.6.2: **the Enable button is no longer pushed out of the window by a long
+  permissions list.** "Declared permissions" in Settings > Mods (the details
+  and the dialog that asks before enabling) shows about 140 characters and a
+  "Show all N" link; opened, one permission per line in a scrolling box with a
+  scroll bar. `ModsPanel.qml`: a new `PermissionsRow` replaces the two rows
+  that printed the whole list.
 - 1.6.1: the mod update notification's icon follows the theme. It is drawn
   through the same tint as the dock and tray icons (Tint Icons, and Tinted
   Icons' True Matugen Icons / True Monochrome where that mod is installed)
