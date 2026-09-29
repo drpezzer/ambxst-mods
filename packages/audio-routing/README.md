@@ -1,5 +1,9 @@
 # Audio routing
 
+> **Superseded by [Ambxst Roadie](../roadie) 2.0.0.** Roadie carries this mod now, unchanged, with a switch for it on the Settings > Roadie page, and it is where all further work happens. This package stays installable and keeps working on the Ambxst versions it was tested on, but will not be updated for new ones.
+>
+> The two cannot be enabled together. **Moving over**, in Settings > Mods: *Disable* Audio Routing, update (or install) Roadie, restart. In a terminal: `ambxst mods disable drpezzer.audio-routing && ambxst mods update drpezzer.roadie && ambxst reload`. While this mod is enabled, updating Roadie to 2.0.0 fails with `mods drpezzer.roadie and drpezzer.audio-routing conflict`; that message means exactly this.
+
 Per-application audio routing in the Ambxst notch. A fourth dashboard tab,
 under the vitals: every program that is playing audio, which output it is
 going to, a slider and a mute for each, and a dropdown to move it somewhere
@@ -81,6 +85,7 @@ Works with Ambxst `>=1.3.0`. No new config keys.
 
 ## Changelog
 
+- 1.1.2: superseded by Ambxst Roadie 2.0.0, which includes it (see the note at the top). No source changes.
 - 1.1.1: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.1.0: **The tab no longer claims index 3, and the patch no longer rewrites
   anything.** 1.0.x replaced the tab list, the highlight's `if (idx <= 2)` and

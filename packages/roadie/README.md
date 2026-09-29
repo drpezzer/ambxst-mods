@@ -5,13 +5,26 @@ starting and reloading, monitors coming and going, focus moving between
 screens, a game going fullscreen. Every one of those is a staged movement
 with the windows in step, instead of a snap, a blink or a stranded panel.
 
-Roadie replaces **Ambxst Clean Load**, **Multi-monitor fixes**, **Mod
-Updater** (since 1.4.0) and **Settings Float** (since 1.5.0): it is all of
-them in one package, plus a boot sequence and a farewell. It patches the same files, so it cannot be enabled together
-with any of them (the manifest declares the conflict) -- disable those first.
-It also looks after the mods themselves: it [checks them for
-updates](#mod-updates) and tells you when one needs a newer Ambxst *before*
-anything is installed.
+Since 2.0.0 Roadie is **everything in one package**: one mod to install, one
+to update, one to keep in step with Ambxst.
+
+| | |
+|---|---|
+| **The shell** | [start, reload](#shell-start-and-reload) and [boot](#booting) as one staged movement, a [farewell](#shutting-down-and-rebooting) on reboot and power off |
+| **Screens** | [hotplug without a reload, a bar that follows focus, staged chrome around fullscreen windows, notifications on one screen](#monitors-focus-and-fullscreen), [idle dimming](#screens-that-stay-at-their-brightness) for laptops only or never |
+| **Bar and notch** | [frame-attached popouts, a Bluetooth widget, night weather glyphs](#bar-at-a-glance), an [audio routing tab](#audio-routing) |
+| **Icons** | [True Matugen Icons and True Monochrome](#tinted-icons) |
+| **Settings** | a [floating Settings window](#the-settings-window-floats), a [permissions list that fits](#a-permissions-list-that-fits) |
+| **Mods** | [update checks](#mod-updates) that say when a mod needs a newer Ambxst *before* anything is installed |
+
+Every feature has a switch or a Stock mode on the [Settings > Roadie](#settings)
+page, and **Stock everything** leaves only the fixes.
+
+Roadie replaces **Clean Load**, **Multi-monitor fixes**, **Mod Updater**
+(1.4.0), **Settings Float** (1.5.0), **Bar at a Glance**, **Audio Routing** and
+**Tinted Icons** (2.0.0). It patches the same files, so it cannot be enabled
+together with any of them (the manifest declares the conflict): see
+[Coming from the separate mods](#coming-from-the-separate-mods).
 
 | Shutting down | Booting |
 |---|---|
@@ -405,6 +418,113 @@ Testing hotplug without real hardware: `hyprctl output create headless` and
 
 Works with Ambxst `>=1.3.9`.
 
+## Bar at a glance
+
+More of your system readable straight from the bar, without opening the apps
+behind it.
+
+- **Frame-attached popouts.** With *contain bar* on, the clock/calendar, audio
+  and brightness controls, battery and power-profile picker, the tiling layout
+  switcher and the tray's hidden-icons popup grow out of the frame like part
+  of it instead of floating as separate pills. With *contain bar* off they
+  stay floating pills, as stock. Switch: *Popouts grow out of the frame*.
+- **Bluetooth in the bar.** An indicator that opens a frame-attached flyout on
+  hover or click: adapter power, scanning, and connect, disconnect, pair, trust
+  and forget per device. Right click opens `blueman-manager`. A second
+  indicator shows the battery level of connected devices that report one
+  (headsets, controllers, mice, keyboards). blueman's own tray icon is hidden
+  so there is one Bluetooth icon in the bar; the `bar.systrayExclude` list in
+  bar.json controls that and takes any other tray ids you want gone. Switch:
+  *Bluetooth in the bar*; off, the indicators go and blueman's tray icon
+  comes back.
+- **Weather that knows it's night.** The bar's weather glyph switches to moon
+  and night variants between sunset and sunrise instead of showing a sun at
+  midnight.
+
+**How the popouts work.** Ambxst draws the bar, notch and dock in one
+full-screen surface per monitor. A popout that should merge with the frame has
+to be drawn in that same surface, or the fill never joins and the frame's
+concave fillets can't overlap it, so each widget hands its popout content to
+the panel as a `Component` through `GlobalStates` and a single `BarFlyout` per
+screen instantiates it. `BarPopout` wraps that: widgets declare their content
+inline as before, and it picks the attached or floating form. Only one flyout
+is open at a time, shell-wide, and a click anywhere outside it closes it.
+
+## Audio routing
+
+A fourth dashboard tab, under the vitals: every program that is playing audio,
+which output it is going to, a slider and a mute for each, and a dropdown to
+move it somewhere else, including into EasyEffects. Same again for
+microphones. Switch: *Audio routing tab in the dashboard*.
+
+<img src="media/audio-routing.png" width="700" alt="The audio tab">
+
+| Row | Dropdown | Slider |
+|---|---|---|
+| **All programs** | Moves every stream at once and sets the default output, so new programs follow. | System volume: the hardware device the default route ends at. |
+| **One program** | Moves just that stream. | That program's own volume. |
+| **All programs** *(Recording)* | Default microphone, and moves every recording stream to it. | Microphone gain. |
+| **One program** *(Recording)* | Which microphone that program records from. | That stream's gain. |
+
+Click the speaker or microphone glyph on any row to mute it. Rows carry the
+program's desktop icon, recoloured to your theme the way the dock and launcher
+do it. The titlebar has an **EasyEffects** picker for the device EasyEffects
+outputs to, plus buttons to open EasyEffects and pavucontrol. When programs are
+split across devices, "All programs" no longer has a single answer, so it says
+so and one row per device appears underneath with that device's volume as the
+knob.
+
+<img src="media/audio-split.png" width="700" alt="Per-device rows when programs are split">
+
+`ambxst run audio` (or `dashboard-audio`) opens the tab directly, for a
+keybind. Needs `pactl` (pipewire-pulse), which Ambxst's own install brings in
+along with EasyEffects and pavucontrol.
+
+**EasyEffects: one setting to change.** EasyEffects ships with *Process all
+output streams* on. In that mode it pulls every stream into its own sink and
+yanks it back half a second after any move, so per-app routing silently does
+nothing. Turn that setting off in EasyEffects → Preferences, then pick the
+device EasyEffects should feed from the tab's titlebar picker (it pins
+EasyEffects to it and restarts EasyEffects for you, since EasyEffects only
+reads its config at startup). The tab shows a notice whenever it detects
+EasyEffects capturing again. Volume for anything routed through EasyEffects
+lives on the device EasyEffects feeds; the `easyeffects_sink` knob itself is a
+no-op.
+
+The tab takes whatever index it lands on when the dashboard completes, so
+another mod adding a tab the same way gets the next one instead of the same
+one.
+
+## Tinted icons
+
+Two switches under *Settings → Theme → Tint Icons*, each usable on its own.
+Stock *Tint Icons* is left exactly as Ambxst ships it, and both are off by
+default.
+
+- **True Matugen Icons** rethemes app icons in the tray, dock, workspace pills
+  and launcher through a lightness ramp built from your theme's primary
+  family, so every icon lands in one hue with its own shading intact:
+  gradients stay gradients, and the whole set follows whatever matugen
+  generated from your wallpaper. The active workspace and the selected
+  launcher entry swap to the primary colour. The notch's unread bell, the
+  dashboard's clear-notifications broom and the mod update notification's icon
+  follow the palette too.
+- **True Monochrome** flattens icons to a single colour instead. It wins if
+  both are on.
+
+<img src="media/tinted-icons.png" alt="True Matugen Icons, True Monochrome, and the original icons">
+
+The ramp shader is a port of the colour mapping in
+[Iconicul](https://codeberg.org/dvrkxed/iconicul) by dvrkxed (MIT), which
+recolours whole icon themes on disk. Each pixel is converted to Lab, its
+lightness is remapped onto the ramp's lightness range, the ramp anchors are
+blended with a Gaussian window, and the result's chroma is scaled by how
+saturated the source pixel was, so anti-aliased greys stay quiet. The ramp is
+`background → primaryContainer → inversePrimary → primary → primaryFixed`.
+Feeding a lightness mapping the whole palette does not work: matugen's accents
+share a lightness band, so they average out into beige. Restricting the ramp
+to the primary family is what makes it read as a retheme.
+
 ## Screens that stay at their brightness
 
 Ambxst dims when you are away: its first idle rule lowers the brightness of
@@ -592,6 +712,11 @@ stock / Laptops only / Never) · Settings opens as a floating
 window (on; stock: off), with its width and height in percent of the screen
 (41, 66).
 
+**Bar and notch.** Bluetooth in the bar (on; stock: off) · Popouts grow out of
+the frame (on; stock: off) · Audio routing tab in the dashboard (on; stock:
+off, applies on the next reload). True Matugen Icons and True Monochrome are
+under Settings > Theme, off by default.
+
 **Mod updates.** Check for mod updates automatically (off) · Install mod
 updates automatically (off) · Hours between automatic checks (6). "Stock
 everything" leaves these alone.
@@ -620,6 +745,9 @@ ambxst mods disable drpezzer.clean-load            # if you have them
 ambxst mods disable drpezzer.multi-monitor-fixes
 ambxst mods disable drpezzer.mod-updater
 ambxst mods disable drpezzer.settings-float
+ambxst mods disable drpezzer.bar-glance
+ambxst mods disable drpezzer.audio-routing
+ambxst mods disable drpezzer.tinted-icons
 ambxst mods install https://github.com/drpezzer/ambxst-mods/tree/main/packages/roadie
 ambxst mods enable drpezzer.roadie
 ambxst reload
@@ -634,19 +762,26 @@ again in the panel. The optional `extras/ambxst-wrapper` (install it as
 `~/.local/bin/ambxst`) answers to both this mod and Clean Load, so a copy you
 already installed keeps working.
 
-**Coming from Mod Updater or Settings Float.** Roadie cannot be enabled next
-to either (1.4.0 took in the first, 1.5.0 the second), so updating Roadie
-while one of them is enabled fails with `mods drpezzer.roadie and
-drpezzer.mod-updater conflict` (or `drpezzer.settings-float`). In Settings >
-Mods: **Disable** the old mod, then press **Update to x.y.z** on Roadie (with
-Mod Updater the button is still there after you disabled it, the running shell
-keeps it until it restarts), then restart. Or, in a terminal:
+### Coming from the separate mods
 
-    ambxst mods disable drpezzer.mod-updater
-    ambxst mods disable drpezzer.settings-float
+Roadie cannot be enabled next to a mod it has taken in: Mod Updater, Settings
+Float, Bar at a Glance, Audio Routing, Tinted Icons. Updating Roadie while one
+of them is enabled fails with `mods drpezzer.roadie and drpezzer.<that mod>
+conflict`; that message means exactly this.
+
+In Settings > Mods: **Disable** each of those you have, then press **Update to
+x.y.z** on Roadie, then restart. **Do not restart in between.** Bar at a
+Glance and Tinted Icons add config keys (`bar.systrayExclude`, the two icon
+switches), and a shell started with neither them nor the new Roadie drops
+those keys from your config. Or, in a terminal, in one go:
+
+    for mod in mod-updater settings-float bar-glance audio-routing tinted-icons; do
+        ambxst mods disable drpezzer.$mod 2>/dev/null
+    done
     ambxst mods update drpezzer.roadie && ambxst reload
 
-What you had set in either mod is carried over.
+What you had set in any of them is carried over. Afterwards the old mods can
+be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Notes
 
@@ -678,6 +813,18 @@ What you had set in either mod is carried over.
 
 ## Changelog
 
+- 2.0.0: **everything in one package.** Bar at a Glance, Audio Routing and
+  Tinted Icons are part of Roadie now, exactly as they were: the combined shell
+  is line for line the one the four separate mods built. One patch, one
+  package to keep in step with Ambxst. New on the Settings > Roadie page, under
+  *Bar and notch*: **Bluetooth in the bar**, **Popouts grow out of the frame**
+  and **Audio routing tab in the dashboard**, each on by default, off with
+  "Stock everything". With the Bluetooth widget off, blueman's tray icon comes
+  back. The two icon switches stay under Settings > Theme. The manifest's
+  permissions were rewritten as eleven short lines. Conflicts with
+  `drpezzer.bar-glance`, `drpezzer.audio-routing` and `drpezzer.tinted-icons`,
+  which are superseded; see [Coming from the separate
+  mods](#coming-from-the-separate-mods).
 - 1.6.2: **the Enable button is no longer pushed out of the window by a long
   permissions list.** "Declared permissions" in Settings > Mods (the details
   and the dialog that asks before enabling) shows about 140 characters and a

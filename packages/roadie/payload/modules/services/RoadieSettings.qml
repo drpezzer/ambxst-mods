@@ -52,6 +52,10 @@ Singleton {
         modAutoInstall: false,
         modCheckHours: 6,
         modUpdaterImported: false, // the one-time import below has run
+        // bar and notch
+        bluetoothWidget: true,     // stock: false
+        framePopouts: true,        // stock: false (floating pills)
+        audioTab: true,            // stock: false
         // the Settings window
         settingsFloat: true,       // stock: false (it tiles)
         settingsFloatWidth: 41,    // percent of the screen
@@ -88,6 +92,9 @@ Singleton {
         veilEnabled: false,
         ddcCache: false,
         settingsFloat: false,
+        bluetoothWidget: false,
+        framePopouts: false,
+        audioTab: false,
         idleDim: "always",
         osd: "stock",
         bootLock: "never",
@@ -124,6 +131,9 @@ Singleton {
     readonly property string bootLock: ["auto", "always", "never"].indexOf(root.get("bootLock")) !== -1 ? root.get("bootLock") : "auto"
     readonly property bool farewellSource: !!root.get("farewellSource")
     readonly property int farewellHold: root.ms("farewellHold")
+    readonly property bool bluetoothWidget: !!root.get("bluetoothWidget")
+    readonly property bool framePopouts: !!root.get("framePopouts")
+    readonly property bool audioTab: !!root.get("audioTab")
     readonly property bool settingsFloat: !!root.get("settingsFloat")
     readonly property int settingsFloatWidth: root.percent("settingsFloatWidth")
     readonly property int settingsFloatHeight: root.percent("settingsFloatHeight")

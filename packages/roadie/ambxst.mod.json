@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.roadie",
   "name": "Ambxst Roadie",
-  "version": "1.6.2",
-  "description": "The crew that keeps the show running while the stage changes. Boot: the screen stays in the background colour until the shell is ready, then the wallpaper and frame come in and the shell locks (unless you logged in through a greeter or an external locker is up), the bar following after you unlock. Shell start and reload: the wallpaper fades in while the frame, bar, notch and dock slide into place and the windows make room on one staged timeline; a reload through `ambxst run reload` (or the optional `ambxst` wrapper in extras/) plays it in reverse before the restart, and a tiny detached helper covers a cold kill the same way. Monitors coming and going: hotplug without a shell reload (panels unregister by the screen name latched at creation, stale unregisters are ignored, the wallpaper-manager role passes to a surviving screen, ~15 screen.name bindings are null-guarded during teardown). Focus and fullscreen: a pinned bar can live on the focused screen only and slide across when focus moves (Dual Screen Single Bar, switchable), a bar, dock or frame that hides for a fullscreen window releases the space it held, fullscreen detection sees games on an open special workspace, and the notch and dock count that workspace's windows. On Hyprland the compositor's window animation is matched to each of these moves for its duration. Shutting down: Reboot and Power Off from the power menu swell the notch into the whole screen, a line from a film or show fades in (a goodbye for a shutdown, a back-in-a-second for a reboot), and the command runs once it has been up long enough to read; Escape backs out. Also: no AI sidebar sweep or corner flash at start, and no volume or brightness pop-ups on their own after a start. Mod updates: a Check for updates button in Settings > Mods, optional automatic checks, and an update that needs a newer Ambxst says so before anything is installed and is offered together with the Ambxst update, in the order that keeps the mods working. Idle dimming can be kept for laptops only or turned off, so desktop screens stay at the brightness you set. The Settings window opens as a centred floating window sized to its screen instead of a tile, with no window rule. Replaces Ambxst Clean Load, Multi-monitor fixes, Mod Updater and Settings Float (it is all four, and more); it cannot be enabled together with any of them.",
+  "version": "2.0.0",
+  "description": "Everything in one package. Shell start, reload and boot as one staged movement, with a farewell on reboot and power off. Monitors coming and going without a reload, a bar that follows the focused screen, staged chrome around fullscreen windows (special workspaces included), notifications on one screen. Bar and notch: frame-attached popouts, a Bluetooth widget with a battery readout, night weather glyphs, an audio routing tab in the dashboard. Icons: True Matugen Icons and True Monochrome under Theme. Mods: update checks that say when a mod needs a newer Ambxst before anything is installed, and can update Ambxst and the mods together. Also: a floating Settings window, idle dimming for laptops only or never, a permissions list that fits. Every feature has a switch or a Stock mode under Settings > Roadie. Replaces Clean Load, Multi-monitor fixes, Mod Updater, Settings Float, Bar at a Glance, Audio Routing and Tinted Icons; it cannot be enabled together with any of them.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -21,7 +21,10 @@
     "drpezzer.clean-load",
     "drpezzer.multi-monitor-fixes",
     "drpezzer.mod-updater",
-    "drpezzer.settings-float"
+    "drpezzer.settings-float",
+    "drpezzer.bar-glance",
+    "drpezzer.audio-routing",
+    "drpezzer.tinted-icons"
   ],
   "commands": [
     "setsid",
@@ -29,39 +32,63 @@
     "curl"
   ],
   "permissions": [
-    "Spawns a second, detached Quickshell process (the veil) that listens on a socket in XDG_RUNTIME_DIR and draws wallpaper and frame surfaces while the shell is down",
-    "Runs `ambxst reload` itself when asked to reload through `ambxst run reload` or the roadie IPC target",
-    "Reads Hyprland monitor state through Quickshell.Hyprland",
-    "On Hyprland, runs `hyprctl eval` to retune the windowsMove animation for the duration of a shell transition or a bar slide, then restores it; remembers the originals in ~/.local/state/ambxst/",
-    "Runs the power menu's own reboot / power off command itself, a few seconds after the click, and keeps a small state file of quotes already shown in ~/.local/state/ambxst/",
-    "At boot, reads the login session's PAM service name over `loginctl` and looks for a running external locker, to decide whether to lock; locks with the Ambxst lockscreen",
-    "Keeps its options in ~/.config/ambxst/roadie.json (Settings > Roadie)",
-    "Declares a fixed window size for the Settings window until the compositor has placed it",
-    "Contacts the source of each installed mod (local directory, git remote, or raw.githubusercontent.com) to read its current manifest, and raw.githubusercontent.com for Ambxst's current version, when you check for updates or have automatic checks on",
-    "Installs mod updates through the mod manager's own update path, which rebuilds the shell generation",
-    "When you ask it to update Ambxst together with the mods that need the new version: opens a terminal that disables those mods, fetches their new versions, runs Ambxst's own installer (the one `ambxst update` runs, which asks for your password), enables them again and restarts Ambxst; keeps a copy of the previous packages in ~/.cache/ambxst/ until that has succeeded",
-    "Sends notifications through Ambxst's notification service when automatic checks find updates"
+    "Spawns a small detached helper (the veil) that draws the wallpaper and frame while the shell restarts",
+    "Runs `ambxst reload`, and the power menu's reboot or power off command, when you ask for them",
+    "On Hyprland, retunes the window animation with `hyprctl eval` during a transition, then restores it",
+    "At boot, reads the login session's service name and looks for a running locker, to decide whether to lock",
+    "Reads other mods' manifests from their sources, and Ambxst's version from GitHub, when checking for updates",
+    "Installs mod updates through the mod manager; runs Ambxst's installer in a terminal when you ask it to update Ambxst too",
+    "Controls Bluetooth adapters and devices (BlueZ)",
+    "Reads and moves audio streams with pactl and changes volumes; sets EasyEffects' output device and restarts it when asked",
+    "Launches EasyEffects, pavucontrol and blueman-manager from their buttons",
+    "Adds the config keys bar.systrayExclude, theme.trueMatugenIcons and theme.trueMonochromeTint",
+    "Keeps its options in ~/.config/ambxst/roadie.json and small state files in ~/.local/state/ambxst and ~/.cache/ambxst"
   ],
   "operations": [
     {
       "type": "overlay",
-      "source": "payload/modules/services/ShellTransitions.qml",
-      "target": "modules/services/ShellTransitions.qml"
+      "source": "payload/modules/bar/BluetoothBatteryIndicator.qml",
+      "target": "modules/bar/BluetoothBatteryIndicator.qml"
     },
     {
       "type": "overlay",
-      "source": "payload/modules/services/veil/Veil.qml",
-      "target": "modules/services/veil/Veil.qml"
+      "source": "payload/modules/bar/BluetoothDeviceRow.qml",
+      "target": "modules/bar/BluetoothDeviceRow.qml"
     },
     {
       "type": "overlay",
-      "source": "payload/modules/services/BarSlideSync.qml",
-      "target": "modules/services/BarSlideSync.qml"
+      "source": "payload/modules/bar/BluetoothFlyout.qml",
+      "target": "modules/bar/BluetoothFlyout.qml"
     },
     {
       "type": "overlay",
-      "source": "payload/modules/services/ShellFarewell.qml",
-      "target": "modules/services/ShellFarewell.qml"
+      "source": "payload/modules/bar/BluetoothIndicator.qml",
+      "target": "modules/bar/BluetoothIndicator.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/components/BarPopout.qml",
+      "target": "modules/components/BarPopout.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/components/icon_ramp_tint.frag",
+      "target": "modules/components/icon_ramp_tint.frag"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/components/icon_ramp_tint.frag.qsb",
+      "target": "modules/components/icon_ramp_tint.frag.qsb"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/components/icon_ramp_tint.vert",
+      "target": "modules/components/icon_ramp_tint.vert"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/components/icon_ramp_tint.vert.qsb",
+      "target": "modules/components/icon_ramp_tint.vert.qsb"
     },
     {
       "type": "overlay",
@@ -70,23 +97,28 @@
     },
     {
       "type": "overlay",
-      "source": "payload/modules/widgets/dashboard/controls/RoadieQuotesEditor.qml",
-      "target": "modules/widgets/dashboard/controls/RoadieQuotesEditor.qml"
+      "source": "payload/modules/services/AudioRouting.qml",
+      "target": "modules/services/AudioRouting.qml"
     },
     {
       "type": "overlay",
-      "source": "payload/modules/services/RoadieSettings.qml",
-      "target": "modules/services/RoadieSettings.qml"
+      "source": "payload/modules/services/BarSlideSync.qml",
+      "target": "modules/services/BarSlideSync.qml"
     },
     {
       "type": "overlay",
-      "source": "payload/modules/widgets/dashboard/controls/RoadiePanel.qml",
-      "target": "modules/widgets/dashboard/controls/RoadiePanel.qml"
+      "source": "payload/modules/services/BluetoothBattery.qml",
+      "target": "modules/services/BluetoothBattery.qml"
     },
     {
       "type": "overlay",
-      "source": "payload/modules/services/RoadieDdc.qml",
-      "target": "modules/services/RoadieDdc.qml"
+      "source": "payload/modules/services/BluetoothControl.qml",
+      "target": "modules/services/BluetoothControl.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/ModUpdateService.qml",
+      "target": "modules/services/ModUpdateService.qml"
     },
     {
       "type": "overlay",
@@ -95,8 +127,23 @@
     },
     {
       "type": "overlay",
-      "source": "payload/modules/services/ModUpdateService.qml",
-      "target": "modules/services/ModUpdateService.qml"
+      "source": "payload/modules/services/RoadieDdc.qml",
+      "target": "modules/services/RoadieDdc.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/RoadieSettings.qml",
+      "target": "modules/services/RoadieSettings.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/ShellFarewell.qml",
+      "target": "modules/services/ShellFarewell.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/ShellTransitions.qml",
+      "target": "modules/services/ShellTransitions.qml"
     },
     {
       "type": "overlay",
@@ -107,6 +154,46 @@
       "type": "overlay",
       "source": "payload/modules/services/roadie_update.sh",
       "target": "modules/services/roadie_update.sh"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/veil/Veil.qml",
+      "target": "modules/services/veil/Veil.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/shell/BarFlyout.qml",
+      "target": "modules/shell/BarFlyout.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/audio/AudioRouteRow.qml",
+      "target": "modules/widgets/dashboard/audio/AudioRouteRow.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/audio/AudioSinkDropdown.qml",
+      "target": "modules/widgets/dashboard/audio/AudioSinkDropdown.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/audio/AudioTab.qml",
+      "target": "modules/widgets/dashboard/audio/AudioTab.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/controls/RoadiePanel.qml",
+      "target": "modules/widgets/dashboard/controls/RoadiePanel.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/controls/RoadieQuotesEditor.qml",
+      "target": "modules/widgets/dashboard/controls/RoadieQuotesEditor.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/scripts/easyeffects_output.py",
+      "target": "scripts/easyeffects_output.py"
     },
     {
       "type": "patch",

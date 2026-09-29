@@ -619,6 +619,33 @@ Item {
 
                 Separator { Layout.fillWidth: true; Layout.topMargin: 6 }
 
+                // ─── bar and notch ───────────────────────────────────
+                SectionTitle { text: "Bar and notch" }
+
+                ToggleRow {
+                    label: "Bluetooth in the bar"
+                    hint: "An indicator that opens a panel on hover or click: power, scanning, connect, pair, trust and forget per device, and a battery readout for connected devices. blueman's own tray icon is hidden while this is on. Off is stock."
+                    checked: RoadieSettings.bluetoothWidget
+                    onToggled: value => RoadieSettings.set("bluetoothWidget", value)
+                }
+                ToggleRow {
+                    label: "Popouts grow out of the frame"
+                    hint: "With contain bar on, the clock, controls, battery, layout and hidden tray icons popouts are part of the frame instead of floating pills. Off (stock): floating pills."
+                    checked: RoadieSettings.framePopouts
+                    onToggled: value => RoadieSettings.set("framePopouts", value)
+                }
+                ToggleRow {
+                    label: "Audio routing tab in the dashboard"
+                    hint: "A tab under the vitals: every program playing or recording audio, where it goes, its volume, and a dropdown to move it, EasyEffects included. Off is stock. Takes effect on the next reload."
+                    checked: RoadieSettings.audioTab
+                    onToggled: value => RoadieSettings.set("audioTab", value)
+                }
+                Hint {
+                    text: "Icon colours: True Matugen Icons and True Monochrome are under Settings > Theme, with Tint Icons."
+                }
+
+                Separator { Layout.fillWidth: true; Layout.topMargin: 6 }
+
                 // ─── mod updates ─────────────────────────────────────
                 SectionTitle { text: "Mod updates" }
                 Hint {

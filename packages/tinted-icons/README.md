@@ -1,5 +1,9 @@
 # Tinted icons
 
+> **Superseded by [Ambxst Roadie](../roadie) 2.0.0.** Roadie carries this mod now, unchanged, with a switch for it on the Settings > Roadie page, and it is where all further work happens. This package stays installable and keeps working on the Ambxst versions it was tested on, but will not be updated for new ones.
+>
+> The two cannot be enabled together. **Moving over**, in Settings > Mods: *Disable* Tinted Icons, update (or install) Roadie, restart. It adds config keys, so do not restart between disabling it and updating Roadie, or a shell started without either drops them from your config. In a terminal: `ambxst mods disable drpezzer.tinted-icons && ambxst mods update drpezzer.roadie && ambxst reload`. While this mod is enabled, updating Roadie to 2.0.0 fails with `mods drpezzer.roadie and drpezzer.tinted-icons conflict`; that message means exactly this.
+
 Adds two switches under *Settings → Theme → Tint Icons*, each usable on its
 own. Stock *Tint Icons* is left exactly as Ambxst ships it.
 
@@ -71,6 +75,7 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- 2.3.3: superseded by Ambxst Roadie 2.0.0, which includes it (see the note at the top). No source changes.
 - 2.3.2: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 2.3.1: with True Matugen Icons on, the dashboard's clear-notifications broom uses the palette's tertiary accent (idle and pressed) instead of the error tone, so it follows the wallpaper without matching the primary the icons are tinted with. Off, it stays stock. Patch now also touches modules/widgets/dashboard/widgets/NotificationHistory.qml.
 - 2.3.0: with True Matugen Icons on, the notch's notification bell lights up in the theme's primary colour when there are unread notifications, instead of the palette's error tone (which is red on every wallpaper). Off, it stays stock. Patch now also touches modules/widgets/defaultview/NotificationIndicator.qml.

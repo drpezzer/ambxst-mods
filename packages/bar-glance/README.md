@@ -1,5 +1,9 @@
 # Bar at a Glance
 
+> **Superseded by [Ambxst Roadie](../roadie) 2.0.0.** Roadie carries this mod now, unchanged, with a switch for it on the Settings > Roadie page, and it is where all further work happens. This package stays installable and keeps working on the Ambxst versions it was tested on, but will not be updated for new ones.
+>
+> The two cannot be enabled together. **Moving over**, in Settings > Mods: *Disable* Bar at a Glance, update (or install) Roadie, restart. It adds config keys, so do not restart between disabling it and updating Roadie, or a shell started without either drops them from your config. In a terminal: `ambxst mods disable drpezzer.bar-glance && ambxst mods update drpezzer.roadie && ambxst reload`. While this mod is enabled, updating Roadie to 2.0.0 fails with `mods drpezzer.roadie and drpezzer.bar-glance conflict`; that message means exactly this.
+
 More of your system readable straight from the bar, without opening the apps
 behind it.
 
@@ -70,6 +74,7 @@ Works with Ambxst `>=1.3.8` (1.1.2 is the last release for 1.3.6 and 1.3.7). One
 
 ## Changelog
 
+- 1.2.2: superseded by Ambxst Roadie 2.0.0, which includes it (see the note at the top). No source changes.
 - 1.2.1: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.2.0: the tray's overflow popup (Ambxst 1.3.8's hidden-icons grid) is a frame-attached popout too: with *contain bar* on it grows out of the frame beside the chevron on whichever side the bar is, and with it off it stays the floating pill Ambxst ships. Drag and drop into and out of it works in both forms; a hidden icon's own menu still opens from inside it. `BarPopout` gained the pass-throughs this needs (`visualMargin`, `clickThroughMargins`, `extraGrabWindows`, `activeChildMenu`, `refreshFocusGrab()`).
 - 1.1.4: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
