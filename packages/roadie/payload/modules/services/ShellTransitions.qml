@@ -602,6 +602,11 @@ Singleton {
         function updateCheck(): void {
             ModUpdateService.checkForUpdates(false);
         }
+        // The same check the way the automatic one runs it: with the
+        // notification (or the automatic install) if anything is found.
+        function updateCheckAuto(): void {
+            ModUpdateService.checkForUpdates(true);
+        }
         function updateState(): string {
             return JSON.stringify(ModUpdateService.report(), null, 2);
         }

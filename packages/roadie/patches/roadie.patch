@@ -1594,6 +1594,48 @@ index 5a80e6bd..c3b9019b 100644
      }
  
      NotchContent {
+diff --git a/modules/notifications/NotificationAppIcon.qml b/modules/notifications/NotificationAppIcon.qml
+index 75e37c61..b735702f 100644
+--- a/modules/notifications/NotificationAppIcon.qml
++++ b/modules/notifications/NotificationAppIcon.qml
+@@ -5,6 +5,7 @@ import Quickshell
+ import Quickshell.Widgets
+ import Quickshell.Services.Notifications
+ import qs.modules.theme
++import qs.modules.components
+ import qs.config
+ 
+ Item {
+@@ -85,6 +86,29 @@ Item {
+             }
+         }
+ 
++        // roadie: the icon of Roadie's own notifications (mod updates) wears
++        // the theme like the shell's other icons do. It goes through the same
++        // Tinted component as the dock and the tray, so it follows Tint Icons
++        // and, where the Tinted Icons mod is installed, its True Matugen Icons
++        // and True Monochrome switches (set from here only if this Tinted has
++        // them: on a stock one the properties do not exist). Every other
++        // notification keeps the icon its app sent.
++        Loader {
++            id: roadieTintLoader
++            active: root.appName === "Ambxst Mods" && root.image == "" && appIconLoader.item !== null && appIconLoader.item.status === Image.Ready
++            anchors.fill: parent
++            sourceComponent: Tinted {
++                id: roadieTint
++                sourceItem: appIconLoader.item
++                Component.onCompleted: {
++                    if ("ramp" in roadieTint)
++                        roadieTint.ramp = Qt.binding(() => !!Config.theme.trueMatugenIcons);
++                    if ("monochrome" in roadieTint)
++                        roadieTint.monochrome = Qt.binding(() => !!Config.theme.trueMonochromeTint);
++                }
++            }
++        }
++
+         // Mostrar imagen de notificación si existe
+         Loader {
+             id: notifImageLoader
 diff --git a/modules/services/Brightness.qml b/modules/services/Brightness.qml
 index 9f01e78b..00d689db 100644
 --- a/modules/services/Brightness.qml

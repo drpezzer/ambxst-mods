@@ -476,6 +476,11 @@ Mods*, *Later* (snoozes 8 h) and *Update all* -- and **Install mod updates
 automatically**, which installs what a check finds and then offers *Restart
 now*. The shell never restarts itself.
 
+The notification's icon wears your theme the way the shell's other icons do:
+it follows *Tint Icons*, and *True Matugen Icons* / *True Monochrome* where the
+Tinted Icons mod is installed. With none of those on it is the plain icon from
+your icon theme.
+
 ### Updates that need a newer Ambxst
 
 A mod's manifest says which Ambxst versions it is for. When a mod's *new*
@@ -536,7 +541,9 @@ version does not show as an update. The Ambxst version an update would bring
 is read from the `version` file on Ambxst's main branch.
 
 `qs ipc --pid $(cat $XDG_RUNTIME_DIR/ambxst-qs.pid) call roadie updateCheck`
-runs a check and `... call roadie updateState` prints what the last one found.
+runs a check and `... call roadie updateState` prints what the last one found;
+`... call roadie updateCheckAuto` runs it the way the automatic one does,
+notification included.
 
 **For mod authors:** raise `compatibility.ambxst` in the release that needs
 the new Ambxst (`">=1.3.9 <2.0.0"`). That one line is what lets your users be
@@ -660,6 +667,13 @@ What you had set in either mod is carried over.
 
 ## Changelog
 
+- 1.6.1: the mod update notification's icon follows the theme. It is drawn
+  through the same tint as the dock and tray icons (Tint Icons, and Tinted
+  Icons' True Matugen Icons / True Monochrome where that mod is installed)
+  instead of in the icon theme's own colours. Only Roadie's notifications are
+  touched; every other notification keeps the icon its app sent.
+  `NotificationAppIcon.qml` joins the patch (insertions only). New IPC:
+  `updateCheckAuto`.
 - 1.6.0: **Dim the screens when idle: As stock / Laptops only / Never**
   (Settings > Roadie, `idleDim`). Ambxst's idle rule that lowers the
   brightness after 2.5 minutes can be kept for machines with a battery or
