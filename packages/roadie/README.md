@@ -425,9 +425,11 @@ behind it.
 
 - **Frame-attached popouts.** With *contain bar* on, the clock/calendar, audio
   and brightness controls, battery and power-profile picker, the tiling layout
-  switcher and the tray's hidden-icons popup grow out of the frame like part
-  of it instead of floating as separate pills. With *contain bar* off they
-  stay floating pills, as stock. Switch: *Popouts grow out of the frame*.
+  switcher, the tray's hidden-icons popup and every tray icon's right-click
+  menu (the network applet's, say) grow out of the frame like part of it
+  instead of floating as separate pills, in every bar position, and keep
+  clear of the frame's corner at the end of the bar. With *contain bar* off
+  they stay floating pills, as stock. Switch: *Popouts grow out of the frame*.
 - **Bluetooth in the bar.** An indicator that opens a frame-attached flyout on
   hover or click: adapter power, scanning, and connect, disconnect, pair, trust
   and forget per device. Right click opens `blueman-manager`. A second
@@ -437,6 +439,15 @@ behind it.
   bar.json controls that and takes any other tray ids you want gone. Switch:
   *Bluetooth in the bar*; off, the indicators go and blueman's tray icon
   comes back.
+- **An Ethernet switch in the notch.** Stock offers one network control in the
+  dashboard's quick controls, the Wi-Fi switch, which says nothing to a desk
+  that is always on a cable. While a cable is plugged in, an Ethernet switch
+  sits to the left of the Wi-Fi one: lit while the wired connection is up,
+  click to disconnect it or bring it back (`nmcli device disconnect` /
+  `connect`; nothing is stored, a reboot connects as usual). It is there for
+  as long as the cable is, on or off, and slides in and out of the row when
+  the cable is plugged in or pulled. No cable, no switch, and the row is
+  stock. Switch: *Ethernet switch in the notch*.
 - **Weather that knows it's night.** The bar's weather glyph switches to moon
   and night variants between sunset and sunrise instead of showing a sun at
   midnight.
@@ -697,7 +708,7 @@ does there.
 |---|---|
 | Shell | Staged shell start · Staged reload · Cover a sudden restart · Lock after boot · Farewell on reboot and power off |
 | Screens | Bar follows the focused screen · Notifications follow the focused screen · Staged bar slide · Animated frame around fullscreen windows · Notch hangs off the edge over fullscreen · Remember the monitors' brightness channels |
-| Bar and notch | Bluetooth in the bar · Popouts grow out of the frame · Audio routing tab in the dashboard |
+| Bar and notch | Bluetooth in the bar · Popouts grow out of the frame · Audio routing tab in the dashboard · Ethernet switch in the notch |
 | Settings and mods | Settings opens as a floating window · Check for mod updates automatically |
 
 **Behaviours** is how the features that are switched on behave: Bar slide
@@ -816,6 +827,17 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 2.1.0: **Ethernet and networking.** An **Ethernet switch in the notch**:
+  while a cable is plugged in, the quick controls get a switch for the wired
+  connection to the left of the Wi-Fi one, and it slides out again when the
+  cable is pulled (new switch under *Bar and notch*, on by default, off with
+  "Stock everything"). And the **tray icons' right-click menus** (the network
+  applet's included) are frame-attached popouts now, like the bar's other
+  popouts, with the same clearance from the frame's corner; icons inside the
+  hidden-icons popup keep their floating menu. New command used: `nmcli`.
+  Also a fix for a stock leak: Ambxst's daemon leaves one `nmcli monitor`
+  process behind on every reload, for the rest of the session; Roadie ends
+  the leftovers at each shell start (only ones nobody is reading any more).
 - 2.0.1: **no more faint arc in the screen corners.** With the frame on, each
   rounded screen corner carried a one-pixel arc of nearby colour across the
   frame, easiest to see on a black (OLED) frame. A stock bug: the corners are

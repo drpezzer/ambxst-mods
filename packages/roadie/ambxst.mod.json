@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.roadie",
   "name": "Ambxst Roadie",
-  "version": "2.0.1",
-  "description": "Everything in one package. Shell start, reload and boot as one staged movement, with a farewell on reboot and power off. Monitors coming and going without a reload, a bar that follows the focused screen, staged chrome around fullscreen windows (special workspaces included), notifications on one screen. Bar and notch: frame-attached popouts, a Bluetooth widget with a battery readout, night weather glyphs, an audio routing tab in the dashboard. Icons: True Matugen Icons and True Monochrome under Theme. Mods: update checks that say when a mod needs a newer Ambxst before anything is installed, and can update Ambxst and the mods together. Also: a floating Settings window, idle dimming for laptops only or never, a permissions list that fits. Every feature has a switch or a Stock mode under Settings > Roadie. Replaces Clean Load, Multi-monitor fixes, Mod Updater, Settings Float, Bar at a Glance, Audio Routing and Tinted Icons; it cannot be enabled together with any of them.",
+  "version": "2.1.0",
+  "description": "Everything in one package. Shell start, reload and boot as one staged movement, with a farewell on reboot and power off. Monitors coming and going without a reload, a bar that follows the focused screen, staged chrome around fullscreen windows (special workspaces included), notifications on one screen. Bar and notch: frame-attached popouts, a Bluetooth widget with a battery readout, night weather glyphs, an audio routing tab in the dashboard, an Ethernet switch in the notch. Icons: True Matugen Icons and True Monochrome under Theme. Mods: update checks that say when a mod needs a newer Ambxst before anything is installed, and can update Ambxst and the mods together. Also: a floating Settings window, idle dimming for laptops only or never, a permissions list that fits. Every feature has a switch or a Stock mode under Settings > Roadie. Replaces Clean Load, Multi-monitor fixes, Mod Updater, Settings Float, Bar at a Glance, Audio Routing and Tinted Icons; it cannot be enabled together with any of them.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -29,7 +29,9 @@
   "commands": [
     "setsid",
     "git",
-    "curl"
+    "curl",
+    "nmcli",
+    "pgrep"
   ],
   "permissions": [
     "Spawns a small detached helper (the veil) that draws the wallpaper and frame while the shell restarts",
@@ -39,6 +41,7 @@
     "Reads other mods' manifests from their sources, and Ambxst's version from GitHub, when checking for updates",
     "Installs mod updates through the mod manager; runs Ambxst's installer in a terminal when you ask it to update Ambxst too",
     "Controls Bluetooth adapters and devices (BlueZ)",
+    "Lists wired network devices and connects or disconnects them with nmcli; at shell start, ends `nmcli monitor` processes an earlier Ambxst daemon left behind",
     "Reads and moves audio streams with pactl and changes volumes; sets EasyEffects' output device and restarts it when asked",
     "Launches EasyEffects, pavucontrol and blueman-manager from their buttons",
     "Adds the config keys bar.systrayExclude, theme.trueMatugenIcons and theme.trueMonochromeTint",
@@ -132,6 +135,11 @@
     },
     {
       "type": "overlay",
+      "source": "payload/modules/services/RoadieEthernet.qml",
+      "target": "modules/services/RoadieEthernet.qml"
+    },
+    {
+      "type": "overlay",
       "source": "payload/modules/services/RoadieSettings.qml",
       "target": "modules/services/RoadieSettings.qml"
     },
@@ -149,6 +157,11 @@
       "type": "overlay",
       "source": "payload/modules/services/mod_update_check.sh",
       "target": "modules/services/mod_update_check.sh"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/roadie_nmcli_reap.sh",
+      "target": "modules/services/roadie_nmcli_reap.sh"
     },
     {
       "type": "overlay",

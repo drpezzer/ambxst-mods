@@ -2746,10 +2746,69 @@ index ee1392e0..94c74df7 100644
              }
          }
 diff --git a/modules/bar/systray/SysTrayItem.qml b/modules/bar/systray/SysTrayItem.qml
-index 346f18af..27fb8065 100644
+index 346f18af..95052ee8 100644
 --- a/modules/bar/systray/SysTrayItem.qml
 +++ b/modules/bar/systray/SysTrayItem.qml
-@@ -254,6 +254,9 @@ MouseArea {
+@@ -111,19 +111,28 @@ MouseArea {
+         root.Drag.active = false;
+     }
+ 
+-    BarPopup {
++    // Using QsMenuOpener to access menu items
++    QsMenuOpener {
++        id: menuOpener
++        menu: root.item.menu
++    }
++
++    // roadie: the icon's menu is a BarPopout like the bar's other popouts, so
++    // with the bar contained by the frame it grows out of the frame at the
++    // icon instead of floating beside it (and keeps clear of the frame's
++    // corner at the end of the bar, as they do). The menu opener lives
++    // outside it: the contents are a Component now, and the menu should be
++    // loaded before it is first shown, as it was.
++    BarPopout {
+         id: systrayPopup
+         anchorItem: root
+         bar: root.bar
+ 
+         // Nested inside the overflow popup it must not close it
+         groupId: root.inOverflow ? "systrayMenu" : "bar"
+-
+-        // Use a reasonable width for the menu
+-        contentWidth: 220
+-        // Height adapts to content, with a max limit if needed.
+-        // Must include vertical padding (8 top + 8 bottom = 16)
+-        contentHeight: Math.min(itemsColumn.implicitHeight + 16, 400)
++        // ...and stays a floating pill there: the one flyout there is holds
++        // the overflow popup it was opened from.
++        allowAttached: !root.inOverflow
+ 
+         popupPadding: 8
+         // 8px standard margin + 8px SysTray container padding to ensure correct offset from the main bar
+@@ -132,17 +141,14 @@ MouseArea {
+         onIsOpenChanged: {
+             if (!root.inOverflow || !root.overflowPopupRef)
+                 return;
+-            root.overflowPopupRef.activeChildMenu = isOpen ? systrayPopup : null;
+-        }
+-
+-        // Using QsMenuOpener to access menu items
+-        QsMenuOpener {
+-            id: menuOpener
+-            menu: root.item.menu
++            root.overflowPopupRef.activeChildMenu = isOpen ? systrayPopup.pillWindow : null;
+         }
+ 
+         ScrollView {
+-            anchors.fill: parent
++            // The popout sizes itself from its contents: the menu's width,
++            // and its height up to a limit (both less the popout's padding).
++            implicitWidth: 204
++            implicitHeight: Math.min(itemsColumn.implicitHeight, 384)
+             contentWidth: availableWidth
+             clip: true
+ 
+@@ -254,6 +260,9 @@ MouseArea {
      Tinted {
          sourceItem: trayIcon
          anchors.fill: trayIcon
@@ -4307,6 +4366,28 @@ index 14402e87..11b98b01 100644
 +        root.roadieSkipped = [];
      }
  }
+diff --git a/modules/services/NetworkService.qml b/modules/services/NetworkService.qml
+index 0be8e1e2..55c2b3b9 100644
+--- a/modules/services/NetworkService.qml
++++ b/modules/services/NetworkService.qml
+@@ -207,11 +207,17 @@ Singleton {
+     property int networkSubscription: -1
+     property bool _watchBound: false
+ 
++    // roadie: counts every state the daemon streams, one per NetworkManager
++    // event, whatever it holds. RoadieEthernet lists the wired devices again
++    // on each: a cable going in or out changes none of the properties above.
++    property int stateSerial: 0
++
+     function bindWatcher() {
+         if (root._watchBound) return;
+         root._watchBound = true;
+         root.networkSubscription = BackendService.addSubscription(["network"], (service, data) => {
+             if (service !== "network.state") return;
++            root.stateSerial++;
+             if (!root.isUpdating) {
+                 Qt.callLater(() => root.applyState(data));
+             }
 diff --git a/modules/services/Visibilities.qml b/modules/services/Visibilities.qml
 index ee97b092..378ef7ed 100644
 --- a/modules/services/Visibilities.qml
@@ -6216,6 +6297,67 @@ index d28f41d2..44c4edd7 100644
  
                          Text {
                              anchors.centerIn: parent
+diff --git a/modules/widgets/dashboard/widgets/QuickControls.qml b/modules/widgets/dashboard/widgets/QuickControls.qml
+index daf05a90..769ba001 100644
+--- a/modules/widgets/dashboard/widgets/QuickControls.qml
++++ b/modules/widgets/dashboard/widgets/QuickControls.qml
+@@ -51,6 +51,56 @@ StyledRect {
+                 anchors.centerIn: parent
+                 spacing: 4
+ 
++                // roadie: an Ethernet switch, there while a cable is plugged
++                // in (see RoadieEthernet). Settings > Roadie, "Ethernet
++                // switch in the notch".
++                //
++                // It comes and goes with the cable while the dashboard is
++                // open, so it does not pop: the slot opens up (the row and
++                // the pane widen with it, the other switches slide over)
++                // while the button grows and fades in, and the reverse. The
++                // button is scaled by the same amount the slot is open, so it
++                // always just fits and never runs under its neighbour. The
++                // slot also takes back the row's spacing as it closes, or a
++                // closed slot would still push the Wi-Fi switch over by it.
++                Item {
++                    id: ethernetSlot
++
++                    readonly property bool shown: RoadieSettings.ethernetButton && RoadieEthernet.present
++                    property real reveal: shown ? 1 : 0
++
++                    Behavior on reveal {
++                        enabled: Config.animDuration > 0
++                        NumberAnimation {
++                            duration: Config.animDuration
++                            easing.type: Easing.OutCubic
++                        }
++                    }
++
++                    visible: reveal > 0
++                    Layout.preferredWidth: 48 * reveal
++                    Layout.preferredHeight: 48
++                    Layout.rightMargin: -buttonRow.spacing * (1 - reveal)
++
++                    ControlButton {
++                        anchors.centerIn: parent
++                        width: 48
++                        height: 48
++                        opacity: ethernetSlot.reveal
++                        scale: ethernetSlot.reveal
++                        iconName: Icons.ethernet
++                        isActive: RoadieEthernet.on
++                        tooltipText: {
++                            if (!RoadieEthernet.on)
++                                return "Ethernet: Off";
++                            if (!RoadieEthernet.connected)
++                                return "Ethernet: Connecting";
++                            return RoadieEthernet.connectionName ? `Ethernet: On (${RoadieEthernet.connectionName})` : "Ethernet: On";
++                        }
++                        onClicked: RoadieEthernet.toggle()
++                    }
++                }
++
+                 ControlButton {
+                     Layout.preferredWidth: 48
+                     Layout.preferredHeight: 48
 diff --git a/modules/widgets/defaultview/NotificationIndicator.qml b/modules/widgets/defaultview/NotificationIndicator.qml
 index a8a61a86..87322803 100644
 --- a/modules/widgets/defaultview/NotificationIndicator.qml
@@ -6335,7 +6477,7 @@ index e5a3f75f..a4da9aa0 100644
 +  pulseaudio
  ]
 diff --git a/shell.qml b/shell.qml
-index 888996d3..8d7c45c4 100644
+index 888996d3..34a15395 100644
 --- a/shell.qml
 +++ b/shell.qml
 @@ -77,7 +77,24 @@ ShellRoot {
@@ -6447,11 +6589,12 @@ index 888996d3..8d7c45c4 100644
              required property ShellScreen modelData
              sourceComponent: PresetsPopup {
                  screen: presetsLoader.modelData
-@@ -309,6 +350,7 @@ ShellRoot {
+@@ -309,6 +350,8 @@ ShellRoot {
          onTriggered: {
              let _ = NightLightClient.active;
              _ = GameModeClient.toggled;
 +            _ = ModUpdateService.autoCheck; // roadie: force init (mod update checks)
++            _ = RoadieEthernet.present; // roadie: force init (the notch's Ethernet switch is settled before the dashboard first opens)
          }
      }
  }

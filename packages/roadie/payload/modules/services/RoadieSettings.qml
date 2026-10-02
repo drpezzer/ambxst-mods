@@ -56,6 +56,7 @@ Singleton {
         bluetoothWidget: true,     // stock: false
         framePopouts: true,        // stock: false (floating pills)
         audioTab: true,            // stock: false
+        ethernetButton: true,      // stock: false (Wi-Fi switch only)
         // Settings > Roadie: the group shown last (0 Features, 1 Behaviours,
         // 2 Customization). Not a setting of the shell; kept across a reset.
         page: 0,
@@ -98,6 +99,7 @@ Singleton {
         bluetoothWidget: false,
         framePopouts: false,
         audioTab: false,
+        ethernetButton: false,
         idleDim: "always",
         osd: "stock",
         bootLock: "never",
@@ -137,6 +139,7 @@ Singleton {
     readonly property bool bluetoothWidget: !!root.get("bluetoothWidget")
     readonly property bool framePopouts: !!root.get("framePopouts")
     readonly property bool audioTab: !!root.get("audioTab")
+    readonly property bool ethernetButton: !!root.get("ethernetButton")
     readonly property int page: {
         const n = Number(root.get("page"));
         return (isNaN(n) || n < 0 || n > 2) ? 0 : Math.round(n);

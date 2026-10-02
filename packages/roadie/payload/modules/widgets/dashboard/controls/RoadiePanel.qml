@@ -603,7 +603,7 @@ Item {
                     }
                     ToggleRow {
                         label: "Popouts grow out of the frame"
-                        hint: "With contain bar on, the clock, controls, battery, layout and hidden tray icons popouts are part of the frame. Off: floating pills."
+                        hint: "With contain bar on, the clock, controls, battery, layout and hidden tray icons popouts and the tray icons' menus are part of the frame. Off: floating pills."
                         checked: RoadieSettings.framePopouts
                         onToggled: value => RoadieSettings.set("framePopouts", value)
                     }
@@ -612,6 +612,12 @@ Item {
                         hint: "Every program playing or recording audio, where it goes, its volume, and a dropdown to move it. Takes effect on the next reload."
                         checked: RoadieSettings.audioTab
                         onToggled: value => RoadieSettings.set("audioTab", value)
+                    }
+                    ToggleRow {
+                        label: "Ethernet switch in the notch"
+                        hint: "While a cable is plugged in, the quick controls get an Ethernet switch to the left of the Wi-Fi one. It leaves with the cable."
+                        checked: RoadieSettings.ethernetButton
+                        onToggled: value => RoadieSettings.set("ethernetButton", value)
                     }
 
                     GroupTitle { text: "Settings and mods" }

@@ -65,6 +65,16 @@ Item {
     // A nested popup opened from inside the contents, for hosts that track
     // one (the tray registers its per-icon menus here).
     property var activeChildMenu: null
+    // Floating pill only: its mutual-exclusion group (see BarPopup). Attached
+    // there is one flyout shell-wide, which is the same thing.
+    property string groupId: "bar"
+    // False keeps the floating pill whatever the bar settings are: a popout
+    // opened from INSIDE another one (a tray icon's menu in the overflow
+    // popout) has no flyout to be, the one there is holds its parent.
+    property bool allowAttached: true
+    // The floating pill's window, for a host that lists it as a nested popup
+    // (extraGrabWindows wants the window, not this handle).
+    readonly property var pillWindow: pill
 
     // Contents, instantiated by whichever host is in use.
     default property Component content
@@ -80,7 +90,7 @@ Item {
     // bulge out of and the pill is the only sensible form.
     // Settings > Roadie, "Popouts grow out of the frame": off is the stock
     // floating pill whatever the bar settings are.
-    readonly property bool attached: RoadieSettings.framePopouts && (Config.bar?.containBar ?? false) && (Config.bar?.frameEnabled ?? false)
+    readonly property bool attached: root.allowAttached && RoadieSettings.framePopouts && (Config.bar?.containBar ?? false) && (Config.bar?.frameEnabled ?? false)
 
     // Only one flyout exists shell-wide, so ours is open only while it is ours.
     readonly property bool flyoutOpen: GlobalStates.barFlyoutOpen && GlobalStates.barFlyoutOwner === root
@@ -163,6 +173,7 @@ Item {
             clickThroughMargins: root.clickThroughMargins
             extraGrabWindows: root.extraGrabWindows
             variant: root.variant
+            groupId: root.groupId
 
             contentWidth: (pillContent.item?.implicitWidth ?? 0) + root.popupPadding * 2
             contentHeight: (pillContent.item?.implicitHeight ?? 0) + root.popupPadding * 2
