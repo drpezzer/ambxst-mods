@@ -816,6 +816,13 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 2.0.1: **no more faint arc in the screen corners.** With the frame on, each
+  rounded screen corner carried a one-pixel arc of nearby colour across the
+  frame, easiest to see on a black (OLED) frame. A stock bug: the corners are
+  a window of their own, and the compositor's blur showed through their
+  antialiased edge. With the frame on they are now drawn in the frame's own
+  surface (one full-screen layer less per monitor); without a frame nothing
+  changes. No switch, it is a fix.
 - 2.0.0: **everything in one package.** Bar at a Glance, Audio Routing and
   Tinted Icons are part of Roadie now, exactly as they were: the combined shell
   is line for line the one the four separate mods built. One patch, one

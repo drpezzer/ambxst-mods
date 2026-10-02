@@ -4590,10 +4590,10 @@ index 26da91a8..75c3b74d 100644
              if (barEnabled && barPosition === "right" && barPinned) {
                  zone += barSize + barOuterMargin;
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 786c98e6..53ba45b9 100644
+index 786c98e6..72209185 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
-@@ -2,6 +2,7 @@ import QtQuick
+@@ -2,11 +2,13 @@ import QtQuick
  import QtQuick.Effects
  import Quickshell
  import Quickshell.Wayland
@@ -4601,7 +4601,13 @@ index 786c98e6..53ba45b9 100644
  import qs.modules.bar
  import qs.modules.bar.workspaces
  import qs.modules.notch
-@@ -31,6 +32,11 @@ PanelWindow {
+ import qs.modules.dock
+ import qs.modules.frame
++import qs.modules.corners
+ import qs.modules.services
+ import qs.modules.globals
+ import qs.modules.components
+@@ -31,6 +33,11 @@ PanelWindow {
      // Dynamic keyboard focus: Exclusive when a notch module is open (so text fields work),
      // None otherwise (so compositor receives normal input).
      WlrLayershell.keyboardFocus: {
@@ -4613,7 +4619,7 @@ index 786c98e6..53ba45b9 100644
          if (notchContent.screenNotchOpen) {
              return WlrKeyboardFocus.Exclusive;
          }
-@@ -45,12 +51,17 @@ PanelWindow {
+@@ -45,12 +52,17 @@ PanelWindow {
  
      // Whether we need to capture full-screen input for click-outside detection.
      // True when notch modules are open OR any FocusGrab is active (e.g., BarPopups).
@@ -4633,7 +4639,7 @@ index 786c98e6..53ba45b9 100644
      }
  
      readonly property bool dockEnabled: {
-@@ -58,13 +69,18 @@ PanelWindow {
+@@ -58,13 +70,18 @@ PanelWindow {
          if (!(Config.dock.enabled ?? false) || (Config.dock.theme ?? "default") === "integrated")
              return false;
          const list = Config.dock.screenList;
@@ -4654,7 +4660,7 @@ index 786c98e6..53ba45b9 100644
      readonly property bool barReveal: barEnabled && barContent.reveal
      readonly property alias barTargetWidth: barContent.barTargetWidth
      readonly property alias barTargetHeight: barContent.barTargetHeight
-@@ -73,7 +89,7 @@ PanelWindow {
+@@ -73,7 +90,7 @@ PanelWindow {
      readonly property alias dockPosition: dockContent.position
      readonly property alias dockPinned: dockContent.pinned
      readonly property bool dockReveal: dockEnabled && dockContent.reveal
@@ -4663,7 +4669,7 @@ index 786c98e6..53ba45b9 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,9 +105,190 @@ PanelWindow {
+@@ -89,9 +106,190 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
@@ -4857,10 +4863,15 @@ index 786c98e6..53ba45b9 100644
  
      // Proxy properties for Bar/Notch synchronization
      // Note: BarContent and NotchContent already handle their internal sync using Visibilities.
-@@ -101,22 +298,49 @@ PanelWindow {
+@@ -101,22 +299,54 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
++    // roadie: with the frame on, this panel draws the rounded screen corners
++    // itself (the Loader at the end of this file) and shell.qml leaves the
++    // corners window out.
++    readonly property bool cornersInFrame: Config.barReady && (Config.bar.frameEnabled ?? false)
++
 +    // The screen this panel registered itself under, latched at creation.
 +    //
 +    // NOT read from `screen` at teardown: when an output is unplugged Quickshell
@@ -4919,7 +4930,7 @@ index 786c98e6..53ba45b9 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -132,6 +356,16 @@ PanelWindow {
+@@ -132,6 +362,16 @@ PanelWindow {
          // Full-screen capture when any module/popup is open
          item: unifiedPanel.needsFullScreenInput ? fullScreenMask : null
          regions: [
@@ -4936,7 +4947,7 @@ index 786c98e6..53ba45b9 100644
              Region {
                  item: barContent.visible ? barContent.barHitbox : null
              },
-@@ -173,6 +407,10 @@ PanelWindow {
+@@ -173,6 +413,10 @@ PanelWindow {
  
          onClicked: {
              FocusGrabManager.clearTopGrab();
@@ -4947,7 +4958,7 @@ index 786c98e6..53ba45b9 100644
              if (assistantSidebar.active && assistantSidebar.wantsFocus) {
                  assistantSidebar.wantsFocus = false;
              }
-@@ -202,21 +440,82 @@ PanelWindow {
+@@ -202,21 +446,82 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -5030,6 +5041,27 @@ index 786c98e6..53ba45b9 100644
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
+@@ -276,4 +581,20 @@ PanelWindow {
+             }
+         }
+     }
++
++    // roadie: the rounded screen corners, while the frame is on. Their edge
++    // is antialiased, and the compositor draws its blur behind every pixel of
++    // an Ambxst layer that is opaque enough to count. In the corners' own
++    // window those soft edge pixels had nothing under them but that blur, so
++    // each corner of the screen carried a faint one-pixel arc of whatever sat
++    // nearby, across a frame that is solid there. Drawn in the frame's own
++    // surface they blend into the frame instead. Outside visualContent, so
++    // they take no shadow, and above it, as the corners window was. Same
++    // conditions as that window (shell.qml).
++    Loader {
++        anchors.fill: parent
++        z: 10
++        active: unifiedPanel.cornersInFrame && Config.themeReady && Config.theme.enableCorners && Config.roundness > 0 && ShellTransitions.reserve && !unifiedPanel.hasFullscreenWindow
++        sourceComponent: ScreenCornersContent {}
++    }
+ }
 diff --git a/modules/shell/osd/OSD.qml b/modules/shell/osd/OSD.qml
 index f8bb8632..5671bff7 100644
 --- a/modules/shell/osd/OSD.qml
@@ -6303,10 +6335,10 @@ index e5a3f75f..a4da9aa0 100644
 +  pulseaudio
  ]
 diff --git a/shell.qml b/shell.qml
-index 888996d3..848c0595 100644
+index 888996d3..8d7c45c4 100644
 --- a/shell.qml
 +++ b/shell.qml
-@@ -77,7 +77,19 @@ ShellRoot {
+@@ -77,7 +77,24 @@ ShellRoot {
              }
  
              Loader {
@@ -6323,11 +6355,16 @@ index 888996d3..848c0595 100644
 +                // rounded corners back the moment focus went to another
 +                // screen. The panel's per-output scan counts the open special
 +                // workspace, and is what the bar, frame and notch go by.
-+                active: Config.themeReady && Config.theme.enableCorners && Config.roundness > 0 && ShellTransitions.reserve && !unifiedPanel.hasFullscreenWindow
++                //
++                // And not with the frame on: the panel then draws the corners
++                // in the frame's own surface (see the end of
++                // UnifiedShellPanel.qml), where their soft edge cannot pick
++                // up the compositor's blur.
++                active: Config.themeReady && Config.theme.enableCorners && Config.roundness > 0 && ShellTransitions.reserve && !unifiedPanel.hasFullscreenWindow && !unifiedPanel.cornersInFrame
                  sourceComponent: ScreenCorners {
                      screen: screenShellContainer.modelData
                  }
-@@ -90,12 +102,33 @@ ShellRoot {
+@@ -90,12 +107,33 @@ ShellRoot {
                  // Bar status for reservations
                  barEnabled: {
                      const list = (Config.bar && Config.bar.screenList !== undefined ? Config.bar.screenList : []);
@@ -6365,7 +6402,7 @@ index 888996d3..848c0595 100644
  
                  // Dock status for reservations
                  dockEnabled: {
-@@ -105,18 +138,21 @@ ShellRoot {
+@@ -105,18 +143,21 @@ ShellRoot {
                      const list = (Config.dock && Config.dock.screenList !== undefined ? Config.dock.screenList : []);
                      if (!list || list.length === 0)
                          return true;
@@ -6392,7 +6429,7 @@ index 888996d3..848c0595 100644
                  sidebarPinned: GlobalStates.assistantPinned
                  sidebarWidth: GlobalStates.assistantWidth
                  sidebarPosition: GlobalStates.assistantPosition
-@@ -136,7 +172,7 @@ ShellRoot {
+@@ -136,7 +177,7 @@ ShellRoot {
  
          Loader {
              id: overviewLoader
@@ -6401,7 +6438,7 @@ index 888996d3..848c0595 100644
              required property ShellScreen modelData
              sourceComponent: OverviewPopup {
                  screen: overviewLoader.modelData
-@@ -156,7 +192,7 @@ ShellRoot {
+@@ -156,7 +197,7 @@ ShellRoot {
  
          Loader {
              id: presetsLoader
@@ -6410,7 +6447,7 @@ index 888996d3..848c0595 100644
              required property ShellScreen modelData
              sourceComponent: PresetsPopup {
                  screen: presetsLoader.modelData
-@@ -309,6 +345,7 @@ ShellRoot {
+@@ -309,6 +350,7 @@ ShellRoot {
          onTriggered: {
              let _ = NightLightClient.active;
              _ = GameModeClient.toggled;
