@@ -6681,6 +6681,25 @@ index ac44b52a..d7db19b1 100644
                              // Enable Corners toggle
                              RowLayout {
                                  Layout.fillWidth: true
+diff --git a/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml b/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
+index 30c36e6f..27541267 100644
+--- a/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
++++ b/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
+@@ -18,6 +18,14 @@ Item {
+     readonly property bool screenHasFullscreen: {
+         if (!screenMonitor)
+             return false;
++        // roadie: only a fullscreen window that is on screen pauses the video.
++        // Upstream counts every fullscreen window of the monitor, whatever
++        // workspace it is on, so one parked on a hidden special workspace (or
++        // on a workspace not shown) left this screen's wallpaper paused on its
++        // first, black frame. The shell panel already works out per screen
++        // what covers it (UnifiedShellPanel.coverInfo).
++        if (screenName in NotificationRouter.covered)
++            return NotificationRouter.covered[screenName] === true;
+         const clients = AxctlService.clients.values || [];
+         return clients.some(client => client.fullscreen === true && client.monitor === screenMonitor.id);
+     }
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 index 63137c2a..da3b54b2 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml

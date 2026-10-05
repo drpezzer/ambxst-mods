@@ -935,6 +935,12 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 2.2.2: a video wallpaper is no longer left black on a screen that has a
+  fullscreen window parked out of sight. Ambxst 1.3.10 pauses video wallpapers
+  under fullscreen windows, and counts every fullscreen window of the monitor
+  whatever workspace it is on: one on a hidden special workspace (or on a
+  workspace not shown) paused that screen's wallpaper on its first, black
+  frame. Only a window that really covers the screen pauses it now.
 - 2.2.1: **a message sent while Claude Code is working reaches it as it
   does in the terminal.** It waits under the chat as *Queued*, Claude reads
   it after the tool call it is on, and at that point it moves into the chat
