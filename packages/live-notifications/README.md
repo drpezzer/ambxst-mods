@@ -35,5 +35,6 @@ gdbus call --session --dest org.freedesktop.Notifications \
 
 ## Changelog
 
+- 1.0.2: ported to Ambxst 1.3.10 (base bc602302). Upstream replaced its in-memory image cache with one kept by the daemon (`cacheImage`); a replaced notification's new icon and image now go through it, where 1.0.1 would have called a function that no longer exists. Needs Ambxst 1.3.10; on 1.3.9 and older stay on 1.0.1.
 - 1.0.1: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.0.0 (2026-09-22): first release, on Ambxst 1.3.8 (2a704c43).

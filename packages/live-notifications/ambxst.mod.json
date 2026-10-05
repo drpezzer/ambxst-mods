@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.live-notifications",
   "name": "Live Notifications",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Makes notifications that replace themselves update in place. Any app that re-sends a notification with the same ID (notify-send -r, progress bars from downloaders, music players, copy dialogs) currently keeps showing its first text in the notch, because the shell copies a notification's fields once and never looks again. With this mod the notch and the history follow every update, and a replaced notification that had already timed out pops back up with a fresh timer, the way other notification daemons behave.",
   "license": "MIT",
   "author": "drpezzer",
@@ -11,10 +11,9 @@
   "homepage": "https://github.com/drpezzer/ambxst-mods",
   "compatibility": {
     "api": 1,
-    "ambxst": ">=1.3.0 <2.0.0",
+    "ambxst": ">=1.3.10 <2.0.0",
     "testedBaseCommits": [
-      "2a704c438ddc0b94a11f4e4cf32a16220b62141f",
-      "3705f278f24a74718fc23772b47044e96701d53a"
+      "bc60230283a3822eec2e23c949f44990480d0f43"
     ]
   },
   "dependencies": [],

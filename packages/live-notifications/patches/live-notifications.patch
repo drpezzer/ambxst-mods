@@ -1,8 +1,8 @@
 diff --git a/modules/services/Notifications.qml b/modules/services/Notifications.qml
-index 10f81f97..b15c2fb3 100644
+index 0f1815bf..8ac48135 100644
 --- a/modules/services/Notifications.qml
 +++ b/modules/services/Notifications.qml
-@@ -67,7 +67,77 @@ Singleton {
+@@ -70,7 +70,79 @@ Singleton {
                          root.discardNotification(id);
                      }
                  });
@@ -47,8 +47,9 @@ index 10f81f97..b15c2fb3 100644
 +                appIcon = newAppIcon;
 +                cachedAppIcon = "";
 +                if (appIcon && !appIcon.startsWith("data:")) {
-+                    root.cacheImageAsBase64(appIcon, function (cachedData) {
++                    root.cacheImage(appIcon, function (cachedData) {
 +                        cachedAppIcon = cachedData;
++                        root.scheduleCacheSave();
 +                    });
 +                }
 +            }
@@ -57,8 +58,9 @@ index 10f81f97..b15c2fb3 100644
 +                image = newImage;
 +                cachedImage = "";
 +                if (image && !image.startsWith("data:")) {
-+                    root.cacheImageAsBase64(image, function (cachedData) {
++                    root.cacheImage(image, function (cachedData) {
 +                        cachedImage = cachedData;
++                        root.scheduleCacheSave();
 +                    });
 +                }
 +            }
