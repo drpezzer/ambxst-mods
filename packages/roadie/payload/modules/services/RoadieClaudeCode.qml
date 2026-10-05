@@ -257,6 +257,94 @@ Singleton {
         return out;
     }
 
+    // ── messages sent while a reply is being written ──────────────────────
+    //
+    // Stock sends such a message as a request of its own on top of the one
+    // that is running: the running turn never sees it, its text moves into the
+    // new bubble, and a second turn starts when the first ends and writes over
+    // whatever is last in the chat (seen: Claude's reply in the user's bubble).
+    //
+    // Here it waits in `queued`, shown under the chat. While Claude Code is
+    // answering it is also written into the turn's inbox, and Claude reads it
+    // after the tool call it is on, as it would a message typed into the
+    // terminal meanwhile; the bridge says when ("took") and Ai.qml moves it
+    // into the chat at that point. What is still queued when the reply ends
+    // (another provider's reply, or Claude was already done) is sent then.
+    property var queued: []         // [{ id, text, attachments, claude, written }]
+    property int queueSerial: 0
+
+    function queue(text, attachments, claude) {
+        root.queueSerial += 1;
+        const id = ("000000" + root.queueSerial).slice(-6);
+        root.queued = root.queued.concat([{
+            id: id,
+            text: text,
+            attachments: attachments || [],
+            claude: claude === true,
+            written: false
+        }]);
+        root.deliver();
+    }
+
+    // Writes what is waiting into the running turn's inbox, once it has one.
+    function deliver() {
+        const inbox = root.strategy.inbox;
+        if (inbox === "")
+            return;
+        let changed = false;
+        let next = [];
+        for (let i = 0; i < root.queued.length; i++) {
+            let q = root.queued[i];
+            if (q.claude && !q.written) {
+                const file = inboxWriter.createObject(root, { path: inbox + "/" + q.id + ".json" });
+                file.setText(JSON.stringify({ content: q.text, attachments: q.attachments }));
+                file.destroy(3000);
+                q = Object.assign({}, q, { written: true });
+                changed = true;
+            }
+            next.push(q);
+        }
+        if (changed)
+            root.queued = next;
+    }
+
+    // Claude has read message `id`: it leaves the queue. Returns it, or null.
+    function take(id) {
+        let found = null;
+        let rest = [];
+        for (let i = 0; i < root.queued.length; i++) {
+            if (found === null && root.queued[i].id === id)
+                found = root.queued[i];
+            else
+                rest.push(root.queued[i]);
+        }
+        if (found !== null)
+            root.queued = rest;
+        return found;
+    }
+
+    // The reply has ended: everything still waiting, and an empty queue.
+    function drain() {
+        const rest = root.queued;
+        root.queued = [];
+        return rest;
+    }
+
+    property Connections inboxWatch: Connections {
+        target: root.strategy
+        function onInboxChanged() {
+            root.deliver();
+        }
+    }
+
+    property Component inboxWriter: Component {
+        FileView {
+            blockWrites: true
+            atomicWrites: true
+            printErrors: false
+        }
+    }
+
     // ── is the CLI there? (asked by Settings > AI, never at shell start) ──
     property bool probed: false
     property bool probing: false

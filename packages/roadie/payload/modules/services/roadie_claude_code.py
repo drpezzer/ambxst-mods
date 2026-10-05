@@ -12,6 +12,17 @@ key is involved, and prints one JSON object per line on stdout:
     {"t": "<markdown to append to the reply>"}
     {"s": "<what Claude is doing right now>"}
 
+    {"inbox": "<folder>"}
+    {"took": "<id>"}
+
+A message sent while the turn runs reaches Claude the way one typed into the
+terminal does: the sidebar writes it into the inbox folder (<id>.json, with
+"content" and "attachments"), it is handed to the running CLI, and Claude
+reads it after the tool call it is on. "took" says the moment that happened:
+the sidebar closes the bubble being written, shows the message, and what
+Claude says next starts a new bubble. A message Claude never took (the turn
+ended first, or was stopped) is the sidebar's to send as the next turn.
+
 "t" is what Claude says to the user, and the only thing kept in the chat. "s"
 is the line under the chat while the turn runs (Thinking, Running ..., Reading
 ...): each one replaces the one before and none is kept, the way the terminal
@@ -555,6 +566,11 @@ class Turn:
     def __init__(self):
         self.text = ""          # everything sent to the sidebar so far
         self.doing = ""         # the status line last sent
+        self.said = False       # Claude has said something in this turn
+        self.chat = []          # the conversation, as the sidebar will hold it
+        self.inbox = ""         # folder the sidebar writes mid-turn messages into
+        self.waiting = {}       # uuid -> message handed to the CLI, not yet read by Claude
+        self.closed = False     # the CLI has been told there is nothing more
         self.child = None
         self.current = ""       # id of the message being streamed
         self.model = ""         # the model that answered, as the CLI names it
@@ -570,6 +586,7 @@ class Turn:
             return
         with self.lock:
             self.text += text
+            self.said = True
             try:
                 sys.stdout.write(json.dumps({"t": text}) + "\n")
                 sys.stdout.flush()
@@ -605,6 +622,77 @@ class Turn:
             lead = "\n" if self.text.endswith("\n") else "\n\n"
         if need:
             self.emit(lead)
+
+    def say(self, message):
+        """Adds what the user said to the conversation the way the sidebar's
+        next request will tell it: what they say in a row is one message."""
+        last = self.chat[-1] if self.chat else None
+        if last and last["role"] == "user":
+            last["content"] = (last["content"] + "\n\n" + message["content"]) if last["content"] else message["content"]
+            last["attachments"] = last["attachments"] + message["attachments"]
+        else:
+            self.chat.append({"role": "user", "content": message["content"], "attachments": message["attachments"]})
+
+    def took(self, message):
+        """Claude has read a message sent during the turn: what it said before
+        is one reply, what it says from here on is the next."""
+        with self.lock:
+            if self.text:
+                self.chat.append({"role": "assistant", "content": self.text, "attachments": []})
+            self.say(message)
+            self.text = ""
+            try:
+                sys.stdout.write(json.dumps({"took": message["id"]}) + "\n")
+                sys.stdout.flush()
+            except (BrokenPipeError, OSError, ValueError):
+                self.stopping = True
+                self.kill()
+
+    def feed(self, child):
+        """Hands the messages the sidebar puts into the inbox to the running CLI."""
+        seen = {}
+        while child.poll() is None and not self.closed and not self.stopping:
+            try:
+                names = sorted(n for n in os.listdir(self.inbox) if n.endswith(".json"))
+            except OSError:
+                return
+            for name in names:
+                path = os.path.join(self.inbox, name)
+                try:
+                    with open(path, encoding="utf-8") as f:
+                        got = json.load(f)
+                    if not isinstance(got, dict):
+                        raise ValueError
+                except (OSError, ValueError):
+                    # Still being written, most likely. Not for ever.
+                    seen[name] = seen.get(name, 0) + 1
+                    if seen[name] > 40:
+                        try:
+                            os.unlink(path)
+                        except OSError:
+                            pass
+                    continue
+                message = {
+                    "id": name[:-5],
+                    "content": str(got.get("content") or ""),
+                    "attachments": got.get("attachments") if isinstance(got.get("attachments"), list) else [],
+                }
+                tag = str(uuid.uuid4())
+                with self.lock:
+                    if self.closed:
+                        return      # the turn is over: the sidebar sends it as the next one
+                    try:
+                        child.stdin.write(json.dumps({"type": "user", "uuid": tag, "message": {
+                            "role": "user", "content": user_content(message, [])}}) + "\n")
+                        child.stdin.flush()
+                    except (BrokenPipeError, OSError, ValueError):
+                        return
+                    self.waiting[tag] = message
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+            time.sleep(0.25)
 
     def kill(self):
         child = self.child
@@ -654,11 +742,29 @@ class Turn:
 
         stderr = []
         threading.Thread(target=lambda: stderr.append(child.stderr.read()), daemon=True).start()
+        # stdin stays open for as long as the turn runs: a message the user
+        # sends meanwhile is written to it (feed), and the CLI gives it to
+        # Claude after the tool call in progress, as it does in a terminal.
+        # --replay-user-messages makes it say when (a `user` event marked
+        # isReplay, carrying the uuid the message was given).
+        self.closed = False
+        self.waiting = {}
         try:
             child.stdin.write(json.dumps({"type": "user", "message": {"role": "user", "content": content}}) + "\n")
-            child.stdin.close()
+            child.stdin.flush()
         except (BrokenPipeError, OSError):
             pass
+        if self.inbox:
+            threading.Thread(target=self.feed, args=(child,), daemon=True).start()
+
+        def done():
+            """Nothing more is coming: the CLI ends once its stdin does."""
+            with self.lock:
+                self.closed = True
+                try:
+                    child.stdin.close()
+                except (BrokenPipeError, OSError, ValueError):
+                    pass
 
         session = ""
         started = False
@@ -725,7 +831,12 @@ class Turn:
                         self.gap()
                         self.emit(part["text"])
             elif kind == "user":
-                self.status("Thinking")     # a tool's result went back to Claude
+                if ev.get("isReplay"):
+                    with self.lock:
+                        message = self.waiting.pop(str(ev.get("uuid") or ""), None)
+                    if message:
+                        self.took(message)
+                self.status("Thinking")     # a tool's result, or a message, went to Claude
             elif kind == "result":
                 started = True
                 per_model = ev.get("modelUsage")
@@ -740,8 +851,15 @@ class Turn:
                     said = "; ".join(str(x) for x in said) if isinstance(said, list) else ""
                     error = str(ev.get("result") or said or "")
                     failed = str(ev.get("subtype") or "the turn failed")
-                elif not self.text and ev.get("result"):
+                elif not self.said and ev.get("result"):
                     self.emit(str(ev["result"]))
+                # A message handed over that Claude has not read yet is the
+                # next turn of this same run; with none, this was the last.
+                with self.lock:
+                    more = bool(self.waiting) and not ev.get("is_error")
+                if not more:
+                    done()
+        done()
         code = child.wait()
         if not error and (failed or code != 0) and not self.stopping:
             tail = "".join(stderr).strip().splitlines()
@@ -819,7 +937,8 @@ def run(path, request):
         system += "\n\n" + extra
 
     base = [claude, "-p", "--output-format", "stream-json", "--input-format", "stream-json",
-            "--verbose", "--include-partial-messages", "--append-system-prompt", system]
+            "--verbose", "--include-partial-messages", "--replay-user-messages",
+            "--append-system-prompt", system]
     base += ACCESS[access]
 
     # Where `gate` writes down a command that needs root (see the top).
@@ -839,6 +958,18 @@ def run(path, request):
 
     earlier, message = chat[:-1], chat[-1]
     chat_id = str(body.get("chat") or "")
+    turn.chat = chat
+
+    # Where the sidebar puts what the user sends while this turn runs.
+    inbox = os.path.join(os.path.dirname(os.path.abspath(path)), "inbox-" + (request or str(os.getpid())))
+    try:
+        shutil.rmtree(inbox, ignore_errors=True)
+        os.makedirs(inbox, mode=0o700)
+        turn.inbox = inbox
+        sys.stdout.write(json.dumps({"inbox": inbox}) + "\n")
+        sys.stdout.flush()
+    except OSError:
+        turn.inbox = ""
     sessions = load_state()["sessions"]
     known = None
     if earlier:
@@ -858,7 +989,7 @@ def run(path, request):
             naming = before["title"]
         resume = base + ["--resume", known] + (["--name", naming] if naming else [])
         session, started, error = turn.run(resume, cwd, user_content(message, []))
-        if (error or not started) and not turn.text and not turn.stopping:
+        if (error or not started) and not turn.said and not turn.stopping:
             # The session is gone, or cannot be continued: start over with a
             # transcript. Whatever is wrong beyond that shows up there too.
             with locked_state() as state:
@@ -878,6 +1009,9 @@ def run(path, request):
             hint = " This needs a recent Claude Code: run `claude update`."
         turn.block("**Claude Code:** %s%s" % (error, hint))
 
+    if turn.inbox:
+        shutil.rmtree(turn.inbox, ignore_errors=True)
+
     if asked:
         try:
             with open(asked, encoding="utf-8") as f:
@@ -896,11 +1030,11 @@ def run(path, request):
             state["limit"] = turn.limit
         if turn.model:
             state["models"][model] = turn.model
-        if not (started and session and turn.text):
+        if not (started and session and turn.said):
             return
         entry = state["sessions"].pop(known, None) if known else None
         entry = entry if isinstance(entry, dict) else {}
-        full = chat + [{"role": "assistant", "content": turn.text, "attachments": []}]
+        full = chat + ([{"role": "assistant", "content": turn.text, "attachments": []}] if turn.text else [])
         users = sum(1 for m in full if m["role"] == "user")
         entry.update(digest=digest(full), cwd=cwd, at=int(time.time()), chat=chat_id, users=users)
         if turn.model:

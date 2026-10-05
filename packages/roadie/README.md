@@ -591,6 +591,12 @@ switching it off takes its models out of the list again.
   runs, a line beside the three dots says what it is on right now (*Thinking*,
   *Reading notes.md*, *Running git status*), each one replacing the last, the
   way the terminal shows it. The bubble only holds what Claude says to you.
+- **Keep typing while it works.** A message sent during a reply is shown
+  under the chat as *Queued*. Claude Code reads it after the tool call it is
+  on, the way it reads one typed into the terminal meanwhile; the message then
+  moves into the chat and what Claude says next is a new bubble. If the reply
+  ends or is stopped first, the message goes out as the next one. Other
+  providers get it when their reply has ended.
 - **The keyboard, for every provider.** A click anywhere on the sidebar gives
   it the keyboard: stock only did that for a click on its empty background, so
   after Escape or a click outside you could see a cursor in the message box
@@ -929,8 +935,17 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
-- 2.2.1: the line that says what Claude Code is doing sits level with the
-  three dots beside it (it hung a few pixels below them).
+- 2.2.1: **a message sent while Claude Code is working reaches it as it
+  does in the terminal.** It waits under the chat as *Queued*, Claude reads
+  it after the tool call it is on, and at that point it moves into the chat
+  and the reply carries on in a new bubble. With another provider, or when
+  the reply ends first (or you stop it), it is sent as the next message.
+  Stock sent it as a second request on top of the running one, which is what
+  was behind replies landing in the wrong bubble or over your own message, a
+  bubble's text being replaced, and a turn running with no dots to show for
+  it. Regenerate or an edit during a reply now stops that reply first. And
+  the line that says what Claude Code is doing sits level with the three dots
+  (it hung a few pixels below them).
 - 2.2.0: **Claude Code in the AI sidebar.** A switch under Settings > AI makes
   the Claude Code installed on your machine a provider of the AI sidebar, under
   its own login and with no API key; the API providers keep working beside it.

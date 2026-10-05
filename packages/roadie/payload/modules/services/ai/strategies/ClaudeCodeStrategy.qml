@@ -27,6 +27,10 @@ ApiStrategy {
     // ..."), from the script's {"s": ...} lines. The sidebar shows it under
     // the chat while the turn runs; Ai.qml empties it when the turn ends.
     property string status: ""
+    // The folder the running turn reads further messages from ({"inbox": ...},
+    // "" between turns). RoadieClaudeCode writes what the user sends while a
+    // reply is being written into it.
+    property string inbox: ""
     property int serial: 0
 
     function quote(text) {
@@ -69,6 +73,7 @@ ApiStrategy {
         const request = Date.now().toString(36) + "-" + strategy.serial;
         model.customCurlTemplate = strategy.commandFor(request);
         strategy.status = "Thinking";
+        strategy.inbox = "";
 
         // Role system is Ambxst's prompt (sent as `system`, when it is the
         // user's own) and the sidebar's notices: not part of the conversation.
@@ -137,7 +142,11 @@ ApiStrategy {
                 strategy.pendingSudo = json.sudo;
             if (typeof json.s === "string")
                 strategy.status = json.s;
-            return { content: json.t || "", done: false, error: null };
+            if (typeof json.inbox === "string")
+                strategy.inbox = json.inbox;
+            // "took": Claude has read a message sent during the turn (Ai.qml
+            // then shows it and starts a new bubble for what follows).
+            return { content: json.t || "", took: json.took || "", done: false, error: null };
         } catch (e) {
             return { content: "", done: false, error: null };
         }

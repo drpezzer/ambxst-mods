@@ -3852,7 +3852,7 @@ index 75e37c61..9d61a8b2 100644
          Loader {
              id: notifImageLoader
 diff --git a/modules/services/Ai.qml b/modules/services/Ai.qml
-index 6fe22f76..3a64605e 100644
+index 6fe22f76..5b4fb8dc 100644
 --- a/modules/services/Ai.qml
 +++ b/modules/services/Ai.qml
 @@ -134,6 +134,7 @@ Singleton {
@@ -3863,7 +3863,7 @@ index 6fe22f76..3a64605e 100644
          case "custom": return openaiStrategy; // custom endpoints use OpenAI-compatible format by default
          default: return openaiStrategy;
          }
-@@ -146,6 +147,105 @@ Singleton {
+@@ -146,6 +147,150 @@ Singleton {
              currentStrategy = openaiStrategy;
      }
  
@@ -3957,6 +3957,51 @@ index 6fe22f76..3a64605e 100644
 +    // roadie: stop the reply that is being written, keeping what has arrived.
 +    // The request is a process (curl, or Claude Code's turn): it is told to end.
 +    property bool stopRequested: false
++
++    // roadie: Claude Code has read a message that was sent while it worked
++    // (RoadieClaudeCode.queue). The bubble being written ends there, the
++    // message goes into the chat, and what Claude says next is a new bubble.
++    property bool tookDuringReply: false
++    function tookQueued(id) {
++        const msg = RoadieClaudeCode.take(id);
++        if (!msg)
++            return;
++        let chat = Array.from(currentChat);
++        if (chat.length > 0 && chat[chat.length - 1].role === "assistant" && !chat[chat.length - 1].content)
++            chat.pop();
++        let userMsg = {
++            role: "user",
++            content: msg.text
++        };
++        if (msg.attachments && msg.attachments.length > 0)
++            userMsg.attachments = msg.attachments;
++        chat.push(userMsg);
++        chat.push({
++            role: "assistant",
++            content: "",
++            model: currentModel ? currentModel.name : "Unknown"
++        });
++        currentChat = chat;
++        responseBuffer = "";
++        tookDuringReply = true;
++        saveCurrentChat();
++    }
++
++    // roadie: what was sent during a reply and not read by then goes out as
++    // the next message, in one piece.
++    function sendQueued(rest) {
++        if (rest.length === 0 || isLoading)
++            return;
++        let texts = [];
++        let attachments = [];
++        for (let i = 0; i < rest.length; i++) {
++            if (rest[i].text)
++                texts.push(rest[i].text);
++            attachments = attachments.concat(rest[i].attachments || []);
++        }
++        sendMessage(texts.join("\n\n"), attachments.length > 0 ? attachments : undefined);
++    }
++
 +    function stopResponse() {
 +        if (!isLoading)
 +            return;
@@ -3969,7 +4014,42 @@ index 6fe22f76..3a64605e 100644
      // ============================================
      // STATE
      // ============================================
-@@ -409,9 +509,19 @@ Singleton {
+@@ -345,6 +490,13 @@ Singleton {
+             return;
+         if (processCommand(text))
+             return;
++        // roadie: a reply is being written. The message waits its turn (see
++        // RoadieClaudeCode.queue): Claude Code reads it while it works, any
++        // other provider gets it when the reply has ended.
++        if (isLoading) {
++            RoadieClaudeCode.queue(text, attachments, curlProcess.running && currentModel && currentModel.provider === "claude-code" && requestChatId === currentChatId);
++            return;
++        }
+         isLoading = true;
+         lastError = "";
+         let userMsg = {
+@@ -360,7 +512,20 @@ Singleton {
+         makeRequest();
+     }
+ 
++    // roadie: one request at a time. Stock starts the next one over a reply
++    // that is still arriving (Regenerate or an edit during a reply): the
++    // running one keeps writing into the chat, and the new one only starts
++    // when it has ended, with nothing on screen saying so. The running reply
++    // is stopped here and the new request made when it is gone.
++    property bool requestAfterStop: false
++
+     function makeRequest() {
++        if (curlProcess.running) {
++            requestAfterStop = true;
++            requestChatId = ""; // what the old reply still sends is dropped
++            curlProcess.signal(15);
++            return;
++        }
+         let apiKey = getApiKey(currentModel);
+         if (!apiKey && currentModel.requires_key) {
+             lastError = I18n.t("ai.api_key_missing").replace("%1", currentModel.name).replace("%2", currentModel.key_id || I18n.t("ai.env_variable"));
+@@ -409,9 +574,19 @@ Singleton {
                  apiMsg.geminiParts = msg.geminiParts;
              if (msg.name)
                  apiMsg.name = msg.name;
@@ -3989,7 +4069,7 @@ index 6fe22f76..3a64605e 100644
          // Build body — always use streaming
          let body = currentStrategy.getStreamBody(messages, currentModel, systemTools);
  
-@@ -517,6 +627,9 @@ Singleton {
+@@ -517,6 +692,9 @@ Singleton {
          // Use SplitParser for streaming — emits onRead per line
          stdout: SplitParser {
              onRead: data => {
@@ -3999,7 +4079,30 @@ index 6fe22f76..3a64605e 100644
                  let result = root.currentStrategy.parseStreamChunk(data);
  
                  if (result.error) {
-@@ -543,6 +656,32 @@ Singleton {
+@@ -524,10 +702,22 @@ Singleton {
+                     return;
+                 }
+ 
++                if (result.took)
++                    root.tookQueued(result.took); // roadie
++
+                 if (result.content) {
+                     root.responseBuffer += result.content;
+                     // Update the last message in currentChat with accumulated text
+                     let newChat = Array.from(root.currentChat);
++                    // roadie: a reply is only ever written into a bubble of the
++                    // assistant's. With anything else last in the chat it gets
++                    // one, where stock wrote over the user's message.
++                    if (newChat.length > 0 && newChat[newChat.length - 1].role !== "assistant")
++                        newChat.push({
++                            role: "assistant",
++                            content: "",
++                            model: root.currentModel ? root.currentModel.name : "Unknown"
++                        });
+                     if (newChat.length > 0) {
+                         newChat[newChat.length - 1].content = root.responseBuffer;
+                         root.currentChat = newChat;
+@@ -543,6 +733,56 @@ Singleton {
          }
  
          onExited: exitCode => {
@@ -4007,6 +4110,30 @@ index 6fe22f76..3a64605e 100644
 +            // may have asked for.
 +            Qt.callLater(root.offerSudo);
 +            RoadieClaudeCode.strategy.status = ""; // roadie: nothing is being done any more
++            RoadieClaudeCode.strategy.inbox = "";
++
++            // roadie: stopped to make room for another request (makeRequest).
++            if (root.requestAfterStop) {
++                root.requestAfterStop = false;
++                root.stopRequested = false;
++                root.tookDuringReply = false;
++                root.responseBuffer = "";
++                Qt.callLater(root.makeRequest);
++                return;
++            }
++
++            // roadie: messages sent during the reply. One that Claude read and
++            // then said nothing more about leaves no empty bubble behind; what
++            // was never read is sent now (not into a chat opened meanwhile).
++            const roadieRest = RoadieClaudeCode.drain();
++            if (root.requestChatId === root.currentChatId) {
++                const rn = root.currentChat.length;
++                if (root.tookDuringReply && root.responseBuffer === "" && rn > 0 && root.currentChat[rn - 1].role === "assistant" && !root.currentChat[rn - 1].content)
++                    root.currentChat = root.currentChat.slice(0, rn - 1);
++                if (roadieRest.length > 0)
++                    Qt.callLater(() => root.sendQueued(roadieRest));
++            }
++            root.tookDuringReply = false;
 +
 +            // roadie: the chat it was for is no longer the one on screen.
 +            if (root.requestChatId !== root.currentChatId) {
@@ -4032,7 +4159,7 @@ index 6fe22f76..3a64605e 100644
              root.isLoading = false;
  
              if (exitCode === 0) {
-@@ -610,6 +749,8 @@ Singleton {
+@@ -610,6 +850,8 @@ Singleton {
      // ============================================
  
      function createNewChat() {
@@ -4041,7 +4168,7 @@ index 6fe22f76..3a64605e 100644
          currentChat = [];
          currentChatId = Date.now().toString();
          chatModelChanged();
-@@ -634,6 +775,8 @@ Singleton {
+@@ -634,6 +876,8 @@ Singleton {
      }
  
      function loadChat(id) {
@@ -4050,7 +4177,7 @@ index 6fe22f76..3a64605e 100644
          let filename = chatDir + "/" + id + ".json";
          loadChatProcess.targetId = id;
          loadChatProcess.command = ["cat", filename];
-@@ -684,6 +827,11 @@ Singleton {
+@@ -684,6 +928,11 @@ Singleton {
                          });
                      }
                  }
@@ -4062,7 +4189,7 @@ index 6fe22f76..3a64605e 100644
                  root.chatHistory = history;
                  root.historyModelChanged();
              }
-@@ -724,6 +872,8 @@ Singleton {
+@@ -724,6 +973,8 @@ Singleton {
          fetchingModels = true;
          pendingFetches = 0;
  
@@ -5395,7 +5522,7 @@ index f8bb8632..5671bff7 100644
              if (!screen || !root.targetScreen || screen.name === root.targetScreen.name || Brightness.syncBrightness) {
                  root.osdValue = value;
 diff --git a/modules/sidebar/AssistantSidebar.qml b/modules/sidebar/AssistantSidebar.qml
-index 292f58c4..28d7d0bd 100644
+index 292f58c4..d991d15e 100644
 --- a/modules/sidebar/AssistantSidebar.qml
 +++ b/modules/sidebar/AssistantSidebar.qml
 @@ -60,7 +60,14 @@ Item {
@@ -5611,7 +5738,23 @@ index 292f58c4..28d7d0bd 100644
                                                      ColumnLayout {
                                                          visible: modelData.functionCall !== undefined
                                                          Layout.fillWidth: true
-@@ -1141,6 +1231,35 @@ Item {
+@@ -1100,11 +1190,13 @@ Item {
+ 
+                                 footer: Item {
+                                     width: chatView.width
+-                                    height: 40
++                                    height: 40 + (roadieQueued.visible ? roadieQueued.height + 8 : 0) // roadie: + the queued messages
+                                     visible: Ai.isLoading
+ 
+                                     Row {
+-                                        anchors.centerIn: parent
++                                        // roadie: where `anchors.centerIn: parent` put it at the stock height
++                                        anchors.horizontalCenter: parent.horizontalCenter
++                                        y: 16
+                                         spacing: 4
+ 
+                                         Repeater {
+@@ -1141,6 +1233,65 @@ Item {
                                                  }
                                              }
                                          }
@@ -5644,10 +5787,40 @@ index 292f58c4..28d7d0bd 100644
 +                                                color: Colors.overSurfaceVariant
 +                                            }
 +                                        }
++                                    }
++
++                                    // roadie: what was sent while the reply is being written and
++                                    // has not been read yet (RoadieClaudeCode.queue). It moves into
++                                    // the chat when Claude Code reads it, or when the reply ends.
++                                    Column {
++                                        id: roadieQueued
++                                        visible: RoadieClaudeCode.queued.length > 0
++                                        anchors.horizontalCenter: parent.horizontalCenter
++                                        y: 40
++                                        width: chatView.width - 48
++                                        spacing: 2
++
++                                        Repeater {
++                                            model: RoadieClaudeCode.queued
++
++                                            Text {
++                                                required property var modelData
++                                                width: roadieQueued.width
++                                                horizontalAlignment: Text.AlignHCenter
++                                                text: "Queued: " + String(modelData.text).replace(/\s+/g, " ")
++                                                elide: Text.ElideRight
++                                                maximumLineCount: 1
++                                                textFormat: Text.PlainText
++                                                font.family: Config.theme.font
++                                                font.pixelSize: 12
++                                                font.italic: true
++                                                color: Colors.outline
++                                            }
++                                        }
                                      }
                                  }
                              }
-@@ -1507,9 +1626,45 @@ Item {
+@@ -1507,9 +1658,45 @@ Item {
                                              }
                                          }
                                      }
