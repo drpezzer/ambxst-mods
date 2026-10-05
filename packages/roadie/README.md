@@ -929,6 +929,8 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 2.2.1: the line that says what Claude Code is doing sits level with the
+  three dots beside it (it hung a few pixels below them).
 - 2.2.0: **Claude Code in the AI sidebar.** A switch under Settings > AI makes
   the Claude Code installed on your machine a provider of the AI sidebar, under
   its own login and with no API key; the API providers keep working beside it.
