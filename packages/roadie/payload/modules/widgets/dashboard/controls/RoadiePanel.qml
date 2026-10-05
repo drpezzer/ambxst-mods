@@ -636,7 +636,7 @@ Item {
 
                     Hint {
                         Layout.topMargin: 6
-                        text: "Icon colours: True Matugen Icons and True Monochrome are under Settings > Theme, with Tint Icons."
+                        text: "Icon colours: True Matugen Icons and True Monochrome are under Settings > Theme, with Tint Icons. Claude Code in the AI sidebar is under Settings > AI."
                     }
                 }
 

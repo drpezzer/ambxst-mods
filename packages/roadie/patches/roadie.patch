@@ -1,5 +1,5 @@
 diff --git a/config/Config.qml b/config/Config.qml
-index ab5ce35c..e4cd2c66 100644
+index b7b39906..8f6b9aff 100644
 --- a/config/Config.qml
 +++ b/config/Config.qml
 @@ -141,6 +141,14 @@ Singleton {
@@ -90,7 +90,7 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index 5ae8d2ea..419c8dfa 100644
+index 554a38fc..0e221bfd 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
 @@ -22,11 +22,22 @@ import "." as Bar
@@ -2965,7 +2965,7 @@ index 3132417b..c5aa8c1b 100644
                  }
  
 diff --git a/modules/dock/DockContent.qml b/modules/dock/DockContent.qml
-index 80536938..ea44def6 100644
+index 474b8a69..b912dcfb 100644
 --- a/modules/dock/DockContent.qml
 +++ b/modules/dock/DockContent.qml
 @@ -16,6 +16,10 @@ import qs.config
@@ -3001,8 +3001,8 @@ index 80536938..ea44def6 100644
 +
      // Monitor reference and refrence to toplevels on monitor
      readonly property var compositorMonitor: AxctlService.monitorFor(screen)
--    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.activeWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.activeWorkspace.id)
-+    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.activeWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.activeWorkspace.id || (openSpecialWorkspaceId !== 0 && c.workspace.id === openSpecialWorkspaceId))
+-    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.visibleWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.visibleWorkspace.id && c.monitor === compositorMonitor.id)
++    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.visibleWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => (c.workspace.id === compositorMonitor.visibleWorkspace.id && c.monitor === compositorMonitor.id) || (openSpecialWorkspaceId !== 0 && c.workspace.id === openSpecialWorkspaceId))
  
 -    // Check if there are any windows on the current monitor and workspace
 +    // Check if there are any windows on this output's visible workspaces
@@ -3424,7 +3424,7 @@ index 557c3261..b4cc1e4c 100644
          onPaint: {
              if (Config.notchTheme !== "default")
 diff --git a/modules/notch/NotchContent.qml b/modules/notch/NotchContent.qml
-index e076618b..d4d0ec45 100644
+index 8ef85f11..07299d9f 100644
 --- a/modules/notch/NotchContent.qml
 +++ b/modules/notch/NotchContent.qml
 @@ -22,22 +22,32 @@ Item {
@@ -3445,8 +3445,8 @@ index e076618b..d4d0ec45 100644
  
      // Monitor reference and refrence to toplevels on monitor
      readonly property var compositorMonitor: AxctlService.monitorFor(screen)
--    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.activeWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.activeWorkspace.id)
-+    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.activeWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.activeWorkspace.id || (openSpecialWorkspaceId !== 0 && c.workspace.id === openSpecialWorkspaceId))
+-    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.visibleWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.visibleWorkspace.id && c.monitor === compositorMonitor.id)
++    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.visibleWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => (c.workspace.id === compositorMonitor.visibleWorkspace.id && c.monitor === compositorMonitor.id) || (openSpecialWorkspaceId !== 0 && c.workspace.id === openSpecialWorkspaceId))
  
 -    // Check if there are any windows on the current monitor and workspace
 +    // Check if there are any windows on this output's visible workspaces
@@ -3499,7 +3499,7 @@ index e076618b..d4d0ec45 100644
          // If keepHidden is true, ONLY show on interaction
          // UNLESS notch and bar are on same side (e.g. both top), then keepHidden is IGNORED for sync consistency
          if (((Config.notch && Config.notch.keepHidden !== undefined) ? Config.notch.keepHidden : false) && barPosition !== notchPosition) {
-@@ -156,7 +175,7 @@ Item {
+@@ -172,7 +191,7 @@ Item {
      Loader {
          id: persistentDashboardViewLoader
          active: false
@@ -3508,7 +3508,7 @@ index e076618b..d4d0ec45 100644
      }
  
      // Persistent power menu view
-@@ -223,6 +242,8 @@ Item {
+@@ -239,6 +258,8 @@ Item {
          // Animation container for reveal/hide
          Item {
              id: notchAnimationContainer
@@ -3517,7 +3517,7 @@ index e076618b..d4d0ec45 100644
              anchors.horizontalCenter: parent.horizontalCenter
              anchors.top: root.notchPosition === "top" ? parent.top : undefined
              anchors.bottom: root.notchPosition === "bottom" ? parent.bottom : undefined
-@@ -241,7 +262,7 @@ Item {
+@@ -257,7 +278,7 @@ Item {
              }
  
              // Slide animation (slide up when hidden)
@@ -3526,7 +3526,7 @@ index e076618b..d4d0ec45 100644
                  y: {
                      if (root.reveal) return 0;
                      if (root.notchPosition === "top")
-@@ -256,21 +277,33 @@ Item {
+@@ -272,21 +293,33 @@ Item {
                          easing.type: Easing.OutCubic
                      }
                  }
@@ -3550,21 +3550,21 @@ index e076618b..d4d0ec45 100644
 +                // onto its strip with it.
 +                readonly property real coveredFrame: (root.barPanelRef && root.barPanelRef.barFrameCollapse !== undefined) ? root.barPanelRef.barFrameCollapse : 0
 +                readonly property int frameOffset: (Config.bar && Config.bar.frameEnabled) ? Math.round(((Config.bar.frameThickness !== undefined) ? Config.bar.frameThickness : 6) * (root.activeWindowFullscreen ? coveredFrame : 1)) : 0
- 
--                anchors.topMargin: (root.notchPosition === "top" ? (Config.notchTheme === "default" ? 0 : (Config.notchTheme === "island" ? 4 : 0)) : 0) + (root.notchPosition === "top" ? frameOffset : 0)
--                anchors.bottomMargin: (root.notchPosition === "bottom" ? (Config.notchTheme === "default" ? 0 : (Config.notchTheme === "island" ? 4 : 0)) : 0) + (root.notchPosition === "bottom" ? frameOffset : 0)
++
 +                // roadie: the farewell swells the notch over the whole screen,
 +                // and closes the gap to the screen edge on the way.
 +                farewell: ShellFarewell.expand
 +                farewellWidth: root.width
 +                farewellHeight: root.height
-+
+ 
+-                anchors.topMargin: (root.notchPosition === "top" ? (Config.notchTheme === "default" ? 0 : (Config.notchTheme === "island" ? 4 : 0)) : 0) + (root.notchPosition === "top" ? frameOffset : 0)
+-                anchors.bottomMargin: (root.notchPosition === "bottom" ? (Config.notchTheme === "default" ? 0 : (Config.notchTheme === "island" ? 4 : 0)) : 0) + (root.notchPosition === "bottom" ? frameOffset : 0)
 +                anchors.topMargin: ((root.notchPosition === "top" ? (Config.notchTheme === "default" ? 0 : (Config.notchTheme === "island" ? 4 : 0)) : 0) + (root.notchPosition === "top" ? frameOffset : 0)) * (1 - ShellFarewell.expand)
 +                anchors.bottomMargin: ((root.notchPosition === "bottom" ? (Config.notchTheme === "default" ? 0 : (Config.notchTheme === "island" ? 4 : 0)) : 0) + (root.notchPosition === "bottom" ? frameOffset : 0)) * (1 - ShellFarewell.expand)
  
                  // layer.enabled: true
                  // layer.effect: Shadow {}
-@@ -401,95 +434,141 @@ Item {
+@@ -417,95 +450,141 @@ Item {
          }
      }
  
@@ -3851,6 +3851,226 @@ index 75e37c61..9d61a8b2 100644
          // Mostrar imagen de notificación si existe
          Loader {
              id: notifImageLoader
+diff --git a/modules/services/Ai.qml b/modules/services/Ai.qml
+index 6fe22f76..3a64605e 100644
+--- a/modules/services/Ai.qml
++++ b/modules/services/Ai.qml
+@@ -134,6 +134,7 @@ Singleton {
+         case "groq": return groqStrategy;
+         case "ollama": return ollamaStrategy;
+         case "minimax": return minimaxStrategy;
++        case "claude-code": return RoadieClaudeCode.strategy; // roadie
+         case "custom": return openaiStrategy; // custom endpoints use OpenAI-compatible format by default
+         default: return openaiStrategy;
+         }
+@@ -146,6 +147,105 @@ Singleton {
+             currentStrategy = openaiStrategy;
+     }
+ 
++    // roadie: Claude Code (the switch under Settings > AI) is a provider with
++    // no key and nothing to fetch: its models are in the list, first, for as
++    // long as the switch is on, beside whatever the API providers bring.
++    Connections {
++        target: RoadieClaudeCode
++        function onOfferedChanged() {
++            root.syncClaudeCode();
++        }
++        function onInfoChanged() {
++            // A label arrived, or changed: the history shows it.
++            if (root.chatHistory.length > 0) {
++                root.chatHistory = RoadieClaudeCode.labelled(root.chatHistory);
++                root.historyModelChanged();
++            }
++        }
++        function onSwitchedOn() {
++            // Flipping the switch on is asking for it: move the sidebar there.
++            root.syncClaudeCode();
++            for (let i = 0; i < root.models.length; i++) {
++                if (root.models[i].provider === "claude-code") {
++                    root.isRestored = true;
++                    root.currentModel = root.models[i];
++                    if (root.persistenceReady)
++                        StateService.set("lastAiModel", root.models[i].model);
++                    break;
++                }
++            }
++        }
++    }
++
++    function syncClaudeCode() {
++        const offered = RoadieClaudeCode.offered;
++        let others = [];
++        for (let i = 0; i < models.length; i++) {
++            if (models[i].provider !== "claude-code")
++                others.push(models[i]);
++        }
++        const listed = models.length - others.length;
++        if (listed === offered.length)
++            return;
++        if (offered.length === 0) {
++            const wasCurrent = currentModel && currentModel.provider === "claude-code";
++            models = others;
++            if (wasCurrent)
++                currentModel = others.length > 0 ? others[0] : null;
++            return;
++        }
++        let next = [];
++        for (let i = 0; i < offered.length; i++)
++            next.push(offered[i]);
++        models = next.concat(others);
++        if (!isRestored)
++            tryRestore();
++    }
++
++    // roadie: the chat the running request was sent from. A reply is written
++    // into "the last message of the current chat", so opening another chat
++    // while one was still arriving put the rest of it into THAT chat, over its
++    // last message, and saved it there. Opening or starting a chat now stops
++    // the reply, and whatever still arrives for another chat is dropped.
++    property string requestChatId: ""
++
++    // roadie: a turn of Claude Code that wanted a command run as root ends
++    // with that command held back (see roadie_claude_code.py, `gate`). It
++    // becomes a box of its own under the reply, "Run this sudo command?",
++    // which RoadieSudoBox draws and RoadieSudo acts on.
++    function offerSudo() {
++        const wanted = RoadieClaudeCode.strategy.pendingSudo;
++        RoadieClaudeCode.strategy.pendingSudo = null;
++        if (!wanted || !wanted.command || requestChatId !== currentChatId || currentChat.length === 0 || isLoading)
++            return;
++        let newChat = Array.from(currentChat);
++        newChat.push({
++            role: "system",
++            content: "",
++            sudo: {
++                command: wanted.command,
++                cwd: wanted.cwd || "",
++                state: "pending",
++                output: "",
++                exitCode: -1
++            }
++        });
++        currentChat = newChat;
++        saveCurrentChat();
++    }
++
++    // roadie: stop the reply that is being written, keeping what has arrived.
++    // The request is a process (curl, or Claude Code's turn): it is told to end.
++    property bool stopRequested: false
++    function stopResponse() {
++        if (!isLoading)
++            return;
++        if (curlProcess.running) {
++            stopRequested = true;
++            curlProcess.signal(15);
++        }
++    }
++
+     // ============================================
+     // STATE
+     // ============================================
+@@ -409,9 +509,19 @@ Singleton {
+                 apiMsg.geminiParts = msg.geminiParts;
+             if (msg.name)
+                 apiMsg.name = msg.name;
++            if (msg.sudo)
++                apiMsg.sudo = msg.sudo; // roadie: a sudo box and what became of it (ClaudeCodeStrategy)
+             messages.push(apiMsg);
+         }
+ 
++        // roadie: the reply belongs to the chat it was asked in (see
++        // requestChatId), and Claude Code's bridge files what it learns about
++        // the turn (the session's label, the context in use) under that chat.
++        requestChatId = currentChatId;
++        RoadieClaudeCode.strategy.pendingSudo = null;
++        if (currentModel.provider === "claude-code")
++            RoadieClaudeCode.strategy.chatId = currentChatId;
++
+         // Build body — always use streaming
+         let body = currentStrategy.getStreamBody(messages, currentModel, systemTools);
+ 
+@@ -517,6 +627,9 @@ Singleton {
+         // Use SplitParser for streaming — emits onRead per line
+         stdout: SplitParser {
+             onRead: data => {
++                if (root.requestChatId !== root.currentChatId)
++                    return; // roadie: not this chat's reply
++
+                 let result = root.currentStrategy.parseStreamChunk(data);
+ 
+                 if (result.error) {
+@@ -543,6 +656,32 @@ Singleton {
+         }
+ 
+         onExited: exitCode => {
++            // roadie: once the reply is filed (below), the root command it
++            // may have asked for.
++            Qt.callLater(root.offerSudo);
++            RoadieClaudeCode.strategy.status = ""; // roadie: nothing is being done any more
++
++            // roadie: the chat it was for is no longer the one on screen.
++            if (root.requestChatId !== root.currentChatId) {
++                root.stopRequested = false;
++                root.isLoading = false;
++                root.responseBuffer = "";
++                return;
++            }
++
++            // roadie: ended by stopResponse(). What arrived stays as the
++            // reply; a reply that had not started leaves no empty bubble.
++            if (root.stopRequested) {
++                root.stopRequested = false;
++                root.isLoading = false;
++                const n = root.currentChat.length;
++                if (root.responseBuffer === "" && n > 0 && root.currentChat[n - 1].role === "assistant" && !root.currentChat[n - 1].content)
++                    root.currentChat = root.currentChat.slice(0, n - 1);
++                root.responseBuffer = "";
++                root.saveCurrentChat();
++                return;
++            }
++
+             root.isLoading = false;
+ 
+             if (exitCode === 0) {
+@@ -610,6 +749,8 @@ Singleton {
+     // ============================================
+ 
+     function createNewChat() {
++        if (isLoading)
++            stopResponse(); // roadie: see requestChatId
+         currentChat = [];
+         currentChatId = Date.now().toString();
+         chatModelChanged();
+@@ -634,6 +775,8 @@ Singleton {
+     }
+ 
+     function loadChat(id) {
++        if (isLoading)
++            stopResponse(); // roadie: see requestChatId
+         let filename = chatDir + "/" + id + ".json";
+         loadChatProcess.targetId = id;
+         loadChatProcess.command = ["cat", filename];
+@@ -684,6 +827,11 @@ Singleton {
+                         });
+                     }
+                 }
++                // roadie: a Claude Code chat goes by its session's label, the
++                // one `claude --resume` shows; the labels are read again for
++                // the next time (a turn has usually just ended).
++                history = RoadieClaudeCode.labelled(history);
++                RoadieClaudeCode.refresh();
+                 root.chatHistory = history;
+                 root.historyModelChanged();
+             }
+@@ -724,6 +872,8 @@ Singleton {
+         fetchingModels = true;
+         pendingFetches = 0;
+ 
++        syncClaudeCode(); // roadie: needs no key, nothing to fetch
++
+         // Gemini
+         let geminiKey = KeyStore.getKey("gemini");
+         if (geminiKey) {
 diff --git a/modules/services/BluetoothDevice.qml b/modules/services/BluetoothDevice.qml
 index 8c8055b8..009ad6ad 100644
 --- a/modules/services/BluetoothDevice.qml
@@ -5175,10 +5395,26 @@ index f8bb8632..5671bff7 100644
              if (!screen || !root.targetScreen || screen.name === root.targetScreen.name || Brightness.syncBrightness) {
                  root.osdValue = value;
 diff --git a/modules/sidebar/AssistantSidebar.qml b/modules/sidebar/AssistantSidebar.qml
-index cfed4f6c..34965b2c 100644
+index 292f58c4..f0c70a6a 100644
 --- a/modules/sidebar/AssistantSidebar.qml
 +++ b/modules/sidebar/AssistantSidebar.qml
-@@ -144,25 +144,26 @@ Item {
+@@ -60,7 +60,14 @@ Item {
+                 Qt.callLater(() => {
+                     if (wasAlreadyOpen) {
+                         // It was already open. If it currently has focus, close it. Otherwise, regain focus.
+-                        if (root.active && root.wantsFocus && inputField.activeFocus) {
++                        // roadie: "has focus" is the sidebar holding the keyboard, whatever
++                        // inside it has the cursor. Upstream asked for the message box itself,
++                        // so after a click on any of its buttons (or with a password field
++                        // open) the shortcut only moved the cursor back and did not close. A
++                        // sidebar that is not pinned floats over the windows, and there the
++                        // shortcut always closes it: only a pinned one takes the keyboard back
++                        // first.
++                        if (root.active && (root.wantsFocus || !GlobalStates.assistantPinned)) {
+                             GlobalStates.hideAssistant();
+                         } else {
+                             root.wantsFocus = true;
+@@ -144,27 +151,45 @@ Item {
          width: GlobalStates.assistantWidth + root.sidebarMargin
          height: parent.height
  
@@ -5206,18 +5442,264 @@ index cfed4f6c..34965b2c 100644
 +        Behavior on slide {
              NumberAnimation {
 -                id: slideAnimR
--                duration: Config.animDuration
--                easing.type: Easing.OutCubic
--            }
--        }
--
--        Behavior on anchors.leftMargin {
--            NumberAnimation {
--                id: slideAnimL
 +                id: slideAnimation
                  duration: Config.animDuration
                  easing.type: Easing.OutCubic
              }
+         }
+ 
+-        Behavior on anchors.leftMargin {
+-            NumberAnimation {
+-                id: slideAnimL
+-                duration: Config.animDuration
+-                easing.type: Easing.OutCubic
++        // roadie: a press anywhere on the sidebar gives it the keyboard. The
++        // MouseArea upstream has for this lies under the sidebar's own
++        // controls, which take the press first, so once the keyboard had gone
++        // back to the windows (Escape, a click outside) a click into the
++        // message box or on a button showed a cursor there while the typing
++        // still went to the window behind. This one is on top and passes
++        // every press on.
++        MouseArea {
++            anchors.fill: parent
++            z: 1000
++            acceptedButtons: Qt.AllButtons
++            onPressed: mouse => {
++                root.wantsFocus = true;
++                mouse.accepted = false;
+             }
+         }
+ 
+@@ -437,6 +462,7 @@ Item {
+                                     spacing: 4
+ 
+                                     delegate: Button {
++                                        id: historyRow // roadie
+                                         width: historyList.width
+                                         height: 48
+                                         flat: true
+@@ -453,7 +479,10 @@ Item {
+ 
+                                                 Text {
+                                                     text: modelData.title || "New Chat"
+-                                                    color: Ai.currentChatId === modelData.id ? Styling.srItem("primary") : Colors.overSurface
++                                                    // roadie: the open chat sits on the "focus" plate (grey), where the
++                                                    // text colour of the "primary" plate is dark on dark. The accent
++                                                    // reads on it and still says which chat is open.
++                                                    color: Ai.currentChatId === modelData.id ? Styling.srItem("overprimary") : Colors.overSurface
+                                                     font.family: Config.theme.font
+                                                     font.pixelSize: 14
+                                                     font.weight: Font.Medium
+@@ -466,7 +495,8 @@ Item {
+                                                         let date = new Date(parseInt(modelData.id));
+                                                         return date.toLocaleString(Qt.locale(), "MMM dd, hh:mm a");
+                                                     }
+-                                                    color: Ai.currentChatId === modelData.id ? Styling.srItem("primary") : Colors.outline
++                                                    // roadie: readable on the grey of the open and the hovered row too
++                                                    color: (Ai.currentChatId === modelData.id || historyRow.hovered) ? Colors.overSurfaceVariant : Colors.outline
+                                                     font.family: Config.theme.font
+                                                     font.pixelSize: 11
+                                                     elide: Text.ElideRight
+@@ -671,14 +701,47 @@ Item {
+                                 displayMarginBeginning: 40
+                                 displayMarginEnd: 40
+ 
+-                                bottomMargin: mainChatArea.isWelcome ? 0 : inputContainer.height
++                                bottomMargin: mainChatArea.isWelcome ? 0 : inputContainer.height + aiStatus.height + 8 // roadie: + the status line
+ 
+                                 onCountChanged: {
+                                     Qt.callLater(() => {
+                                         positionViewAtEnd();
++                                        // roadie: and once more when the new bubble has its size
++                                        chatView.followEnd = true;
++                                        endTimer.restart();
+                                     });
+                                 }
+ 
++                                // roadie: the list follows its end. Upstream scrolls to the end once,
++                                // the instant a message is added, when the bubbles have not been laid
++                                // out yet (it ends up short of the end), and not at all while a reply
++                                // grows, so a long answer runs off the bottom. Here it is brought to
++                                // the end a moment after anything changes its length, for as long as
++                                // the user has not scrolled away from the end themselves.
++                                property bool followEnd: true
++                                onContentHeightChanged: {
++                                    if (followEnd)
++                                        endTimer.restart();
++                                }
++                                onMovingChanged: {
++                                    if (!moving)
++                                        followEnd = atYEnd;
++                                }
++                                Timer {
++                                    id: endTimer
++                                    interval: 40
++                                    onTriggered: {
++                                        if (!chatView.followEnd || chatView.count === 0)
++                                            return;
++                                        chatView.positionViewAtEnd();
++                                        // The end the list knows stops short of its bottom margin, the
++                                        // room kept for the input box: the last bubble would sit under it.
++                                        const end = chatView.originY + chatView.contentHeight + chatView.bottomMargin - chatView.height;
++                                        if (end > chatView.contentY)
++                                            chatView.contentY = end;
++                                    }
++                                }
++
+                                 delegate: Item {
+                                     id: messageDelegate
+                                     required property var modelData
+@@ -689,8 +752,13 @@ Item {
+                                     property bool isEditing: false
+                                     property bool retryMode: false
+ 
++                                    // roadie: while Claude Code has said nothing yet, the line under
++                                    // the chat tells what it is doing; the empty bubble waits unseen.
++                                    readonly property bool roadieWaiting: Ai.isLoading && RoadieClaudeCode.strategy.status !== "" && !isUser && !isSystem && index === chatView.count - 1 && !modelData.content && modelData.functionCall === undefined
++                                    visible: !roadieWaiting
++
+                                     width: ListView.view.width
+-                                    height: bubbleArea.height + 8
++                                    height: roadieWaiting ? 0 : bubbleArea.height + 8
+ 
+                                     Row {
+                                         anchors.left: parent.left
+@@ -853,7 +921,10 @@ Item {
+ 
+                                             StyledRect {
+                                                 id: bubble
+-                                                width: Math.min(Math.max(bubbleContent.implicitWidth + 32, 100), chatView.width * (isSystem ? 0.9 : 0.7))
++                                                // roadie: until what is in the bubble has been measured, it is as wide
++                                                // as it may get, not as narrow as it may get. See the note on wrapMode
++                                                // below: text laid out in the 100 px minimum is many times too tall.
++                                                width: Math.min((bubbleContent.implicitWidth > 0 || !modelData.content) ? Math.max(bubbleContent.implicitWidth + 32, 100) : Infinity, chatView.width * (isSystem ? 0.9 : 0.7))
+                                                 height: bubbleContent.implicitHeight + 24
+ 
+                                                 anchors.right: isUser ? parent.right : undefined
+@@ -922,7 +993,14 @@ Item {
+                                                                         color: isSystem ? Colors.outline : (isUser ? Styling.srItem("primary") : Styling.srItem("secondary"))
+                                                                         font.family: Config.theme.font
+                                                                         font.pixelSize: 14
+-                                                                        wrapMode: Text.Wrap
++                                                                        // roadie: no wrapping until there is a width to wrap at. While a bubble
++                                                                        // is being built its text has no width yet, and a paragraph wrapped at
++                                                                        // nothing is a letter per line: thousands of pixels tall for a moment.
++                                                                        // The chat list scrolls to its end in that moment, lands far past the
++                                                                        // real end, drops every bubble, builds them again with the same spike,
++                                                                        // and never comes out of it. The shell hung, and ate memory until it
++                                                                        // was killed, as soon as a chat was about as tall as the sidebar.
++                                                                        wrapMode: width > 0 ? Text.Wrap : Text.NoWrap
+                                                                         readOnly: true
+                                                                         selectByMouse: true
+ 
+@@ -956,6 +1034,18 @@ Item {
+                                                         visible: messageDelegate.isEditing
+                                                     }
+ 
++                                                    // roadie: a command Claude Code asked to have run as root
++                                                    Loader {
++                                                        Layout.fillWidth: true
++                                                        active: messageDelegate.modelData.sudo !== undefined
++                                                        visible: active
++                                                        sourceComponent: RoadieSudoBox {
++                                                            request: messageDelegate.modelData.sudo
++                                                            messageIndex: messageDelegate.index
++                                                            last: messageDelegate.index === chatView.count - 1
++                                                        }
++                                                    }
++
+                                                     ColumnLayout {
+                                                         visible: modelData.functionCall !== undefined
+                                                         Layout.fillWidth: true
+@@ -1141,6 +1231,27 @@ Item {
+                                                 }
+                                             }
+                                         }
++
++                                        // roadie: what Claude Code is doing right now, in place of
++                                        // tool calls written into the reply
++                                        Item {
++                                            visible: roadieDoing.text !== ""
++                                            width: 4
++                                            height: 1
++                                        }
++                                        Text {
++                                            id: roadieDoing
++                                            visible: text !== ""
++                                            anchors.verticalCenter: parent.verticalCenter
++                                            width: Math.min(implicitWidth, chatView.width - 96)
++                                            text: Ai.isLoading ? RoadieClaudeCode.strategy.status : ""
++                                            elide: Text.ElideRight
++                                            maximumLineCount: 1
++                                            textFormat: Text.PlainText
++                                            font.family: Config.theme.font
++                                            font.pixelSize: 13
++                                            color: Colors.overSurfaceVariant
++                                        }
+                                     }
+                                 }
+                             }
+@@ -1507,9 +1618,45 @@ Item {
+                                             }
+                                         }
+                                     }
++                                    // roadie: stop the reply that is being written
++                                    // (a Claude Code turn can run for minutes).
++                                    Button {
++                                        Layout.preferredWidth: 32
++                                        Layout.preferredHeight: 32
++                                        flat: true
++                                        visible: Ai.isLoading
++
++                                        contentItem: Text {
++                                            text: Icons.stop
++                                            font.family: Icons.font
++                                            font.pixelSize: 20
++                                            color: Colors.error
++                                            horizontalAlignment: Text.AlignHCenter
++                                            verticalAlignment: Text.AlignVCenter
++                                        }
++
++                                        background: Rectangle {
++                                            color: parent.hovered ? Colors.surfaceBright : "transparent"
++                                            radius: 16
++                                        }
++
++                                        onClicked: Ai.stopResponse()
++                                    }
+                                 }
+                             }
+                         }
++
++                        // roadie: the model in use, with a wheel to change it,
++                        // and for Claude Code the context and 5-hour limit used.
++                        RoadieAiStatus {
++                            id: aiStatus
++                            anchors.bottom: inputContainer.top
++                            anchors.bottomMargin: 6
++                            anchors.left: inputContainer.left
++                            anchors.leftMargin: 10
++                            anchors.right: inputContainer.right
++                            onPickerRequested: modelSelector.open()
++                        }
+                     }
+ 
+                     Text {
+diff --git a/modules/sidebar/CodeBlock.qml b/modules/sidebar/CodeBlock.qml
+index 48acc958..e130de38 100644
+--- a/modules/sidebar/CodeBlock.qml
++++ b/modules/sidebar/CodeBlock.qml
+@@ -117,7 +117,9 @@ ColumnLayout {
+             color: Colors.overSurface
+             readOnly: true
+             selectByMouse: true
+-            wrapMode: TextEdit.Wrap
++            // roadie: as for the text of a bubble (AssistantSidebar): code wrapped
++            // before the block has a width is a letter per line.
++            wrapMode: width > 0 ? TextEdit.Wrap : TextEdit.NoWrap
+             textFormat: TextEdit.PlainText
+ 
+             SyntaxHighlighter {
 diff --git a/modules/theme/Icons.qml b/modules/theme/Icons.qml
 index 3333506c..362151ca 100644
 --- a/modules/theme/Icons.qml
@@ -5266,6 +5748,30 @@ index 3333506c..362151ca 100644
 +        return batteryEmpty;
 +    }
  }
+diff --git a/modules/widgets/config/AiPanel.qml b/modules/widgets/config/AiPanel.qml
+index c6f4df7c..bae115fd 100644
+--- a/modules/widgets/config/AiPanel.qml
++++ b/modules/widgets/config/AiPanel.qml
+@@ -5,6 +5,7 @@ import Quickshell
+ import qs.modules.theme
+ import qs.modules.components
+ import qs.modules.services
++import qs.modules.widgets.dashboard.controls // roadie: RoadieClaudeCodeCard
+ import qs.config
+ 
+ Item {
+@@ -37,6 +38,11 @@ Item {
+                 Layout.bottomMargin: 8
+             }
+ 
++            // roadie: Claude Code, the provider that needs no key
++            RoadieClaudeCodeCard {
++                Layout.fillWidth: true
++            }
++
+             // Providers
+             Repeater {
+                 model: ["gemini", "openai", "anthropic", "mistral", "groq", "ollama", "minimax"]
 diff --git a/modules/widgets/config/SettingsWindow.qml b/modules/widgets/config/SettingsWindow.qml
 index 67993a5f..378ffe4f 100644
 --- a/modules/widgets/config/SettingsWindow.qml
@@ -5995,7 +6501,7 @@ index ac44b52a..d7db19b1 100644
                              RowLayout {
                                  Layout.fillWidth: true
 diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
-index 099acb04..b44b5482 100644
+index 63137c2a..da3b54b2 100644
 --- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 +++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
 @@ -24,6 +24,13 @@ PanelWindow {
@@ -6260,7 +6766,7 @@ index 099acb04..b44b5482 100644
                      sourceSize.width: wallpaper.width
                      sourceSize.height: wallpaper.height
                      layer.enabled: parent.tint
-@@ -1228,7 +1341,11 @@ PanelWindow {
+@@ -1229,7 +1342,11 @@ PanelWindow {
                  tint: wallpaper.tintEnabled
                  onRequestVideoSync: wallpaper.requestVideoSync()
  
@@ -6374,10 +6880,10 @@ index a8a61a86..87322803 100644
              HoverHandler {
                  onHoveredChanged: root.hovered = hovered
 diff --git a/modules/widgets/launcher/LauncherView.qml b/modules/widgets/launcher/LauncherView.qml
-index 0f9a071d..c80a3ae8 100644
+index f30909eb..f71e54c2 100644
 --- a/modules/widgets/launcher/LauncherView.qml
 +++ b/modules/widgets/launcher/LauncherView.qml
-@@ -751,6 +751,17 @@ Rectangle {
+@@ -755,6 +755,17 @@ Rectangle {
                              Tinted {
                                  anchors.fill: parent
                                  sourceItem: appIconImage

@@ -3,17 +3,17 @@
   "manifestVersion": 1,
   "id": "drpezzer.roadie",
   "name": "Ambxst Roadie",
-  "version": "2.1.0",
-  "description": "Everything in one package. Shell start, reload and boot as one staged movement, with a farewell on reboot and power off. Monitors coming and going without a reload, a bar that follows the focused screen, staged chrome around fullscreen windows (special workspaces included), notifications on one screen. Bar and notch: frame-attached popouts, a Bluetooth widget with a battery readout, night weather glyphs, an audio routing tab in the dashboard, an Ethernet switch in the notch. Icons: True Matugen Icons and True Monochrome under Theme. Mods: update checks that say when a mod needs a newer Ambxst before anything is installed, and can update Ambxst and the mods together. Also: a floating Settings window, idle dimming for laptops only or never, a permissions list that fits. Every feature has a switch or a Stock mode under Settings > Roadie. Replaces Clean Load, Multi-monitor fixes, Mod Updater, Settings Float, Bar at a Glance, Audio Routing and Tinted Icons; it cannot be enabled together with any of them.",
+  "version": "2.2.0",
+  "description": "Everything in one package. Shell start, reload and boot as one staged movement, with a farewell on reboot and power off. Monitors coming and going without a reload, a bar that follows the focused screen, staged chrome around fullscreen windows (special workspaces included), notifications on one screen. Bar and notch: frame-attached popouts, a Bluetooth widget with a battery readout, night weather glyphs, an audio routing tab in the dashboard, an Ethernet switch in the notch. AI sidebar: chat with the Claude Code installed on your machine, under its own login and with no API key (a switch under Settings > AI), with the model, context and 5-hour limit above the input and a box to run the sudo commands it asks for; for any provider, a stop button and a fix for the shell freezing once a chat is as tall as the sidebar. Icons: True Matugen Icons and True Monochrome under Theme. Mods: update checks that say when a mod needs a newer Ambxst before anything is installed, and can update Ambxst and the mods together. Also: a floating Settings window, idle dimming for laptops only or never, a permissions list that fits. Every feature has a switch or a Stock mode under Settings > Roadie. Replaces Clean Load, Multi-monitor fixes, Mod Updater, Settings Float, Bar at a Glance, Audio Routing and Tinted Icons; it cannot be enabled together with any of them.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
   "homepage": "https://github.com/drpezzer/ambxst-mods",
   "compatibility": {
     "api": 1,
-    "ambxst": ">=1.3.9 <2.0.0",
+    "ambxst": ">=1.3.10 <2.0.0",
     "testedBaseCommits": [
-      "3705f278f24a74718fc23772b47044e96701d53a"
+      "bc60230283a3822eec2e23c949f44990480d0f43"
     ]
   },
   "dependencies": [],
@@ -44,6 +44,8 @@
     "Lists wired network devices and connects or disconnects them with nmcli; at shell start, ends `nmcli monitor` processes an earlier Ambxst daemon left behind",
     "Reads and moves audio streams with pactl and changes volumes; sets EasyEffects' output device and restarts it when asked",
     "Launches EasyEffects, pavucontrol and blueman-manager from their buttons",
+    "With the Claude Code switch on, runs the `claude` CLI for messages sent to it from the AI sidebar (at the access level set under Settings > AI), for a short title per chat, and to read its model names; reads its session files for the chats' labels",
+    "Runs a command Claude Code asked to have run as root, with sudo, when you click Yes on it in the AI sidebar and give your password there; the password goes to sudo and is not kept",
     "Adds the config keys bar.systrayExclude, theme.trueMatugenIcons and theme.trueMonochromeTint",
     "Keeps its options in ~/.config/ambxst/roadie.json and small state files in ~/.local/state/ambxst and ~/.cache/ambxst"
   ],
@@ -130,6 +132,11 @@
     },
     {
       "type": "overlay",
+      "source": "payload/modules/services/RoadieClaudeCode.qml",
+      "target": "modules/services/RoadieClaudeCode.qml"
+    },
+    {
+      "type": "overlay",
       "source": "payload/modules/services/RoadieDdc.qml",
       "target": "modules/services/RoadieDdc.qml"
     },
@@ -145,6 +152,11 @@
     },
     {
       "type": "overlay",
+      "source": "payload/modules/services/RoadieSudo.qml",
+      "target": "modules/services/RoadieSudo.qml"
+    },
+    {
+      "type": "overlay",
       "source": "payload/modules/services/ShellFarewell.qml",
       "target": "modules/services/ShellFarewell.qml"
     },
@@ -155,13 +167,33 @@
     },
     {
       "type": "overlay",
+      "source": "payload/modules/services/ai/strategies/ClaudeCodeStrategy.qml",
+      "target": "modules/services/ai/strategies/ClaudeCodeStrategy.qml"
+    },
+    {
+      "type": "overlay",
       "source": "payload/modules/services/mod_update_check.sh",
       "target": "modules/services/mod_update_check.sh"
     },
     {
       "type": "overlay",
+      "source": "payload/modules/services/roadie_askpass.sh",
+      "target": "modules/services/roadie_askpass.sh"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/roadie_claude_code.py",
+      "target": "modules/services/roadie_claude_code.py"
+    },
+    {
+      "type": "overlay",
       "source": "payload/modules/services/roadie_nmcli_reap.sh",
       "target": "modules/services/roadie_nmcli_reap.sh"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/roadie_sudo_run.sh",
+      "target": "modules/services/roadie_sudo_run.sh"
     },
     {
       "type": "overlay",
@@ -180,6 +212,16 @@
     },
     {
       "type": "overlay",
+      "source": "payload/modules/sidebar/RoadieAiStatus.qml",
+      "target": "modules/sidebar/RoadieAiStatus.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/sidebar/RoadieSudoBox.qml",
+      "target": "modules/sidebar/RoadieSudoBox.qml"
+    },
+    {
+      "type": "overlay",
       "source": "payload/modules/widgets/dashboard/audio/AudioRouteRow.qml",
       "target": "modules/widgets/dashboard/audio/AudioRouteRow.qml"
     },
@@ -192,6 +234,11 @@
       "type": "overlay",
       "source": "payload/modules/widgets/dashboard/audio/AudioTab.qml",
       "target": "modules/widgets/dashboard/audio/AudioTab.qml"
+    },
+    {
+      "type": "overlay",
+      "source": "payload/modules/widgets/dashboard/controls/RoadieClaudeCodeCard.qml",
+      "target": "modules/widgets/dashboard/controls/RoadieClaudeCodeCard.qml"
     },
     {
       "type": "overlay",
