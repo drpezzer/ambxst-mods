@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.roadie",
   "name": "Ambxst Roadie",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Everything in one package. Shell start, reload and boot as one staged movement, with a farewell on reboot and power off. Monitors coming and going without a reload, a bar that follows the focused screen, staged chrome around fullscreen windows (special workspaces included), notifications on one screen. Bar and notch: frame-attached popouts, a Bluetooth widget with a battery readout, night weather glyphs, an audio routing tab in the dashboard, an Ethernet switch in the notch. AI sidebar: chat with the Claude Code installed on your machine, under its own login and with no API key (a switch under Settings > AI), with the model, context and 5-hour limit above the input and a box to run the sudo commands it asks for; for any provider, a stop button and a fix for the shell freezing once a chat is as tall as the sidebar. Icons: True Matugen Icons and True Monochrome under Theme. Mods: update checks that say when a mod needs a newer Ambxst before anything is installed, and can update Ambxst and the mods together. Also: a floating Settings window, idle dimming for laptops only or never, a permissions list that fits. Every feature has a switch or a Stock mode under Settings > Roadie. Replaces Clean Load, Multi-monitor fixes, Mod Updater, Settings Float, Bar at a Glance, Audio Routing and Tinted Icons; it cannot be enabled together with any of them.",
   "license": "MIT",
   "author": "drpezzer",

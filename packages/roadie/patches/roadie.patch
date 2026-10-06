@@ -1,7 +1,16 @@
 diff --git a/config/Config.qml b/config/Config.qml
-index b7b39906..8f6b9aff 100644
+index b7b39906..c21cbd18 100644
 --- a/config/Config.qml
 +++ b/config/Config.qml
+@@ -114,7 +114,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.themeReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.themeReady) {
+                 handleMissingConfig("theme", themeLoader, ThemeDefaults.data, () => {
+                     root.themeReady = true;
+                 });
 @@ -141,6 +141,14 @@ Singleton {
              property string monoFont: "Iosevka Nerd Font Mono"
              property int monoFontSize: 14
@@ -17,6 +26,15 @@ index b7b39906..8f6b9aff 100644
              property bool enableCorners: true
              property int animDuration: 300
              property real shadowOpacity: 0.5
+@@ -509,7 +517,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.barReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.barReady) {
+                 handleMissingConfig("bar", barLoader, BarDefaults.data, () => {
+                     root.barReady = true;
+                 });
 @@ -549,6 +557,11 @@ Singleton {
              property bool containBar: false
              property bool keepBarShadow: false
@@ -28,6 +46,179 @@ index b7b39906..8f6b9aff 100644
 +            property list<string> systrayExclude: ["blueman"]
          }
      }
+ 
+@@ -568,7 +581,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.workspacesReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.workspacesReady) {
+                 handleMissingConfig("workspaces", workspacesLoader, WorkspacesDefaults.data, () => {
+                     root.workspacesReady = true;
+                 });
+@@ -611,7 +624,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.overviewReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.overviewReady) {
+                 handleMissingConfig("overview", overviewLoader, OverviewDefaults.data, () => {
+                     root.overviewReady = true;
+                 });
+@@ -653,7 +666,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.notchReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.notchReady) {
+                 handleMissingConfig("notch", notchLoader, NotchDefaults.data, () => {
+                     root.notchReady = true;
+                 });
+@@ -698,7 +711,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.compositorReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.compositorReady) {
+                 handleMissingConfig("compositor", compositorLoader, CompositorDefaults.data, () => {
+                     root.compositorReady = true;
+                 });
+@@ -778,7 +791,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.performanceReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.performanceReady) {
+                 handleMissingConfig("performance", performanceLoader, PerformanceDefaults.data, () => {
+                     root.performanceReady = true;
+                 });
+@@ -823,7 +836,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.weatherReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.weatherReady) {
+                 handleMissingConfig("weather", weatherLoader, WeatherDefaults.data, () => {
+                     root.weatherReady = true;
+                 });
+@@ -863,7 +876,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.desktopReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.desktopReady) {
+                 handleMissingConfig("desktop", desktopLoader, DesktopDefaults.data, () => {
+                     root.desktopReady = true;
+                 });
+@@ -906,7 +919,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.lockscreenReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.lockscreenReady) {
+                 handleMissingConfig("lockscreen", lockscreenLoader, LockscreenDefaults.data, () => {
+                     root.lockscreenReady = true;
+                 });
+@@ -945,7 +958,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.prefixReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.prefixReady) {
+                 handleMissingConfig("prefix", prefixLoader, PrefixDefaults.data, () => {
+                     root.prefixReady = true;
+                 });
+@@ -988,7 +1001,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.systemReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.systemReady) {
+                 handleMissingConfig("system", systemLoader, SystemDefaults.data, () => {
+                     root.systemReady = true;
+                 });
+@@ -1077,7 +1090,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.dockReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.dockReady) {
+                 handleMissingConfig("dock", dockLoader, DockDefaults.data, () => {
+                     root.dockReady = true;
+                 });
+@@ -1167,7 +1180,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.aiReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.aiReady) {
+                 handleMissingConfig("ai", aiLoader, AiDefaults.data, () => {
+                     root.aiReady = true;
+                 });
+@@ -1212,7 +1225,7 @@ Singleton {
+             }
+         }
+         onLoadFailed: {
+-            if (error.toString().includes("FileNotFound") && !root.generalReady) {
++            if (error === FileViewError.FileNotFound /* roadie: the error is a number, its text never held "FileNotFound" */ && !root.generalReady) {
+                 handleMissingConfig("general", generalLoader, GeneralDefaults.data, () => {
+                     root.generalReady = true;
+                 });
+@@ -3411,29 +3424,41 @@ Singleton {
+     }
+ 
+     // Handle missing config files - copy from preset or create with defaults
++    // roadie: once per module. The reload below fails again for a file that
++    // is still missing, which called this again before the defaults were
++    // written.
++    property var missingHandled: ({})
++
++    // roadie: stock built the copy Process from a string that imported only
++    // QtQuick (Process is in Quickshell.Io) and gave it a signal it does not
++    // have, so creating it failed and the function ended there: a missing
++    // config file was never written, and nothing of that module was ever
++    // saved (the AI sidebar's pin, width and position among them).
++    property Component copyConfigProcess: Component {
++        Process {}
++    }
++
+     function handleMissingConfig(name, loader, defaults, onComplete) {
++        if (root.missingHandled[name])
++            return;
++        root.missingHandled[name] = true;
+         var presetPath = root.presetDir + "/" + name + ".json";
+         var targetPath = root.configDir + "/" + name + ".json";
+         console.log(name + ".json not found, checking preset: " + presetPath);
+ 
+-        // Create a Process component dynamically to copy the file
+-        var copyProcess = Qt.createQmlObject(
+-            "import QtQuick 2.0; Process { running: true; command: ['cp', '" + presetPath + "', '" + targetPath + "']; onFinished: { console.log('Copy finished for " + name + "'); } }",
+-            root,
+-            "copyProcess"
+-        );
+-
+-        // Reload the loader to pick up the copied file
+-        loader.reload();
+-
+-        // If still not ready after reload, use defaults as fallback
+-        Qt.callLater(() => {
+-            if (!root[name + "Ready"]) {
++        var copyProcess = root.copyConfigProcess.createObject(root, { command: ["cp", presetPath, targetPath] });
++        copyProcess.exited.connect(function (code) {
++            copyProcess.destroy();
++            if (code === 0) {
++                console.log("Copied preset for " + name + ".json");
++                loader.reload();    // onLoaded validates it and completes
++            } else {
+                 console.log("Using defaults for " + name + ".json");
+                 loader.setText(JSON.stringify(defaults, null, 2));
++                onComplete();
+             }
+-            onComplete();
+         });
++        copyProcess.running = true;
+     }
+ 
  
 diff --git a/config/defaults/bar.js b/config/defaults/bar.js
 index 7962cdde..056b5243 100644
@@ -3238,7 +3429,7 @@ index a4c725b8..8bd56af3 100644
      // --- Visuals ---
  
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
-index eb6e9ccd..9d880a6c 100644
+index eb6e9ccd..20f4cea4 100644
 --- a/modules/globals/GlobalStates.qml
 +++ b/modules/globals/GlobalStates.qml
 @@ -10,6 +10,33 @@ Singleton {
@@ -3351,6 +3542,25 @@ index eb6e9ccd..9d880a6c 100644
      // ═══════════════════════════════════════════════════════════════
      // ASSISTANT SIDEBAR STATE
      // ═══════════════════════════════════════════════════════════════
+@@ -616,6 +698,18 @@ Singleton {
+ 
+     signal assistantFocusRequested(bool wasAlreadyOpen)
+ 
++    // roadie: true while the sidebar holds the keyboard (its layer has it
++    // exclusively, so nothing else can be typed into). Every screen's panel
++    // then catches the next click anywhere and asks for it to be let go,
++    // where stock only did that on the sidebar's own screen: a click into a
++    // window on another monitor left the keyboard with the sidebar for good.
++    property bool assistantHasKeyboard: false
++    signal assistantKeyboardReleased()
++    function releaseAssistantKeyboard() {
++        if (assistantHasKeyboard)
++            assistantKeyboardReleased();
++    }
++
+     function toggleAssistant() {
+         if (assistantVisible) {
+             assistantFocusRequested(true);
 diff --git a/modules/notch/Notch.qml b/modules/notch/Notch.qml
 index 557c3261..b4cc1e4c 100644
 --- a/modules/notch/Notch.qml
@@ -5018,7 +5228,7 @@ index 26da91a8..75c3b74d 100644
              if (barEnabled && barPosition === "right" && barPinned) {
                  zone += barSize + barOuterMargin;
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 786c98e6..72209185 100644
+index 786c98e6..33a3be62 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,11 +2,13 @@ import QtQuick
@@ -5057,7 +5267,7 @@ index 786c98e6..72209185 100644
 +    // directly - and shell-wide rather than per-screen, because a FocusGrab is
 +    // cleared by a click on any monitor and clicking away from the flyout has to
 +    // dismiss it the same way.
-+    readonly property bool needsFullScreenInput: notchContent.screenNotchOpen || FocusGrabManager.hasActiveGrab || (assistantSidebar.active && assistantSidebar.wantsFocus) || GlobalStates.barFlyoutOpen
++    readonly property bool needsFullScreenInput: notchContent.screenNotchOpen || FocusGrabManager.hasActiveGrab || (assistantSidebar.active && assistantSidebar.wantsFocus) || GlobalStates.barFlyoutOpen || GlobalStates.assistantHasKeyboard // roadie: on every screen while the sidebar has the keyboard
  
      readonly property bool barEnabled: {
          if (!Config.barReady) return false;
@@ -5375,7 +5585,7 @@ index 786c98e6..72209185 100644
              Region {
                  item: barContent.visible ? barContent.barHitbox : null
              },
-@@ -173,6 +413,10 @@ PanelWindow {
+@@ -173,9 +413,14 @@ PanelWindow {
  
          onClicked: {
              FocusGrabManager.clearTopGrab();
@@ -5386,7 +5596,11 @@ index 786c98e6..72209185 100644
              if (assistantSidebar.active && assistantSidebar.wantsFocus) {
                  assistantSidebar.wantsFocus = false;
              }
-@@ -202,21 +446,82 @@ PanelWindow {
++            GlobalStates.releaseAssistantKeyboard(); // roadie: the sidebar may be on another screen
+         }
+     }
+ 
+@@ -202,21 +447,82 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -5469,7 +5683,7 @@ index 786c98e6..72209185 100644
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
-@@ -276,4 +581,20 @@ PanelWindow {
+@@ -276,4 +582,20 @@ PanelWindow {
              }
          }
      }
@@ -5522,7 +5736,7 @@ index f8bb8632..5671bff7 100644
              if (!screen || !root.targetScreen || screen.name === root.targetScreen.name || Brightness.syncBrightness) {
                  root.osdValue = value;
 diff --git a/modules/sidebar/AssistantSidebar.qml b/modules/sidebar/AssistantSidebar.qml
-index 292f58c4..d991d15e 100644
+index 292f58c4..49e72f00 100644
 --- a/modules/sidebar/AssistantSidebar.qml
 +++ b/modules/sidebar/AssistantSidebar.qml
 @@ -60,7 +60,14 @@ Item {
@@ -5541,7 +5755,29 @@ index 292f58c4..d991d15e 100644
                              GlobalStates.hideAssistant();
                          } else {
                              root.wantsFocus = true;
-@@ -144,27 +151,45 @@ Item {
+@@ -76,6 +83,21 @@ Item {
+         }
+     }
+ 
++    // roadie: see GlobalStates.assistantHasKeyboard.
++    readonly property bool holdsKeyboard: root.active && root.wantsFocus
++    onHoldsKeyboardChanged: {
++        if (holdsKeyboard)
++            GlobalStates.assistantHasKeyboard = true;
++        else if (GlobalStates.assistantScreenName === targetScreen.name)
++            GlobalStates.assistantHasKeyboard = false;
++    }
++    Connections {
++        target: GlobalStates
++        function onAssistantKeyboardReleased() {
++            root.wantsFocus = false;
++        }
++    }
++
+     onActiveChanged: {
+         if (active) {
+             root.wantsFocus = true;
+@@ -144,27 +166,45 @@ Item {
          width: GlobalStates.assistantWidth + root.sidebarMargin
          height: parent.height
  
@@ -5597,7 +5833,7 @@ index 292f58c4..d991d15e 100644
              }
          }
  
-@@ -437,6 +462,7 @@ Item {
+@@ -437,6 +477,7 @@ Item {
                                      spacing: 4
  
                                      delegate: Button {
@@ -5605,7 +5841,7 @@ index 292f58c4..d991d15e 100644
                                          width: historyList.width
                                          height: 48
                                          flat: true
-@@ -453,7 +479,10 @@ Item {
+@@ -453,7 +494,10 @@ Item {
  
                                                  Text {
                                                      text: modelData.title || "New Chat"
@@ -5617,7 +5853,7 @@ index 292f58c4..d991d15e 100644
                                                      font.family: Config.theme.font
                                                      font.pixelSize: 14
                                                      font.weight: Font.Medium
-@@ -466,7 +495,8 @@ Item {
+@@ -466,7 +510,8 @@ Item {
                                                          let date = new Date(parseInt(modelData.id));
                                                          return date.toLocaleString(Qt.locale(), "MMM dd, hh:mm a");
                                                      }
@@ -5627,7 +5863,7 @@ index 292f58c4..d991d15e 100644
                                                      font.family: Config.theme.font
                                                      font.pixelSize: 11
                                                      elide: Text.ElideRight
-@@ -671,14 +701,47 @@ Item {
+@@ -671,14 +716,55 @@ Item {
                                  displayMarginBeginning: 40
                                  displayMarginEnd: 40
  
@@ -5636,13 +5872,27 @@ index 292f58c4..d991d15e 100644
  
                                  onCountChanged: {
                                      Qt.callLater(() => {
-                                         positionViewAtEnd();
-+                                        // roadie: and once more when the new bubble has its size
+-                                        positionViewAtEnd();
++                                        // roadie: straight to the real end (with the room kept for the
++                                        // input box), and once more when the new bubble has its size.
++                                        // Upstream's positionViewAtEnd() here stopped short of that room,
++                                        // and the second scroll a moment later showed as a jump.
 +                                        chatView.followEnd = true;
++                                        chatView.toEnd();
 +                                        endTimer.restart();
                                      });
                                  }
  
++                                // roadie: the end of the list, bottom margin included
++                                function toEnd() {
++                                    if (chatView.count === 0)
++                                        return;
++                                    chatView.positionViewAtEnd();
++                                    const end = chatView.originY + chatView.contentHeight + chatView.bottomMargin - chatView.height;
++                                    if (end > chatView.contentY)
++                                        chatView.contentY = end;
++                                }
++
 +                                // roadie: the list follows its end. Upstream scrolls to the end once,
 +                                // the instant a message is added, when the bubbles have not been laid
 +                                // out yet (it ends up short of the end), and not at all while a reply
@@ -5662,21 +5912,16 @@ index 292f58c4..d991d15e 100644
 +                                    id: endTimer
 +                                    interval: 40
 +                                    onTriggered: {
-+                                        if (!chatView.followEnd || chatView.count === 0)
++                                        if (!chatView.followEnd)
 +                                            return;
-+                                        chatView.positionViewAtEnd();
-+                                        // The end the list knows stops short of its bottom margin, the
-+                                        // room kept for the input box: the last bubble would sit under it.
-+                                        const end = chatView.originY + chatView.contentHeight + chatView.bottomMargin - chatView.height;
-+                                        if (end > chatView.contentY)
-+                                            chatView.contentY = end;
++                                        chatView.toEnd();
 +                                    }
 +                                }
 +
                                  delegate: Item {
                                      id: messageDelegate
                                      required property var modelData
-@@ -689,8 +752,13 @@ Item {
+@@ -689,8 +775,13 @@ Item {
                                      property bool isEditing: false
                                      property bool retryMode: false
  
@@ -5691,7 +5936,7 @@ index 292f58c4..d991d15e 100644
  
                                      Row {
                                          anchors.left: parent.left
-@@ -853,7 +921,10 @@ Item {
+@@ -853,7 +944,10 @@ Item {
  
                                              StyledRect {
                                                  id: bubble
@@ -5703,7 +5948,34 @@ index 292f58c4..d991d15e 100644
                                                  height: bubbleContent.implicitHeight + 24
  
                                                  anchors.right: isUser ? parent.right : undefined
-@@ -922,7 +993,14 @@ Item {
+@@ -897,6 +991,26 @@ Item {
+                                                                     });
+                                                                     lastIndex = regex.lastIndex;
+                                                                 }
++                                                                // roadie: a code block still being written (its closing fence has
++                                                                // not arrived) is a code block already, not a run of raw text that
++                                                                // turns into one when the fence lands.
++                                                                let open = txt.substring(lastIndex).match(/```(\w*)[ \t]*\n?([\s\S]*)$/);
++                                                                if (open) {
++                                                                    const at = lastIndex + open.index;
++                                                                    if (at > lastIndex) {
++                                                                        parts.push({
++                                                                            type: "text",
++                                                                            content: txt.substring(lastIndex, at),
++                                                                            language: ""
++                                                                        });
++                                                                    }
++                                                                    parts.push({
++                                                                        type: "code",
++                                                                        content: open[2].replace(/\s+$/, ""),
++                                                                        language: open[1] || "text"
++                                                                    });
++                                                                    lastIndex = txt.length;
++                                                                }
+                                                                 if (lastIndex < txt.length) {
+                                                                     parts.push({
+                                                                         type: "text",
+@@ -922,7 +1036,14 @@ Item {
                                                                          color: isSystem ? Colors.outline : (isUser ? Styling.srItem("primary") : Styling.srItem("secondary"))
                                                                          font.family: Config.theme.font
                                                                          font.pixelSize: 14
@@ -5719,7 +5991,7 @@ index 292f58c4..d991d15e 100644
                                                                          readOnly: true
                                                                          selectByMouse: true
  
-@@ -956,6 +1034,18 @@ Item {
+@@ -956,6 +1077,18 @@ Item {
                                                          visible: messageDelegate.isEditing
                                                      }
  
@@ -5738,7 +6010,7 @@ index 292f58c4..d991d15e 100644
                                                      ColumnLayout {
                                                          visible: modelData.functionCall !== undefined
                                                          Layout.fillWidth: true
-@@ -1100,11 +1190,13 @@ Item {
+@@ -1100,11 +1233,13 @@ Item {
  
                                  footer: Item {
                                      width: chatView.width
@@ -5754,7 +6026,7 @@ index 292f58c4..d991d15e 100644
                                          spacing: 4
  
                                          Repeater {
-@@ -1141,6 +1233,65 @@ Item {
+@@ -1141,6 +1276,65 @@ Item {
                                                  }
                                              }
                                          }
@@ -5820,7 +6092,7 @@ index 292f58c4..d991d15e 100644
                                      }
                                  }
                              }
-@@ -1507,9 +1658,45 @@ Item {
+@@ -1507,9 +1701,45 @@ Item {
                                              }
                                          }
                                      }

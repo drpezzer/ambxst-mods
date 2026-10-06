@@ -591,6 +591,10 @@ switching it off takes its models out of the list again.
   runs, a line beside the three dots says what it is on right now (*Thinking*,
   *Reading notes.md*, *Running git status*), each one replacing the last, the
   way the terminal shows it. The bubble only holds what Claude says to you.
+- **The keyboard goes where you click.** While the sidebar has the keyboard
+  a click anywhere, on any monitor, hands it back to the window under the
+  pointer (stock only did that on the sidebar's own screen). The pin, width
+  and position of the sidebar are kept across reloads.
 - **Keep typing while it works.** A message sent during a reply is shown
   under the chat as *Queued*. Claude Code reads it after the tool call it is
   on, the way it reads one typed into the terminal meanwhile; the message then
@@ -935,6 +939,15 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 2.2.3: **the sidebar's pin, width and position are remembered** (stock
+  never wrote `ai.json`: its missing-file check compared a number to a word,
+  and the copy it then tried to make could not be built; `general.json` and
+  `prefix.json` were missing the same way). **A click on another monitor lets
+  go of the keyboard**: the sidebar holds it exclusively, and only its own
+  screen caught the click that releases it, so a window on the other screen
+  could not be typed into. A code block still being written is a code block
+  from its first line (it was raw text that turned into one when the closing
+  fence arrived). Sending a message no longer scrolls the chat twice.
 - 2.2.2: a video wallpaper is no longer left black on a screen that has a
   fullscreen window parked out of sight. Ambxst 1.3.10 pauses video wallpapers
   under fullscreen windows, and counts every fullscreen window of the monitor
