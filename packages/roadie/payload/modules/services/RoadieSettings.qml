@@ -57,12 +57,6 @@ Singleton {
         framePopouts: true,        // stock: false (floating pills)
         audioTab: true,            // stock: false
         ethernetButton: true,      // stock: false (Wi-Fi switch only)
-        // Claude Code in the AI sidebar. Its switch and options are under
-        // Settings > AI with the other providers, not on Roadie's page, so
-        // "Stock everything" and the reset there leave them alone.
-        claudeCode: false,
-        claudeCodeAccess: "read",  // chat | read | edit | auto
-        claudeCodeDir: "",         // working folder, "" = the home folder
         // Settings > Roadie: the group shown last (0 Features, 1 Behaviours,
         // 2 Customization). Not a setting of the shell; kept across a reset.
         page: 0,
@@ -146,9 +140,6 @@ Singleton {
     readonly property bool framePopouts: !!root.get("framePopouts")
     readonly property bool audioTab: !!root.get("audioTab")
     readonly property bool ethernetButton: !!root.get("ethernetButton")
-    readonly property bool claudeCode: !!root.get("claudeCode")
-    readonly property string claudeCodeAccess: ["chat", "read", "edit", "auto"].indexOf(root.get("claudeCodeAccess")) !== -1 ? root.get("claudeCodeAccess") : "read"
-    readonly property string claudeCodeDir: String(root.get("claudeCodeDir") || "").trim()
     readonly property int page: {
         const n = Number(root.get("page"));
         return (isNaN(n) || n < 0 || n > 2) ? 0 : Math.round(n);
@@ -209,11 +200,6 @@ Singleton {
             kept.settingsFloatImported = true;
         if (root.values.page !== undefined)
             kept.page = root.values.page; // stay on the group being looked at
-        // Set under Settings > AI, not on this page.
-        for (const k of ["claudeCode", "claudeCodeAccess", "claudeCodeDir"]) {
-            if (root.values[k] !== undefined)
-                kept[k] = root.values[k];
-        }
         root.values = kept;
         root.write();
     }

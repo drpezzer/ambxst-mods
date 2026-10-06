@@ -13,7 +13,6 @@ to update, one to keep in step with Ambxst.
 | **The shell** | [start, reload](#shell-start-and-reload) and [boot](#booting) as one staged movement, a [farewell](#shutting-down-and-rebooting) on reboot and power off |
 | **Screens** | [hotplug without a reload, a bar that follows focus, staged chrome around fullscreen windows, notifications on one screen](#monitors-focus-and-fullscreen), [idle dimming](#screens-that-stay-at-their-brightness) for laptops only or never |
 | **Bar and notch** | [frame-attached popouts, a Bluetooth widget, night weather glyphs](#bar-at-a-glance), an [audio routing tab](#audio-routing) |
-| **AI sidebar** | [chat with Claude Code](#claude-code-in-the-ai-sidebar), under its own login, no API key |
 | **Icons** | [True Matugen Icons and True Monochrome](#tinted-icons) |
 | **Settings** | a [floating Settings window](#the-settings-window-floats), a [permissions list that fits](#a-permissions-list-that-fits) |
 | **Mods** | [update checks](#mod-updates) that say when a mod needs a newer Ambxst *before* anything is installed |
@@ -507,112 +506,6 @@ The tab takes whatever index it lands on when the dashboard completes, so
 another mod adding a tab the same way gets the next one instead of the same
 one.
 
-## Claude Code in the AI sidebar
-
-Ambxst's AI sidebar talks to providers that want an API key. If you use
-[Claude Code](https://claude.com/claude-code), Settings > AI gets a **Claude
-Code** card above them with one switch, *Use Claude Code in the sidebar*. With
-it on, the sidebar chats with the Claude Code installed on your machine, under
-the login it already has: no API key, and it counts against your Claude plan
-like any other Claude Code session.
-
-It is off until you switch it on. The API providers are not touched: their
-models stay in the sidebar's model list next to the Claude Code ones (Claude
-Code with the model it is set to, or on Fable, Opus, Sonnet or Haiku), so you
-can use either, chat by chat. Switching it on moves the sidebar to Claude Code;
-switching it off takes its models out of the list again.
-
-- **A chat is a Claude Code session.** Follow-up messages continue the same
-  session, so it remembers the conversation and what it has read. Images you
-  attach are passed along. A chat you edit, regenerate, or started with another
-  provider is handed over as a transcript to a new session.
-- **What it may do** is a choice on the card, because nothing can ask you for
-  permission from the sidebar. What a level does not allow is refused, and
-  Claude says so.
-
-  | | |
-  |---|---|
-  | **Chat only** | conversation, nothing else |
-  | **Read only** (default) | reads files, runs commands that only look, searches the web; changes nothing |
-  | **Edit files** | also creates and edits files in the working folder |
-  | **Auto** | Claude Code's auto mode: it acts by itself and its safety check refuses what looks risky (on a model without auto mode, such as Haiku, this is Read only) |
-
-  Your own Claude Code settings (allow and deny rules, hooks, MCP servers)
-  apply on top, as they do in a terminal.
-- **Working folder** is where Claude Code starts, as if you had run it in a
-  terminal there: that folder's `CLAUDE.md` and memory apply, and the chats
-  show up in `claude --resume` named "Ambxst: ...". Empty is your home folder.
-- **Chats are labelled as `claude --resume` labels them.** The history page
-  shows each Claude Code chat under its session's name. Sessions run this way
-  are not titled by Claude Code itself, so a short title is written after the
-  first reply (and once more when the chat has grown), and given to the session
-  as its name on the next message: the sidebar and the terminal's resume list
-  then say the same thing. A session you rename in a terminal keeps your name.
-- **A status line above the input**: the model in use, how full this chat's
-  context window is, and how much of your 5-hour limit is used (hover for the
-  token count and the reset time). Point at the model and a small wheel opens,
-  one model above and one below; the scroll wheel turns it, round and round,
-  and the next message goes to the model it stops on. Click it for the full
-  list. For an API model the line shows the model and its wheel only.
-- **Commands that need root.** Claude Code cannot run sudo from here: there is
-  no terminal for the password. When it wants to, the command is held back and
-  shown in a box of its own under the reply: *Run this sudo command?* **Yes**
-  turns the two buttons into a field for your password (skipped when sudo does
-  not need one); the command then runs right there, its output scrolling in the
-  box, and when it ends the output goes back to Claude as the next message, so
-  it carries on by itself. **No** runs nothing, and what you type next reaches
-  Claude with a note that the command was not run. The password goes to sudo
-  and nowhere else (not into the chat, a file, an argument or the environment),
-  and it is tried once before anything runs, so a typo cannot use up the three
-  attempts after which the account locks. The command runs without a terminal:
-  nothing can answer a question it asks. Stop ends it; a part that already runs
-  as root ends when it next prints something.
-- **A stop button.** While a reply is being written, a stop button sits beside
-  the input; what has arrived stays. It works for the API providers too (stock
-  has no way to stop a reply).
-- Stock faults fixed on the way, whatever the provider:
-  - **The shell froze, and ate memory until it was killed, once a chat was
-    about as tall as the sidebar.** While a bubble is being built its text has
-    no width for a moment, and text wrapped at no width is a letter per line:
-    thousands of pixels tall. The chat list scrolled to its end in exactly that
-    moment, landed far past the real end, dropped every bubble, built them
-    again with the same spike, and never came out of it. Text and code blocks
-    now wrap only once they have a width, and a bubble starts at its widest
-    instead of its narrowest.
-  - The chat follows its end: after a message is added and while a reply
-    grows, unless you have scrolled up yourself. Upstream scrolled once, too
-    early, and not at all during a reply, so a long answer ran off the bottom.
-  - Opening another chat while a reply was still arriving wrote the rest of
-    that reply over the other chat's last message. Opening or starting a chat
-    now stops the reply.
-  - The open chat's title on the history page was dark text on the grey of its
-    row.
-- **What Claude Code is doing shows under the chat, not in it.** While a turn
-  runs, a line beside the three dots says what it is on right now (*Thinking*,
-  *Reading notes.md*, *Running git status*), each one replacing the last, the
-  way the terminal shows it. The bubble only holds what Claude says to you.
-- **The keyboard goes where you click.** While the sidebar has the keyboard
-  a click anywhere, on any monitor, hands it back to the window under the
-  pointer (stock only did that on the sidebar's own screen). The pin, width
-  and position of the sidebar are kept across reloads.
-- **Keep typing while it works.** A message sent during a reply is shown
-  under the chat as *Queued*. Claude Code reads it after the tool call it is
-  on, the way it reads one typed into the terminal meanwhile; the message then
-  moves into the chat and what Claude says next is a new bubble. If the reply
-  ends or is stopped first, the message goes out as the next one. Other
-  providers get it when their reply has ended.
-- **The keyboard, for every provider.** A click anywhere on the sidebar gives
-  it the keyboard: stock only did that for a click on its empty background, so
-  after Escape or a click outside you could see a cursor in the message box
-  while the typing still went to the window behind. The sidebar's shortcut
-  closes it whenever it holds the keyboard (stock wanted the cursor in the
-  message box itself, so after a click on any button it only moved the cursor
-  back). A sidebar that is not pinned is always closed by the shortcut; a
-  pinned one that has lost the keyboard takes it back first.
-
-It needs `python3` and the `claude` command (the card says whether it found
-it). Run `claude` once in a terminal to log in.
-
 ## Tinted icons
 
 Two switches under *Settings → Theme → Tint Icons*, each usable on its own.
@@ -830,10 +723,8 @@ durations (clear a field for the normal one; where that is derived from
 Ambxst's animation speed the field reads "auto"), the Settings window's width
 and height, and the farewell quotes editor.
 
-Two things are set where they belong instead: the icon colours under Settings >
-Theme, and [Claude Code](#claude-code-in-the-ai-sidebar) under Settings > AI
-(`claudeCode`, `claudeCodeAccess`, `claudeCodeDir` in the same file; "Stock
-everything" and the reset on Roadie's page leave them alone).
+One thing is set where it belongs instead: the icon colours, under Settings >
+Theme.
 
 | Duration | Normally |
 |---|---|
@@ -939,6 +830,14 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 3.0.0: **Claude Code in the AI sidebar is gone, and the AI sidebar is stock
+  again.** Everything 2.2.0 to 2.2.3 added there (the Claude Code provider,
+  the sudo box, the status line, the message queue, the keyboard and pin
+  fixes, the freeze fix) is removed; the sidebar only keeps its clean slide.
+  A notch companion for Claude Code sessions takes its place as a mod of its
+  own, Ambxst AI Buddy. Roadie 2.2.3 is the last version with the sidebar
+  provider. Kept: config files that were missing are now created (`ai.json`,
+  `general.json`, `prefix.json`), so stock's own sidebar settings are saved.
 - 2.2.3: **the sidebar's pin, width and position are remembered** (stock
   never wrote `ai.json`: its missing-file check compared a number to a word,
   and the copy it then tried to make could not be built; `general.json` and
