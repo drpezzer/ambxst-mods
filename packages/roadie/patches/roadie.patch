@@ -6808,3 +6808,34 @@ index 888996d3..34a15395 100644
          }
      }
  }
+diff --git a/modules/services/Audio.qml b/modules/services/Audio.qml
+index 46c7c510..149812e3 100644
+--- a/modules/services/Audio.qml
++++ b/modules/services/Audio.qml
+@@ -102,16 +102,20 @@ Singleton {
+         return (node?.isSink === isSink) && node?.audio;
+     }
+ 
++    // Qt 6.12: array methods on an ObjectModel's `values` crash V4: index loop.
++    function nodeList(pred) {
++        const vals = Pipewire.nodes.values;
++        const out = [];
++        for (let i = 0; i < vals.length; i++) if (pred(vals[i])) out.push(vals[i]);
++        return out;
++    }
++
+     function appNodes(isSink) {
+-        return Pipewire.nodes.values.filter((node) => {
+-            return root.correctType(node, isSink) && node.isStream;
+-        });
++        return root.nodeList(node => root.correctType(node, isSink) && node.isStream);
+     }
+ 
+     function devices(isSink) {
+-        return Pipewire.nodes.values.filter(node => {
+-            return root.correctType(node, isSink) && !node.isStream;
+-        });
++        return root.nodeList(node => root.correctType(node, isSink) && !node.isStream);
+     }
+ 
+     // IO lists

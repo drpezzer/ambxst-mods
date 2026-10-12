@@ -830,6 +830,12 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 3.0.1: **no more crash when an audio device appears on Qt 6.12.** Stock
+  `Audio.qml` calls `.filter()` on `Pipewire.nodes.values`; on Qt 6.12 that
+  segfaults Quickshell's JavaScript engine every time a PipeWire node shows up
+  (a monitor plugged in, any app starting to play a sound, sometimes the shell
+  starting), even with Quickshell rebuilt for 6.12. The list is now walked
+  with an index loop. Always on: it is a fix, not a feature.
 - 3.0.0: **Claude Code in the AI sidebar is gone, and the AI sidebar is stock
   again.** Everything 2.2.0 to 2.2.3 added there (the Claude Code provider,
   the sudo box, the status line, the message queue, the keyboard and pin
