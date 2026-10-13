@@ -4310,7 +4310,7 @@ index 8c8055b8..009ad6ad 100644
      }
  }
 diff --git a/modules/services/BluetoothService.qml b/modules/services/BluetoothService.qml
-index de25678a..c47a5c65 100644
+index de25678a..a9e6830d 100644
 --- a/modules/services/BluetoothService.qml
 +++ b/modules/services/BluetoothService.qml
 @@ -163,22 +163,37 @@ Singleton {
@@ -4406,7 +4406,58 @@ index de25678a..c47a5c65 100644
          });
      }
  
-@@ -315,7 +354,11 @@ Singleton {
+@@ -236,6 +275,50 @@ Singleton {
+         updateDebouncer.restart();
+     }
+ 
++    // roadie: a device connecting or dropping by itself (it reconnects at boot,
++    // after sleep, headphones switched on) reached the bar only once a menu was
++    // opened: the status is polled only while one is open, and after the
++    // shell's own connect / disconnect. BlueZ announces every Connected change
++    // on the system bus, so the bar now hears it as it happens. gdbus comes
++    // with GLib; without it, a slow poll does the job.
++    property bool roadieWatchOk: true
++    property var roadieWatch: Process {
++        command: ["gdbus", "monitor", "--system", "--dest", "org.bluez"]
++        running: !SuspendManager.isSuspending && root.roadieWatchOk
++        stdout: SplitParser {
++            onRead: data => {
++                if (data && data.indexOf("org.bluez.Device1") >= 0 && data.indexOf("'Connected'") >= 0)
++                    roadieWatchSettle.restart();
++                else if (data && data.indexOf("org.bluez.Adapter1") >= 0 && data.indexOf("'Powered'") >= 0)
++                    roadieWatchSettle.restart();
++            }
++        }
++        onExited: (code, status) => {
++            // Not installed or refused: fall back to polling.
++            if (code === 127 || code === 1)
++                root.roadieWatchOk = false;
++        }
++    }
++    // A connection lands as a burst of property changes: one refresh after it.
++    property var roadieWatchSettle: Timer {
++        interval: 400
++        onTriggered: {
++            root.updateStatus();
++            root.updateDevices();
++        }
++    }
++    property var roadieWatchPoll: Timer {
++        interval: 10000
++        repeat: true
++        running: !root.roadieWatchOk && !SuspendManager.isSuspending
++        onTriggered: root.updateStatus()
++    }
++    Component.onCompleted: roadieStartup.restart()
++    property var roadieStartup: Timer {
++        interval: 1500
++        onTriggered: root.updateStatus()
++    }
++
+     function performUpdate() {
+         if (isUpdating) return;
+         isUpdating = true;
+@@ -315,7 +398,11 @@ Singleton {
              }
          }
          onExited: (exitCode, exitStatus) => {
@@ -4419,7 +4470,7 @@ index de25678a..c47a5c65 100644
              getDevicesProcess.buffer = "";
              
              Qt.callLater(() => {
-@@ -332,13 +375,27 @@ Singleton {
+@@ -332,13 +419,27 @@ Singleton {
                  }
  
                  const rDevices = root.devices;

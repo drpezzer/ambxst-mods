@@ -830,6 +830,12 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 3.0.5: **the bar's Bluetooth icon shows a device that connects by
+  itself.** The connected state was only re-read while a menu was open or
+  after a connect made from the shell, so a device reconnecting on its own
+  (at boot, after sleep, headphones switched on) left the plain icon up. The
+  bar now listens to BlueZ for connection changes (`gdbus monitor`, part of
+  GLib) and updates as they happen; without gdbus it checks every 10 s.
 - 3.0.4: **no more shell crash when several notifications share an app
   icon.** Six notifications from the same app (phone notifications all
   carrying TikTok's icon, say) shared one cached icon across the shell's
