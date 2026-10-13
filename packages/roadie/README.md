@@ -830,6 +830,14 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 3.0.3: **the bar slides across screens smoothly again, glued to the
+  windows.** When the bar followed focus to another screen, its space was
+  handed back to the compositor a step per frame, and every step resized every
+  window on that screen; with a browser open each step took 50-100 ms, so a
+  480 ms slide crawled for up to 1.4 s and then snapped. The space now changes
+  in one step and Hyprland moves the windows into it on the slide's own
+  duration and curve, starting one drawn frame after the bar so the gap
+  between them stays put (within about a pixel) the whole way.
 - 3.0.2: **no more notification icon flashing in the screen's top-left
   corner, and a likely fix for a notch crash.** Stock Ambxst caches a
   notification's icon by rendering it in a transparent window at the

@@ -281,7 +281,7 @@ index 4aa42403..1424d138 100644
  
      BarContent {
 diff --git a/modules/bar/BarContent.qml b/modules/bar/BarContent.qml
-index 554a38fc..0e221bfd 100644
+index 554a38fc..a1a9b910 100644
 --- a/modules/bar/BarContent.qml
 +++ b/modules/bar/BarContent.qml
 @@ -22,11 +22,22 @@ import "." as Bar
@@ -307,7 +307,7 @@ index 554a38fc..0e221bfd 100644
      // Auto-hide properties
      onPinnedChanged: {
          if (Config.bar && Config.bar.pinnedOnStartup !== pinned) {
-@@ -58,9 +69,630 @@ Item {
+@@ -58,9 +69,658 @@ Item {
      // applies to the screen that actually has the fullscreen window
      readonly property bool activeWindowFullscreen: CompositorData.monitorHasFullscreen(compositorMonitor)
  
@@ -492,12 +492,14 @@ index 554a38fc..0e221bfd 100644
 +                    root.fsTarget = -1;
 +                    return; // this screen became the covered one meanwhile; fsStage owns it
 +                }
-+                root.zoneDuration = root.fsDuration;
-+                root.zoneEasing = root.fsEasing;
-+                root.zoneBezier = root.fsBezier;
-+                root.zoneProgress = root.fsTarget;
++                // The bar's space goes in one step; Hyprland moves the windows
++                // into it on the slide's own duration and curve (tuned
++                // above). Walking it every frame resized every window on the
++                // screen every frame, and heavy clients stalled the slide.
++                root.zoneDuration = 0;
 +                root.fsProgress = root.fsTarget;
-+            });
++                root.zoneAfterFrames(root.fsTarget);
++            }, true);
 +            return;
 +        }
 +        root.fsEasing = Easing.OutCubic;
@@ -544,12 +546,39 @@ index 554a38fc..0e221bfd 100644
 +                root.fsTarget = -1; // see fsRetarget: no stale intent
 +                return; // superseded
 +            }
-+            root.zoneDuration = root.fsDuration;
-+            root.zoneEasing = root.fsEasing;
-+            root.zoneBezier = root.fsBezier;
-+            root.zoneProgress = root.fsTarget;
++            // One step for the space, Hyprland moves the windows (see fsRetarget).
++            root.zoneDuration = 0;
 +            root.fsProgress = root.fsTarget;
-+        });
++            root.zoneAfterFrames(root.fsTarget);
++        }, true);
++    }
++
++    // The bar's space, handed to the compositor a couple of drawn frames after
++    // the slide starts. Hyprland moves the windows as soon as it has the new
++    // zone, while the bar's first moved frame is only drawn a frame or two
++    // later: committed together, the windows ran ~2 frames ahead of the bar
++    // all the way (the gap between them swung from 4 to 11 px mid-slide).
++    // Measured on a virtual screen: 1 frame keeps it within ~1 px of the
++    // resting gap both ways (2 and 3 frames put the windows behind).
++    readonly property int zoneLagFrames: 1
++    function zoneAfterFrames(target) {
++        zoneLag.target = target;
++        zoneLag.left = root.zoneLagFrames;
++        zoneLag.running = true;
++    }
++    FrameAnimation {
++        id: zoneLag
++        property real target: 1
++        property int left: 0
++        running: false
++        onTriggered: {
++            if (--left > 0)
++                return;
++            running = false;
++            // Superseded meanwhile (the slide turned round): its own call wins.
++            if (root.fsTarget === target)
++                root.zoneProgress = target;
++        }
 +    }
 +
 +    onBarAwayChanged: root.fsRetarget(true)
@@ -786,9 +815,8 @@ index 554a38fc..0e221bfd 100644
 +            root.fsEasing = Easing.BezierSpline;
 +            root.fsBezier = BarSlideSync.bezier.concat([1, 1]);
 +            root.fsTarget = 0;
-+            root.zoneDuration = root.fsDuration;
-+            root.zoneEasing = root.fsEasing;
-+            root.zoneBezier = root.fsBezier;
++            // Nothing below is visible: the space goes in one step.
++            root.zoneDuration = 0;
 +            root.zoneProgress = 0;
 +            root.fsProgress = 0;
 +            // The frame goes as the bar's last pixels leave, not after a full
@@ -939,7 +967,7 @@ index 554a38fc..0e221bfd 100644
  
      onShouldAutoHideChanged: {
          if (!shouldAutoHide) {
-@@ -77,7 +709,7 @@ Item {
+@@ -77,7 +737,7 @@ Item {
  
      // Check if notch hover is active (for synchronized reveal when bar is at same side)
      // NOTE: We access Visibilities.notchPanels directly because UnifiedShellPanel registers itself as the panel ref
@@ -948,7 +976,7 @@ index 554a38fc..0e221bfd 100644
      readonly property string notchPosition: (Config.notchPosition !== undefined ? Config.notchPosition : "top")
      readonly property bool notchHoverActive: {
          if (barPosition !== notchPosition)
-@@ -98,7 +730,7 @@ Item {
+@@ -98,7 +758,7 @@ Item {
      }
  
      // Check if notch is open (dashboard, powermenu, etc.)
@@ -957,7 +985,7 @@ index 554a38fc..0e221bfd 100644
      readonly property bool notchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
  
      // Radius logic for "Squished" style
-@@ -112,8 +744,18 @@ Item {
+@@ -112,8 +772,18 @@ Item {
          if (!shouldAutoHide)
              return true;
  
@@ -977,7 +1005,7 @@ index 554a38fc..0e221bfd 100644
              return false;
          }
  
-@@ -259,6 +901,9 @@ Item {
+@@ -259,6 +929,9 @@ Item {
          Item {
              id: bar
  
@@ -987,7 +1015,7 @@ index 554a38fc..0e221bfd 100644
              anchors {
                  top: (root.barPosition === "top" || root.orientation === "vertical") ? parent.top : undefined
                  bottom: (root.barPosition === "bottom" || root.orientation === "vertical") ? parent.bottom : undefined
-@@ -275,8 +920,10 @@ Item {
+@@ -275,8 +948,10 @@ Item {
              // layer.enabled: true
              // layer.effect: Shadow {}
  
@@ -1000,7 +1028,7 @@ index 554a38fc..0e221bfd 100644
              Behavior on opacity {
                  enabled: (Config.animDuration !== undefined ? Config.animDuration : 0) > 0
                  NumberAnimation {
-@@ -286,10 +933,12 @@ Item {
+@@ -286,10 +961,12 @@ Item {
              }
  
              // Slide animation
@@ -1014,7 +1042,7 @@ index 554a38fc..0e221bfd 100644
                      if (root.barPosition === "left")
                          return root.reveal ? 0 : -bar.width - (root.frameOffset + root.leftOuterMargin);
                      if (root.barPosition === "right")
-@@ -299,6 +948,8 @@ Item {
+@@ -299,6 +976,8 @@ Item {
                  y: {
                      if (!root.shouldAutoHide)
                          return 0;
@@ -1023,7 +1051,7 @@ index 554a38fc..0e221bfd 100644
                      if (root.barPosition === "top")
                          return root.reveal ? 0 : -bar.height - (root.frameOffset + root.topOuterMargin);
                      if (root.barPosition === "bottom")
-@@ -306,20 +957,20 @@ Item {
+@@ -306,20 +985,20 @@ Item {
                      return 0;
                  }
                  Behavior on x {
@@ -1047,7 +1075,7 @@ index 554a38fc..0e221bfd 100644
  
              states: [
                  State {
-@@ -369,7 +1020,7 @@ Item {
+@@ -369,7 +1048,7 @@ Item {
                          spacing: 4
  
                          // Obtener referencia al notch de esta pantalla
@@ -1056,7 +1084,7 @@ index 554a38fc..0e221bfd 100644
  
                          LauncherButton {
                              id: launcherButton
-@@ -529,6 +1180,22 @@ Item {
+@@ -529,6 +1208,22 @@ Item {
                              endRadius: root.innerRadius
                          }
  
@@ -1079,7 +1107,7 @@ index 554a38fc..0e221bfd 100644
                          ControlsButton {
                              id: controlsButton
                              bar: root
-@@ -585,6 +1252,14 @@ Item {
+@@ -585,6 +1280,14 @@ Item {
                              endRadius: root.innerRadius
                          }
  
@@ -1094,7 +1122,7 @@ index 554a38fc..0e221bfd 100644
                          ToolsButton {
                              id: toolsButtonVert
                              startRadius: root.innerRadius
-@@ -736,11 +1411,21 @@ Item {
+@@ -736,11 +1439,21 @@ Item {
                              }
                          }
  

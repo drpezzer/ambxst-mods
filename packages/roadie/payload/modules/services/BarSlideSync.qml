@@ -11,13 +11,13 @@ import qs.config
 // When the bar hides for a fullscreen window its exclusive zone changes, and
 // the compositor moves the windows into (or out of) that space with its own
 // resize animation -- on Hyprland `windowsMove`, which Ambxst configures to
-// 250 ms. Two independent animations can never stay locked: they start up to
-// a frame apart and drift by pixels at peak speed. So the bar does not
-// release the zone in one step; it walks it frame by frame along its own
-// slide (shell.qml scales the reserved size by BarContent.zoneProgress), and
-// for the duration of the slide `windowsMove` is held near-instant here so
-// the windows simply follow each step. Bar, frame slab and windows are then
-// one number, committed in the same frame. Put back once things are quiet.
+// 250 ms. Roadie retunes `windowsMove` for the slide to the bar's own
+// duration and curve, and the bar's space then changes in one step as the
+// slide starts: the windows glide into (or out of) it on the same function
+// of time as the bar. (Until 3.0.3 the zone was walked frame by frame with
+// `windowsMove` near-instant -- exact to the pixel, but every step resized
+// every window on the screen, and with a browser open the slide crawled and
+// snapped.) Put back once things are quiet.
 // Hyprland only; other compositors are left alone.
 //
 // This is the same idea ShellTransitions applies to the shell enter/leave,
@@ -116,14 +116,19 @@ Singleton {
     // Off Hyprland, or with animations off, it runs straight away.
     property var pending: []
 
-    function tune(durationMs, onLanded) {
+    // `matched`: the bar's space moves in ONE step and Hyprland animates the
+    // windows into it on the slide's own duration and curve (speed is in
+    // tenths of a second). Walking the zone every frame instead resized every
+    // window on the screen every frame; with heavy clients (a browser) each
+    // step took 50-100 ms and a 480 ms slide crawled for up to 1.4 s, then
+    // snapped. Without it: near-instant, for callers still walking the zone.
+    function tune(durationMs, onLanded, matched) {
         const done = function() { if (onLanded) onLanded(); };
         if (!root.hyprland || !root.animate || !root.original) {
             done();
             return;
         }
-        // Near-instant: each per-frame zone step lands within the frame.
-        const speed = 0.1;
+        const speed = matched ? Math.max(0.1, Math.round(durationMs / 10) / 10) : 0.1;
         restoreTimer.interval = Math.round(durationMs) + 120;
         restoreTimer.restart();
         if (root.tuned && Math.abs(root.tunedSpeed - speed) < 0.01 && !tuneProc.running) {
