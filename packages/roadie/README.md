@@ -830,6 +830,13 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 3.0.4: **no more shell crash when several notifications share an app
+  icon.** Six notifications from the same app (phone notifications all
+  carrying TikTok's icon, say) shared one cached icon across the shell's
+  windows, and Qt 6.12 could delete the icon's texture while another window
+  was still drawing it: Quickshell segfaulted in
+  `QSGRenderContext::textureForFactory`, typically on a reload while those
+  notifications were up. Each notification icon now keeps its own copy.
 - 3.0.3: **the bar slides across screens smoothly again, glued to the
   windows.** When the bar followed focus to another screen, its space was
   handed back to the compositor a step per frame, and every step resized every

@@ -19,6 +19,13 @@ Item {
         visible: false
         mipmap: root.mipmap
         smooth: true
+        // Never share the pixmap: several notifications with the same app icon
+        // (six TikTok ones, say) shared one cached pixmap across the shell's
+        // windows, and Qt 6.12 deleted its texture factory under the others
+        // (SIGSEGV in QSGRenderContext::textureForFactory → QObject::connect,
+        // 2026-10-13, twice). Uncached, each image owns its pixmap and its
+        // factory, which live and die with it. A notification icon is small.
+        cache: false
     }
 
     ShaderEffect {
