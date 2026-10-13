@@ -830,6 +830,18 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 3.0.2: **no more notification icon flashing in the screen's top-left
+  corner, and a likely fix for a notch crash.** Stock Ambxst caches a
+  notification's icon by rendering it in a transparent window at the
+  screen's top-left and grabbing it 150 ms later, so the icon showed there
+  for a moment, over fullscreen windows too. It is now rendered outside that
+  window, where nothing shows but the grab still sees it (same cached image).
+  Notification icons also no longer use Quickshell's `ClippingRectangle`:
+  its hidden layer is the object a recurring crash (Quickshell segfaults in
+  `updateChildWindowStackingOrder` right as a notification arrives) finds
+  already freed, inside the notch's compact notification card. The icons
+  round their corners with a small shader that reads the image directly,
+  which looks the same. Always on: these are fixes, not features.
 - 3.0.1: **no more crash when an audio device appears on Qt 6.12.** Stock
   `Audio.qml` calls `.filter()` on `Pipewire.nodes.values`; on Qt 6.12 that
   segfaults Quickshell's JavaScript engine every time a PipeWire node shows up

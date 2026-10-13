@@ -4008,7 +4008,7 @@ index 5a80e6bd..c3b9019b 100644
  
      NotchContent {
 diff --git a/modules/notifications/NotificationAppIcon.qml b/modules/notifications/NotificationAppIcon.qml
-index 75e37c61..9d61a8b2 100644
+index 75e37c61..3515379d 100644
 --- a/modules/notifications/NotificationAppIcon.qml
 +++ b/modules/notifications/NotificationAppIcon.qml
 @@ -5,6 +5,7 @@ import Quickshell
@@ -4019,10 +4019,40 @@ index 75e37c61..9d61a8b2 100644
  import qs.config
  
  Item {
-@@ -85,6 +86,22 @@ Item {
-             }
-         }
+@@ -27,10 +28,14 @@ Item {
+     property real radius: Styling.radius(-8)
  
+     // Contenedor principal con recorte (Clipping)
+-    ClippingRectangle {
++    // roadie: no ClippingRectangle here. Its hidden layer source is the object
++    // the recurring stacking-order crash (QQuickWindowPrivate::
++    // updateChildWindowStackingOrder, right as a notification arrives) finds
++    // already freed, inside this icon in the notch's compact card. The images
++    // round their own corners (RoadieRoundedImage), the fallback tile already
++    // has a radius.
++    Item {
+         anchors.fill: parent
+-        radius: root.radius
+-        color: "transparent"
+ 
+         Rectangle {
+             anchors.fill: parent
+@@ -75,13 +80,27 @@ Item {
+             active: root.image == "" && root.appIcon != ""
+             anchors.fill: parent
+             visible: item && item.status !== Image.Error
+-            sourceComponent: Image {
+-                mipmap: true
++            sourceComponent: RoadieRoundedImage {
+                 id: appIconImage
+                 anchors.fill: parent
++                radius: root.radius
+                 source: root.appIcon ? "image://icon/" + root.appIcon : ""
+-                fillMode: Image.PreserveAspectCrop
+-                smooth: true
++            }
++        }
++
 +        // roadie: the icon of Roadie's own notifications (mod updates) wears
 +        // the theme like the shell's other icons do. It goes through the same
 +        // Tinted component as the dock and the tray, so it follows Tint Icons,
@@ -4036,12 +4066,77 @@ index 75e37c61..9d61a8b2 100644
 +                sourceItem: appIconLoader.item
 +                ramp: Config.theme.trueMatugenIcons
 +                monochrome: Config.theme.trueMonochromeTint
-+            }
-+        }
-+
-         // Mostrar imagen de notificación si existe
-         Loader {
+             }
+         }
+ 
+@@ -90,28 +109,15 @@ Item {
              id: notifImageLoader
+             active: root.image != ""
+             anchors.fill: parent
+-            sourceComponent: Item {
++            sourceComponent: RoadieRoundedImage {
++                id: notifImage
+                 anchors.fill: parent
+-                clip: true
+-
+-                Rectangle {
+-                    anchors.fill: parent
+-                    radius: root.radius
+-                    color: "transparent"
+-
+-                    Image {
+-                        mipmap: true
+-                        id: notifImage
+-                        anchors.fill: parent
+-                        source: status === Image.Error && root.appIcon ? "image://icon/" + root.appIcon : root.image
+-                        fillMode: Image.PreserveAspectCrop
+-                        smooth: true
+-                        onStatusChanged: {
+-                            if (status === Image.Error && root.appIcon) {
+-                                source = "image://icon/" + root.appIcon;
+-                                root.usingAppIconFallback = true;
+-                            }
+-                        }
++                radius: root.radius
++                source: root.image
++                onStatusChanged: {
++                    if (status === Image.Error && root.appIcon) {
++                        source = "image://icon/" + root.appIcon;
++                        root.usingAppIconFallback = true;
+                     }
+                 }
+             }
+diff --git a/modules/services/Audio.qml b/modules/services/Audio.qml
+index 46c7c510..149812e3 100644
+--- a/modules/services/Audio.qml
++++ b/modules/services/Audio.qml
+@@ -102,16 +102,20 @@ Singleton {
+         return (node?.isSink === isSink) && node?.audio;
+     }
+ 
++    // Qt 6.12: array methods on an ObjectModel's `values` crash V4: index loop.
++    function nodeList(pred) {
++        const vals = Pipewire.nodes.values;
++        const out = [];
++        for (let i = 0; i < vals.length; i++) if (pred(vals[i])) out.push(vals[i]);
++        return out;
++    }
++
+     function appNodes(isSink) {
+-        return Pipewire.nodes.values.filter((node) => {
+-            return root.correctType(node, isSink) && node.isStream;
+-        });
++        return root.nodeList(node => root.correctType(node, isSink) && node.isStream);
+     }
+ 
+     function devices(isSink) {
+-        return Pipewire.nodes.values.filter(node => {
+-            return root.correctType(node, isSink) && !node.isStream;
+-        });
++        return root.nodeList(node => root.correctType(node, isSink) && !node.isStream);
+     }
+ 
+     // IO lists
 diff --git a/modules/services/BluetoothDevice.qml b/modules/services/BluetoothDevice.qml
 index 8c8055b8..009ad6ad 100644
 --- a/modules/services/BluetoothDevice.qml
@@ -4579,6 +4674,22 @@ index 0be8e1e2..55c2b3b9 100644
              if (!root.isUpdating) {
                  Qt.callLater(() => root.applyState(data));
              }
+diff --git a/modules/services/Notifications.qml b/modules/services/Notifications.qml
+index 0f1815bf..b558554c 100644
+--- a/modules/services/Notifications.qml
++++ b/modules/services/Notifications.qml
+@@ -675,6 +675,11 @@ Singleton {
+ 
+             width: 1
+             height: 1
++            // roadie: rendered outside the window's 512 px, so the image never
++            // shows on screen while it is cached (it flashed at the screen's
++            // top-left for 150 ms+, over fullscreen windows too). grabToImage
++            // renders the item itself, wherever it sits.
++            x: -(maxSize + 64)
+ 
+             Component.onCompleted: root.activeCacheJobs++
+             Component.onDestruction: root.activeCacheJobs--
 diff --git a/modules/services/Visibilities.qml b/modules/services/Visibilities.qml
 index ee97b092..378ef7ed 100644
 --- a/modules/services/Visibilities.qml
@@ -6808,34 +6919,3 @@ index 888996d3..34a15395 100644
          }
      }
  }
-diff --git a/modules/services/Audio.qml b/modules/services/Audio.qml
-index 46c7c510..149812e3 100644
---- a/modules/services/Audio.qml
-+++ b/modules/services/Audio.qml
-@@ -102,16 +102,20 @@ Singleton {
-         return (node?.isSink === isSink) && node?.audio;
-     }
- 
-+    // Qt 6.12: array methods on an ObjectModel's `values` crash V4: index loop.
-+    function nodeList(pred) {
-+        const vals = Pipewire.nodes.values;
-+        const out = [];
-+        for (let i = 0; i < vals.length; i++) if (pred(vals[i])) out.push(vals[i]);
-+        return out;
-+    }
-+
-     function appNodes(isSink) {
--        return Pipewire.nodes.values.filter((node) => {
--            return root.correctType(node, isSink) && node.isStream;
--        });
-+        return root.nodeList(node => root.correctType(node, isSink) && node.isStream);
-     }
- 
-     function devices(isSink) {
--        return Pipewire.nodes.values.filter(node => {
--            return root.correctType(node, isSink) && !node.isStream;
--        });
-+        return root.nodeList(node => root.correctType(node, isSink) && !node.isStream);
-     }
- 
-     // IO lists
