@@ -844,7 +844,9 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
   480 ms slide crawled for up to 1.4 s and then snapped. The space now changes
   in one step and Hyprland moves the windows into it on the slide's own
   duration and curve, starting one drawn frame after the bar so the gap
-  between them stays put (within about a pixel) the whole way.
+  between them stays put (within about a pixel) the whole way: the space is
+  handed over in the slide's first frame (measured on real 165 and 60 Hz
+  monitors: under a pixel off on average, at most about 1 px).
 - 3.0.2: **no more notification icon flashing in the screen's top-left
   corner, and a likely fix for a notch crash.** Stock Ambxst caches a
   notification's icon by rendering it in a transparent window at the
