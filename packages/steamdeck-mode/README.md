@@ -74,6 +74,7 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- 1.0.9: verified on Ambxst 1.3.12 (base 1e1a5649, native mod updates; also covers 1.3.11); patch applies verbatim, no source changes.
 - 1.0.8: verified on Ambxst 1.3.10 (base bc602302, native clipboard and notification image cache); patch applies verbatim, no source changes.
 - 1.0.7: verified on Ambxst 1.3.9 (base 3705f278, per-monitor fullscreen detection); patch applies verbatim, no source changes.
 - 1.0.6: verified on Ambxst 1.3.8+1 (base 2a704c43, workspace icon pixel-centering fix); patch applies verbatim, no source changes.
