@@ -628,10 +628,10 @@ Item {
                         onToggled: value => RoadieSettings.set("settingsFloat", value)
                     }
                     ToggleRow {
-                        label: "Check for mod updates automatically"
-                        hint: "Shortly after the shell starts and every few hours, with a notification when any are found. The Check for updates button in Settings > Mods is always there."
-                        checked: RoadieSettings.modAutoCheck
-                        onToggled: value => RoadieSettings.set("modAutoCheck", value)
+                        label: "Notify when mod updates are found"
+                        hint: "A notification whenever Ambxst's own mod updater finds new versions. Turn on Scheduled checks in Settings > Mods for it to look on its own."
+                        checked: RoadieSettings.modUpdateNotify
+                        onToggled: value => RoadieSettings.set("modUpdateNotify", value)
                     }
 
                     Hint {
@@ -683,21 +683,6 @@ Item {
                         hint: "Quiet hides the ones the shell makes by itself while reading its initial state after a start."
                         settingKey: "osd"
                         choices: [{ label: "Quiet at start", value: "quiet" }, { label: "As stock", value: "stock" }, { label: "Off", value: "off" }]
-                    }
-                    ToggleRow {
-                        visible: RoadieSettings.modAutoCheck
-                        label: "Install mod updates automatically"
-                        hint: "What an automatic check finds is installed right away, then a notification asks you to restart. Updates that need a newer Ambxst always wait for you."
-                        checked: RoadieSettings.modAutoInstall
-                        onToggled: value => RoadieSettings.set("modAutoInstall", value)
-                    }
-                    NumberRow {
-                        visible: RoadieSettings.modAutoCheck
-                        label: "Hours between automatic checks"
-                        settingKey: "modCheckHours"
-                        from: 1
-                        to: 168
-                        unit: "h"
                     }
                 }
 

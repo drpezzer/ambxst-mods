@@ -15,7 +15,7 @@ to update, one to keep in step with Ambxst.
 | **Bar and notch** | [frame-attached popouts, a Bluetooth widget, night weather glyphs](#bar-at-a-glance), an [audio routing tab](#audio-routing) |
 | **Icons** | [True Matugen Icons and True Monochrome](#tinted-icons) |
 | **Settings** | a [floating Settings window](#the-settings-window-floats), a [permissions list that fits](#a-permissions-list-that-fits) |
-| **Mods** | [update checks](#mod-updates) that say when a mod needs a newer Ambxst *before* anything is installed |
+| **Mods** | a [notification](#mod-updates) when Ambxst's own mod updater finds new versions |
 
 Every feature has a switch or a Stock mode on the [Settings > Roadie](#settings)
 page, and **Stock everything** leaves only the fixes.
@@ -277,7 +277,7 @@ Left edge of a 4K screen, real time. The whole sequence: [demo.mp4](media/demo.m
 - **Fullscreen games on a special workspace are detected.** The panel only
   caught them through a fast path gated on the focused monitor, so the shell
   came back over the game whenever focus moved. The output's open special
-  workspace is now read from Hyprland and matched in the window scan as well
+  workspace is now read from axctl and matched in the window scan as well
   as its active workspace, so the detection no longer depends on focus. On
   Hyprland the scan also reads the compositor's own per-window records
   (`Hyprland.toplevels`, primed once and refreshed on the `fullscreen`
@@ -320,13 +320,10 @@ Left edge of a 4K screen, real time. The whole sequence: [demo.mp4](media/demo.m
   still carries this mod's curve; the originals are also kept on disk so a
   shell killed mid-slide is put right by the next one. Hyprland only.
 - **Hiding or showing the special workspace is followed instantly.** The
-  screen's open special workspace is tracked from Hyprland's own
-  `activespecial` event rather than read back from Quickshell's monitor
-  object, which does not refresh on that event and whose refresh, when
-  requested, could be folded into one already in flight with a stale reply.
-  Before, the bar sometimes stayed away from a screen showing ordinary
-  windows again, or the frame and bar stayed over a game that had just come
-  back.
+  screen's open special workspace comes from axctl's `visible_workspace`,
+  which axctl refreshes on Hyprland's `activespecial` event. (Up to 3.x Roadie
+  tracked that event itself; Quickshell's monitor object does not refresh on
+  it.)
 - **Dual Screen Single Bar.** A pinned bar shows on the focused screen only
   and slides across when focus moves -- out here, in there, on the same
   slide, its space walked with it so the windows on both screens move in
@@ -592,25 +589,28 @@ the Settings > Roadie page and apply the next time Settings is opened.
 
 ## Mod updates
 
-Settings > Mods gets a **Check for updates** button next to the search box.
-It asks each installed mod's source for its current manifest and compares
-versions; with nothing newer it reads *No updates* for a moment, then fades
-back. When newer versions exist it becomes **Install N updates**, and every mod
-with an update gets its own **Update to x.y.z** button next to Enable/Disable.
-Installs go through the mod manager's normal update path, so each one rebuilds
-the generation and the usual "Restart Ambxst" banner and rollback apply.
+Since Ambxst 1.3.11, Settings > Mods checks for, reviews and installs mod
+updates itself: **Check for updates**, an **Update to x.y.z** button with a
+review of what changes, **What's new**, **Scheduled checks** every 1, 6, 24 or
+168 hours, and automatic installs for the mods you allow. Roadie up to 3.x did
+all of that on its own; 4.0.0 hands it over and keeps the one thing Ambxst
+does not do: a **notification** when a check finds new versions, so you hear
+about them without opening Settings. Each version is announced once; *Open
+Mods* takes you to the page. Turn on *Scheduled checks* in Settings > Mods for
+checks to run by themselves. The switch is *Notify when mod updates are found*
+in Settings > Roadie.
 
-Two switches (under *Bypass Ambxst version check*, and in Settings > Roadie):
-**Check for mod updates automatically** -- about 90 seconds after the shell
-starts and then every few hours (default 6), with a notification offering *Open
-Mods*, *Later* (snoozes 8 h) and *Update all* -- and **Install mod updates
-automatically**, which installs what a check finds and then offers *Restart
-now*. The shell never restarts itself.
+If Roadie's own *Check for mod updates automatically* was on, 4.0.0 turns on
+Ambxst's scheduled checks once, at the nearest interval (and automatic installs,
+if those were on too). From then on Settings > Mods owns them.
 
 The notification's icon wears your theme the way the shell's other icons do:
-it follows *Tint Icons*, and *True Matugen Icons* / *True Monochrome* where the
-Tinted Icons mod is installed. With none of those on it is the plain icon from
-your icon theme.
+it follows *Tint Icons*, and *True Matugen Icons* / *True Monochrome*. With
+none of those on it is the plain icon from your icon theme.
+
+`qs ipc --pid $(cat $XDG_RUNTIME_DIR/ambxst-qs.pid) call roadie updateCheck`
+asks Ambxst to check every mod now; `... call roadie updateState` prints what
+is offered and what has been announced.
 
 ### A permissions list that fits
 
@@ -623,77 +623,10 @@ one permission per line in a box that stops growing and scrolls from there,
 with a scroll bar, and **Show less** closes it. A list that fits is shown
 whole, as before.
 
-### Updates that need a newer Ambxst
-
-A mod's manifest says which Ambxst versions it is for. When a mod's *new*
-version needs a newer Ambxst than the one you run, there is no good order to do
-things in by hand:
-
-- **Mod first:** the mod manager refuses it, and tells you only after you
-  clicked: `Ambxst 1.3.8 does not match ">=1.3.9 <2.0.0"`.
-- **Ambxst first:** `ambxst update` rebuilds the mods you *have*. The version
-  you have was written for the old Ambxst; if it no longer applies the build
-  fails, **one failing mod fails it for all of them**, and Ambxst starts with
-  no mods at all -- this checker included, since it is one. (Stock Ambxst then
-  also drops the config keys your mods had added.)
-
-So Roadie reads the range from the new version's manifest during the check and
-says so up front:
-
-- the mod's button reads **x.y.z needs Ambxst a.b.c** instead of *Update to
-  x.y.z*, and such an update is never part of *Install N updates* or of an
-  automatic install;
-- a second button appears beside *Check for updates*: **Update Ambxst to a.b.c
-  and its mods** -- or **Waiting for Ambxst a.b.c** if that version is not out
-  yet, in which case there is nothing to do but wait;
-- the update notification says the same, with an *Update Ambxst too* action.
-
-**Update Ambxst and its mods** opens a terminal (Ambxst's installer asks for
-your password), lists what it is about to do, asks, and then:
-
-1. sets the mods that need the new Ambxst aside (disabled; the running shell
-   is not restarted and keeps them on screen) and fetches their new versions
-   -- the manager does not check a disabled mod against the Ambxst version;
-2. runs Ambxst's own installer, the one `ambxst update` runs;
-3. enables those mods again, now at their new versions, and installs the other
-   updates that were waiting;
-4. rebuilds and restarts Ambxst, once.
-
-Until Ambxst itself has been updated, any failure puts everything back as it
-was -- packages, the mod list, the generation -- and the shell is never
-restarted. After that point there is no way back to the old Ambxst, so the
-script carries on and reports what did not go through. The previous packages
-are kept in `~/.cache/ambxst/roadie-update-backup-*` until everything has
-succeeded.
-
-If you have turned on *Bypass Ambxst version check*, nothing is held back: you
-asked for that.
-
-How the latest version is found:
-
-| Source type | Where the latest version comes from |
-|---|---|
-| local directory | `ambxst.mod.json` in the source directory |
-| git clone (plain Git URL) | `git fetch` in the package clone, manifest read from the fetched head |
-| GitHub tree URL (`…/tree/<ref>/<dir>`) | the manifest fetched from raw.githubusercontent.com, no clone needed |
-| archive | cannot be checked |
-
-Only the version field decides; a source that changed without bumping its
-version does not show as an update. The Ambxst version an update would bring
-is read from the `version` file on Ambxst's main branch.
-
-`qs ipc --pid $(cat $XDG_RUNTIME_DIR/ambxst-qs.pid) call roadie updateCheck`
-runs a check and `... call roadie updateState` prints what the last one found;
-`... call roadie updateCheckAuto` runs it the way the automatic one does,
-notification included.
-
-**For mod authors:** raise `compatibility.ambxst` in the release that needs
-the new Ambxst (`">=1.3.9 <2.0.0"`). That one line is what lets your users be
-told in time.
-
 ## Settings
 
-Roadie has its own page in the Settings window, **Roadie**, just above Ambxst.
+Roadie has its own page in the Settings window, **Roadie**, just above Ambxst
+(move it under Settings > Mods if you like: it is declared to the mod manager).
 Everything applies as you change it, and it is kept in
 `~/.config/ambxst/roadie.json` (only what differs from the defaults; edit it by
 hand if you like, it is watched).
@@ -709,14 +642,13 @@ does there.
 | Shell | Staged shell start · Staged reload · Cover a sudden restart · Lock after boot · Farewell on reboot and power off |
 | Screens | Bar follows the focused screen · Notifications follow the focused screen · Staged bar slide · Animated frame around fullscreen windows · Notch hangs off the edge over fullscreen · Remember the monitors' brightness channels |
 | Bar and notch | Bluetooth in the bar · Popouts grow out of the frame · Audio routing tab in the dashboard · Ethernet switch in the notch |
-| Settings and mods | Settings opens as a floating window · Check for mod updates automatically |
+| Settings and mods | Settings opens as a floating window · Notify when mod updates are found |
 
 **Behaviours** is how the features that are switched on behave: Bar slide
 (Animated / Immediate) · Farewell (Animated / Immediate) · Show where the quote
 is from · Lock after boot (Auto / Always) · Dim the screens when idle (As stock
 / Laptops only / Never) · Volume and brightness pop-ups (Quiet at start / As
-stock / Off) · Install mod updates automatically · Hours between automatic
-checks.
+stock / Off).
 
 **Customization** is their durations, sizes and quotes: the animation
 durations (clear a field for the normal one; where that is derived from
@@ -830,6 +762,32 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 4.0.0: **Ambxst 1.3.12; mod updates are Ambxst's now.** Needs Ambxst
+  1.3.12 (base 1e1a5649); on 1.3.10 stay on 3.0.5.
+  - Ambxst 1.3.11 brought its own mod updater (checks, scheduled checks,
+    review, automatic installs, changelogs), so Roadie's is gone: the Check for
+    updates / Install N updates buttons, the per-mod Update buttons, the two
+    switches and the hours, and the *Update Ambxst and its mods* script
+    (`mod_update_check.sh`, `roadie_update.sh`). On 1.3.12 they could no longer
+    work anyway: the manager's update call now only checks. What stays is the
+    notification, now fed by Ambxst's checks ([Mod updates](#mod-updates)).
+    Roadie's automatic checks, if they were on, are handed to Ambxst once.
+  - The Roadie page is declared to the mod manager (`settingsMenu`, section
+    11): Settings > Mods can move it, and it cannot collide with another mod's
+    page. It used to work out its number from its place in the panel list,
+    which Ambxst no longer uses to find panels.
+  - The permissions list that fits now sits in the rebuilt Mods panel (its
+    details and the enable dialog); stock still prints one long line there.
+  - Dropped: the notification image cache moved off-screen (3.0.2). Ambxst
+    1.3.11 fixed the same flash its own way.
+  - Kept: the missing-config fix. Ambxst 1.3.11 repaired the copy command but
+    still never recognises a missing file and reloads before the copy is done.
+  - `commands` no longer lists git and curl.
+  - The open special workspace now comes from axctl (0.0.28+ reports the
+    workspace an output actually shows), so Roadie's own tracking of
+    Hyprland's `activespecial` event is gone, and the dock and notch count
+    windows exactly as stock does. The fullscreen check still reads
+    Hyprland's own window records as the last word.
 - 3.0.5: **the bar's Bluetooth icon shows a device that connects by
   itself.** The connected state was only re-read while a menu was open or
   after a connect made from the shell, so a device reconnecting on its own

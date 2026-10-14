@@ -24,16 +24,15 @@ import Quickshell.Io
 //
 // Values set in Settings > Mods before 1.1.0 (the mod manager's
 // mods/drpezzer.roadie.json) are imported once, the first time this file is
-// missing. The mod update checks (1.4.0, the former Mod Updater) bring their
-// switches over from mods/drpezzer.mod-updater.json the same way, once, and
-// the floating Settings window (1.5.0, the former Settings Float) its three
-// values from mods/drpezzer.settings-float.json.
+// missing. The floating Settings window (1.5.0, the former Settings Float)
+// brings its three values over from mods/drpezzer.settings-float.json the same
+// way, once. (Roadie 4.0.0 dropped its own mod update checks for Ambxst's; the
+// old auto-check switch is handed to Ambxst once, see ModUpdateService.)
 Singleton {
     id: root
 
     readonly property string path: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/roadie.json"
     readonly property string legacyPath: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/mods/drpezzer.roadie.json"
-    readonly property string updaterPath: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/mods/drpezzer.mod-updater.json"
     readonly property string settingsFloatPath: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/mods/drpezzer.settings-float.json"
 
     readonly property var defaults: ({
@@ -47,11 +46,11 @@ Singleton {
         bootLock: "auto",       // auto | always | never (stock: never)
         farewellSource: false,
         farewellHold: 1500,
-        // mod updates (stock has none of this, so "Stock everything" leaves it alone)
-        modAutoCheck: false,
-        modAutoInstall: false,
-        modCheckHours: 6,
-        modUpdaterImported: false, // the one-time import below has run
+        // mod updates: Ambxst (1.3.11+) checks and installs them itself;
+        // Roadie only notifies (stock has no notification, so "Stock
+        // everything" leaves it alone)
+        modUpdateNotify: true,
+        modUpdatesHandedOver: false, // old auto-check settings moved to Ambxst's own once
         // bar and notch
         bluetoothWidget: true,     // stock: false
         framePopouts: true,        // stock: false (floating pills)
@@ -151,12 +150,7 @@ Singleton {
         const n = Number(root.get(key));
         return (isNaN(n) || n < 20) ? root.defaults[key] : Math.min(100, Math.round(n));
     }
-    readonly property bool modAutoCheck: !!root.get("modAutoCheck")
-    readonly property bool modAutoInstall: !!root.get("modAutoInstall")
-    readonly property int modCheckHours: {
-        const n = Number(root.get("modCheckHours"));
-        return (isNaN(n) || n < 1) ? root.defaults.modCheckHours : Math.min(168, Math.round(n));
-    }
+    readonly property bool modUpdateNotify: root.get("modUpdateNotify") !== false
 
     readonly property string enterMode: root.mode("enterMode")
     readonly property string leaveMode: root.mode("leaveMode")
@@ -194,8 +188,8 @@ Singleton {
         // The import markers are not settings: without them the next start
         // would bring the old mods' values back.
         const kept = {};
-        if (root.values.modUpdaterImported === true)
-            kept.modUpdaterImported = true;
+        if (root.values.modUpdatesHandedOver === true)
+            kept.modUpdatesHandedOver = true;
         if (root.values.settingsFloatImported === true)
             kept.settingsFloatImported = true;
         if (root.values.page !== undefined)
@@ -252,47 +246,6 @@ Singleton {
         printErrors: false
     }
     FileView {
-        id: updaterFile
-        path: root.updaterPath
-        blockLoading: true
-        printErrors: false
-    }
-
-    // The switches of the former Mod Updater mod, brought over once.
-    function importUpdater() {
-        if (root.values.modUpdaterImported === true)
-            return;
-        updaterFile.waitForJob();
-        if (!updaterFile.loaded)
-            return; // never installed: nothing to bring over, nothing to remember
-        let old = {};
-        try {
-            old = JSON.parse(updaterFile.text()) || {};
-        } catch (e) {
-            old = {};
-        }
-        const next = Object.assign({}, root.values, { modUpdaterImported: true });
-        const brought = [];
-        if (old.autoCheck === true && next.modAutoCheck === undefined) {
-            next.modAutoCheck = true;
-            brought.push("modAutoCheck");
-        }
-        if (old.autoInstall === true && next.modAutoInstall === undefined) {
-            next.modAutoInstall = true;
-            brought.push("modAutoInstall");
-        }
-        const hours = Number(old.checkIntervalHours);
-        if (!isNaN(hours) && hours >= 1 && Math.round(hours) !== root.defaults.modCheckHours && next.modCheckHours === undefined) {
-            next.modCheckHours = Math.min(168, Math.round(hours));
-            brought.push("modCheckHours");
-        }
-        if (brought.length > 0)
-            console.log("RoadieSettings: imported", brought.join(", "), "from Mod Updater");
-        root.values = next;
-        root.write();
-    }
-
-    FileView {
         id: settingsFloatFile
         path: root.settingsFloatPath
         blockLoading: true
@@ -335,7 +288,6 @@ Singleton {
 
     Component.onCompleted: {
         root.load();
-        root.importUpdater();
         root.importSettingsFloat();
     }
 

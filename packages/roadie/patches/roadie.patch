@@ -1,8 +1,8 @@
 diff --git a/config/Config.qml b/config/Config.qml
-index b7b39906..c21cbd18 100644
+index 547cb5eb..b53b2b82 100644
 --- a/config/Config.qml
 +++ b/config/Config.qml
-@@ -114,7 +114,7 @@ Singleton {
+@@ -138,7 +138,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -11,7 +11,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("theme", themeLoader, ThemeDefaults.data, () => {
                      root.themeReady = true;
                  });
-@@ -141,6 +141,14 @@ Singleton {
+@@ -165,6 +165,14 @@ Singleton {
              property string monoFont: "Iosevka Nerd Font Mono"
              property int monoFontSize: 14
              property bool tintIcons: false
@@ -26,7 +26,7 @@ index b7b39906..c21cbd18 100644
              property bool enableCorners: true
              property int animDuration: 300
              property real shadowOpacity: 0.5
-@@ -509,7 +517,7 @@ Singleton {
+@@ -533,7 +541,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -35,7 +35,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("bar", barLoader, BarDefaults.data, () => {
                      root.barReady = true;
                  });
-@@ -549,6 +557,11 @@ Singleton {
+@@ -573,6 +581,11 @@ Singleton {
              property bool containBar: false
              property bool keepBarShadow: false
              property bool keepBarBorder: false
@@ -47,7 +47,7 @@ index b7b39906..c21cbd18 100644
          }
      }
  
-@@ -568,7 +581,7 @@ Singleton {
+@@ -592,7 +605,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -56,7 +56,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("workspaces", workspacesLoader, WorkspacesDefaults.data, () => {
                      root.workspacesReady = true;
                  });
-@@ -611,7 +624,7 @@ Singleton {
+@@ -635,7 +648,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -65,7 +65,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("overview", overviewLoader, OverviewDefaults.data, () => {
                      root.overviewReady = true;
                  });
-@@ -653,7 +666,7 @@ Singleton {
+@@ -677,7 +690,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -74,7 +74,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("notch", notchLoader, NotchDefaults.data, () => {
                      root.notchReady = true;
                  });
-@@ -698,7 +711,7 @@ Singleton {
+@@ -722,7 +735,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -83,7 +83,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("compositor", compositorLoader, CompositorDefaults.data, () => {
                      root.compositorReady = true;
                  });
-@@ -778,7 +791,7 @@ Singleton {
+@@ -802,7 +815,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -92,7 +92,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("performance", performanceLoader, PerformanceDefaults.data, () => {
                      root.performanceReady = true;
                  });
-@@ -823,7 +836,7 @@ Singleton {
+@@ -847,7 +860,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -101,7 +101,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("weather", weatherLoader, WeatherDefaults.data, () => {
                      root.weatherReady = true;
                  });
-@@ -863,7 +876,7 @@ Singleton {
+@@ -887,7 +900,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -110,7 +110,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("desktop", desktopLoader, DesktopDefaults.data, () => {
                      root.desktopReady = true;
                  });
-@@ -906,7 +919,7 @@ Singleton {
+@@ -930,7 +943,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -119,7 +119,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("lockscreen", lockscreenLoader, LockscreenDefaults.data, () => {
                      root.lockscreenReady = true;
                  });
-@@ -945,7 +958,7 @@ Singleton {
+@@ -969,7 +982,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -128,7 +128,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("prefix", prefixLoader, PrefixDefaults.data, () => {
                      root.prefixReady = true;
                  });
-@@ -988,7 +1001,7 @@ Singleton {
+@@ -1012,7 +1025,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -137,7 +137,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("system", systemLoader, SystemDefaults.data, () => {
                      root.systemReady = true;
                  });
-@@ -1077,7 +1090,7 @@ Singleton {
+@@ -1101,7 +1114,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -146,7 +146,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("dock", dockLoader, DockDefaults.data, () => {
                      root.dockReady = true;
                  });
-@@ -1167,7 +1180,7 @@ Singleton {
+@@ -1191,7 +1204,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -155,7 +155,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("ai", aiLoader, AiDefaults.data, () => {
                      root.aiReady = true;
                  });
-@@ -1212,7 +1225,7 @@ Singleton {
+@@ -1236,7 +1249,7 @@ Singleton {
              }
          }
          onLoadFailed: {
@@ -164,7 +164,7 @@ index b7b39906..c21cbd18 100644
                  handleMissingConfig("general", generalLoader, GeneralDefaults.data, () => {
                      root.generalReady = true;
                  });
-@@ -3411,29 +3424,41 @@ Singleton {
+@@ -3493,29 +3506,42 @@ Singleton {
      }
  
      // Handle missing config files - copy from preset or create with defaults
@@ -173,11 +173,12 @@ index b7b39906..c21cbd18 100644
 +    // written.
 +    property var missingHandled: ({})
 +
-+    // roadie: stock built the copy Process from a string that imported only
-+    // QtQuick (Process is in Quickshell.Io) and gave it a signal it does not
-+    // have, so creating it failed and the function ended there: a missing
-+    // config file was never written, and nothing of that module was ever
-+    // saved (the AI sidebar's pin, width and position among them).
++    // roadie: stock (1.3.11+) starts the copy and reloads in the same breath,
++    // so the reload reads the file before cp has written it and the defaults
++    // fallback wins. Wait for cp, then reload. Together with the
++    // FileViewError check above, a missing config file is written once and
++    // that module is saved again (the AI sidebar's pin, width and position
++    // among them).
 +    property Component copyConfigProcess: Component {
 +        Process {}
 +    }
@@ -192,9 +193,9 @@ index b7b39906..c21cbd18 100644
  
 -        // Create a Process component dynamically to copy the file
 -        var copyProcess = Qt.createQmlObject(
--            "import QtQuick 2.0; Process { running: true; command: ['cp', '" + presetPath + "', '" + targetPath + "']; onFinished: { console.log('Copy finished for " + name + "'); } }",
+-            "import QtQuick; import Quickshell.Io; Process { running: true; command: " + JSON.stringify(["cp", presetPath, targetPath]) + "; }",
 -            root,
--            "copyProcess"
+-            "copyProcess-" + name
 -        );
 -
 -        // Reload the loader to pick up the copied file
@@ -3193,7 +3194,7 @@ index 3132417b..c5aa8c1b 100644
                  }
  
 diff --git a/modules/dock/DockContent.qml b/modules/dock/DockContent.qml
-index 474b8a69..b912dcfb 100644
+index 474b8a69..8d20f888 100644
 --- a/modules/dock/DockContent.qml
 +++ b/modules/dock/DockContent.qml
 @@ -16,6 +16,10 @@ import qs.config
@@ -3216,28 +3217,7 @@ index 474b8a69..b912dcfb 100644
      readonly property bool barPinned: {
          if (barPanelRef && typeof barPanelRef.pinned !== 'undefined') {
              return barPanelRef.pinned;
-@@ -79,11 +83,18 @@ Item {
-         return true;
-     }
- 
-+    // The special workspace this output has open, if any (id, 0 = none), set
-+    // by UnifiedShellPanel from its activespecial tracking. axctl's monitor
-+    // payload only carries the normal active workspace, so without this the
-+    // windows on an open special workspace never counted: the notch and dock
-+    // stayed out over them whenever the workspace underneath was empty.
-+    property int openSpecialWorkspaceId: 0
-+
-     // Monitor reference and refrence to toplevels on monitor
-     readonly property var compositorMonitor: AxctlService.monitorFor(screen)
--    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.visibleWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.visibleWorkspace.id && c.monitor === compositorMonitor.id)
-+    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.visibleWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => (c.workspace.id === compositorMonitor.visibleWorkspace.id && c.monitor === compositorMonitor.id) || (openSpecialWorkspaceId !== 0 && c.workspace.id === openSpecialWorkspaceId))
- 
--    // Check if there are any windows on the current monitor and workspace
-+    // Check if there are any windows on this output's visible workspaces
-     readonly property bool hasWindows: toplevels.length > 0
- 
-     // Fullscreen detection - scoped to this monitor so the effect only
-@@ -99,10 +110,21 @@ Item {
+@@ -99,10 +103,21 @@ Item {
          return false;
      }
  
@@ -3260,7 +3240,7 @@ index 474b8a69..b912dcfb 100644
              return (Config.dock?.availableOnFullscreen ?? false) && (Config.dock?.hoverToReveal && dockMouseArea.containsMouse);
          }
  
-@@ -192,6 +214,13 @@ Item {
+@@ -192,6 +207,13 @@ Item {
          Item {
              id: dockContainer
  
@@ -3274,7 +3254,7 @@ index 474b8a69..b912dcfb 100644
              // Corner size for default theme
              readonly property int cornerSize: root.isDefault && Config.roundness > 0 ? Config.roundness + 4 : 0
  
-@@ -250,7 +279,12 @@ Item {
+@@ -250,7 +272,12 @@ Item {
              }
  
              // Slide animation
@@ -3288,7 +3268,7 @@ index 474b8a69..b912dcfb 100644
                  x: root.isVertical ? (root.reveal ? 0 : (root.isLeft ? -(dockContainer.width + root.edgeSideMargin) : (dockContainer.width + root.edgeSideMargin))) : 0
                  y: root.isBottom ? (root.reveal ? 0 : (dockContainer.height + root.edgeSideMargin)) : 0
                  Behavior on x {
-@@ -267,7 +301,7 @@ Item {
+@@ -267,7 +294,7 @@ Item {
                          easing.type: Easing.OutCubic
                      }
                  }
@@ -3297,7 +3277,7 @@ index 474b8a69..b912dcfb 100644
  
              // Full background container with masking (default theme)
              Item {
-@@ -523,7 +557,7 @@ Item {
+@@ -523,7 +550,7 @@ Item {
                                  AxctlService.dispatch("overview toggle");
                                  return;
                              }
@@ -3306,7 +3286,7 @@ index 474b8a69..b912dcfb 100644
                              if (visibilities) {
                                  visibilities.overview = !visibilities.overview;
                              }
-@@ -661,7 +695,7 @@ Item {
+@@ -661,7 +688,7 @@ Item {
                                  AxctlService.dispatch("overview toggle");
                                  return;
                              }
@@ -3652,10 +3632,10 @@ index 557c3261..b4cc1e4c 100644
          onPaint: {
              if (Config.notchTheme !== "default")
 diff --git a/modules/notch/NotchContent.qml b/modules/notch/NotchContent.qml
-index 8ef85f11..07299d9f 100644
+index 8ef85f11..8bcb90db 100644
 --- a/modules/notch/NotchContent.qml
 +++ b/modules/notch/NotchContent.qml
-@@ -22,22 +22,32 @@ Item {
+@@ -22,8 +22,8 @@ Item {
      property bool unifiedEffectActive: false
  
      // Get this screen's visibility state
@@ -3663,24 +3643,10 @@ index 8ef85f11..07299d9f 100644
 -    readonly property bool isScreenFocused: AxctlService.focusedMonitor && AxctlService.focusedMonitor.name === screen.name
 +    readonly property var screenVisibilities: Visibilities.getForScreen(screen?.name ?? "")
 +    readonly property bool isScreenFocused: AxctlService.focusedMonitor && AxctlService.focusedMonitor.name === screen?.name
-+
-+    // The special workspace this output has open, if any (id, 0 = none), set
-+    // by UnifiedShellPanel from its activespecial tracking. axctl's monitor
-+    // payload only carries the normal active workspace, so without this the
-+    // windows on an open special workspace never counted: the notch and dock
-+    // stayed out over them whenever the workspace underneath was empty.
-+    property int openSpecialWorkspaceId: 0
  
      // Monitor reference and refrence to toplevels on monitor
      readonly property var compositorMonitor: AxctlService.monitorFor(screen)
--    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.visibleWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => c.workspace.id === compositorMonitor.visibleWorkspace.id && c.monitor === compositorMonitor.id)
-+    readonly property var toplevels: (!compositorMonitor || !compositorMonitor.visibleWorkspace || !AxctlService.clients.values) ? [] : AxctlService.clients.values.filter(c => (c.workspace.id === compositorMonitor.visibleWorkspace.id && c.monitor === compositorMonitor.id) || (openSpecialWorkspaceId !== 0 && c.workspace.id === openSpecialWorkspaceId))
- 
--    // Check if there are any windows on the current monitor and workspace
-+    // Check if there are any windows on this output's visible workspaces
-     readonly property bool hasWindows: toplevels.length > 0
- 
-     // Get the bar position for this screen
+@@ -36,8 +36,11 @@ Item {
      readonly property string barPosition: (Config.bar && Config.bar.position !== undefined) ? Config.bar.position : "top"
      readonly property string notchPosition: Config.notchPosition !== undefined ? Config.notchPosition : "top"
  
@@ -3693,7 +3659,7 @@ index 8ef85f11..07299d9f 100644
  
      // Check if bar is pinned (use bar state directly)
      readonly property bool barPinned: {
-@@ -61,7 +71,10 @@ Item {
+@@ -61,7 +64,10 @@ Item {
  
      // Fullscreen detection - scoped to this monitor so the effect only
      // applies to the screen that actually has the fullscreen window
@@ -3705,7 +3671,7 @@ index 8ef85f11..07299d9f 100644
  
      // Should auto-hide logic:
      // 1. If notch and bar are on different sides: hide if keepHidden is ON, OR if windows/fullscreen are present
-@@ -79,7 +92,10 @@ Item {
+@@ -79,7 +85,10 @@ Item {
  
      // Notch state properties
      readonly property bool screenNotchOpen: screenVisibilities ? (screenVisibilities.launcher || screenVisibilities.dashboard || screenVisibilities.powermenu || screenVisibilities.tools) : false
@@ -3717,7 +3683,7 @@ index 8ef85f11..07299d9f 100644
  
      // Hover state with delay to prevent flickering
      property bool hoverActive: false
-@@ -89,6 +105,9 @@ Item {
+@@ -89,6 +98,9 @@ Item {
  
      // Reveal logic:
      readonly property bool reveal: {
@@ -3727,7 +3693,7 @@ index 8ef85f11..07299d9f 100644
          // If keepHidden is true, ONLY show on interaction
          // UNLESS notch and bar are on same side (e.g. both top), then keepHidden is IGNORED for sync consistency
          if (((Config.notch && Config.notch.keepHidden !== undefined) ? Config.notch.keepHidden : false) && barPosition !== notchPosition) {
-@@ -172,7 +191,7 @@ Item {
+@@ -172,7 +184,7 @@ Item {
      Loader {
          id: persistentDashboardViewLoader
          active: false
@@ -3736,7 +3702,7 @@ index 8ef85f11..07299d9f 100644
      }
  
      // Persistent power menu view
-@@ -239,6 +258,8 @@ Item {
+@@ -239,6 +251,8 @@ Item {
          // Animation container for reveal/hide
          Item {
              id: notchAnimationContainer
@@ -3745,7 +3711,7 @@ index 8ef85f11..07299d9f 100644
              anchors.horizontalCenter: parent.horizontalCenter
              anchors.top: root.notchPosition === "top" ? parent.top : undefined
              anchors.bottom: root.notchPosition === "bottom" ? parent.bottom : undefined
-@@ -257,7 +278,7 @@ Item {
+@@ -257,7 +271,7 @@ Item {
              }
  
              // Slide animation (slide up when hidden)
@@ -3754,7 +3720,7 @@ index 8ef85f11..07299d9f 100644
                  y: {
                      if (root.reveal) return 0;
                      if (root.notchPosition === "top")
-@@ -272,21 +293,33 @@ Item {
+@@ -272,21 +286,33 @@ Item {
                          easing.type: Easing.OutCubic
                      }
                  }
@@ -3792,7 +3758,7 @@ index 8ef85f11..07299d9f 100644
  
                  // layer.enabled: true
                  // layer.effect: Shadow {}
-@@ -417,95 +450,141 @@ Item {
+@@ -417,95 +443,141 @@ Item {
          }
      }
  
@@ -4762,22 +4728,6 @@ index 0be8e1e2..55c2b3b9 100644
              if (!root.isUpdating) {
                  Qt.callLater(() => root.applyState(data));
              }
-diff --git a/modules/services/Notifications.qml b/modules/services/Notifications.qml
-index 0f1815bf..b558554c 100644
---- a/modules/services/Notifications.qml
-+++ b/modules/services/Notifications.qml
-@@ -675,6 +675,11 @@ Singleton {
- 
-             width: 1
-             height: 1
-+            // roadie: rendered outside the window's 512 px, so the image never
-+            // shows on screen while it is cached (it flashed at the screen's
-+            // top-left for 150 ms+, over fullscreen windows too). grabToImage
-+            // renders the item itself, wherever it sits.
-+            x: -(maxSize + 64)
- 
-             Component.onCompleted: root.activeCacheJobs++
-             Component.onDestruction: root.activeCacheJobs--
 diff --git a/modules/services/Visibilities.qml b/modules/services/Visibilities.qml
 index ee97b092..378ef7ed 100644
 --- a/modules/services/Visibilities.qml
@@ -5061,7 +5011,7 @@ index 26da91a8..75c3b74d 100644
              if (barEnabled && barPosition === "right" && barPinned) {
                  zone += barSize + barOuterMargin;
 diff --git a/modules/shell/UnifiedShellPanel.qml b/modules/shell/UnifiedShellPanel.qml
-index 786c98e6..72209185 100644
+index 786c98e6..5bb2e9f2 100644
 --- a/modules/shell/UnifiedShellPanel.qml
 +++ b/modules/shell/UnifiedShellPanel.qml
 @@ -2,11 +2,13 @@ import QtQuick
@@ -5140,7 +5090,7 @@ index 786c98e6..72209185 100644
      readonly property int dockHeight: dockContent.dockSize + dockContent.totalMargin
  
      readonly property alias notchHoverActive: notchContent.hoverActive
-@@ -89,9 +106,190 @@ PanelWindow {
+@@ -89,9 +106,145 @@ PanelWindow {
      readonly property bool unifiedEffectActive: false // Flag to notify children to disable internal borders
  
      readonly property var compositorMonitor: AxctlService.monitorFor(targetScreen)
@@ -5149,50 +5099,14 @@ index 786c98e6..72209185 100644
 -    readonly property bool hasFullscreenWindow: CompositorData.monitorHasFullscreen(compositorMonitor)
 +
 +    // The special workspace this output currently has pulled up, or 0 for none.
-+    //
-+    // axctl has no field for it: its monitor payload carries only
-+    // `active_workspace` (the normal one), and `workspace list` marks a special
-+    // workspace `is_active` only when it holds focus, not when it is merely on
-+    // screen. Hyprland does report it per monitor, so it comes from there.
++    // axctl (0.0.28+) reports it: `visible_workspace` is the special one while
++    // it is open, the active one otherwise.
 +    readonly property int openSpecialWorkspaceId: {
-+        if (unifiedPanel.openSpecialKnown) {
-+            if (!unifiedPanel.openSpecialName)
-+                return 0;
-+            // axctl's list is the same source the window scan's workspace ids
-+            // come from, so the two agree.
-+            const wss = AxctlService.workspaces.values || [];
-+            for (let i = 0; i < wss.length; i++) {
-+                if (wss[i].name === unifiedPanel.openSpecialName)
-+                    return wss[i].id;
-+            }
-+            // Not listed yet (just created): fall through to Hyprland's object.
-+        }
-+        const name = targetScreen ? targetScreen.name : "";
-+        if (!name)
++        const mon = unifiedPanel.compositorMonitor;
++        if (!mon || !mon.visibleWorkspace || !mon.activeWorkspace)
 +            return 0;
-+
-+        const mons = Hyprland.monitors ? Hyprland.monitors.values : [];
-+        for (let i = 0; i < mons.length; i++) {
-+            if (mons[i].name === name)
-+                return mons[i].lastIpcObject?.specialWorkspace?.id ?? 0;
-+        }
-+        return 0;
++        return mon.visibleWorkspace.id !== mon.activeWorkspace.id ? mon.visibleWorkspace.id : 0;
 +    }
-+
-+    // The special workspace this output has open, tracked from Hyprland's own
-+    // `activespecial` event ("<name>,<monitor>"; an empty name means closed).
-+    //
-+    // Quickshell refreshes its monitor objects on `focusedmon` and workspace
-+    // events but not on `activespecial`, and a refresh requested from here
-+    // can be folded into one already in flight for the workspace/focus event
-+    // that precedes it, whose reply predates the change. So the id read from
-+    // lastIpcObject was stale intermittently, in both directions: the frame
-+    // and bar stayed over a game that had just come back, or stayed away from
-+    // a screen that was showing ordinary windows again. The event is the
-+    // authoritative source; lastIpcObject is only the fallback until one has
-+    // been seen.
-+    property string openSpecialName: ""
-+    property bool openSpecialKnown: false
 +
 +    Connections {
 +        target: Hyprland
@@ -5217,15 +5131,6 @@ index 786c98e6..72209185 100644
 +                toplevelSettle.restart();
 +                toplevelSettleLate.restart();
 +            }
-+            if (event.name !== "activespecial")
-+                return;
-+            const parts = String(event.data).split(",");
-+            const mon = parts.length > 1 ? parts[1] : "";
-+            if (!targetScreen || mon !== targetScreen.name)
-+                return;
-+            unifiedPanel.openSpecialName = parts[0];
-+            unifiedPanel.openSpecialKnown = true;
-+            Hyprland.refreshMonitors();
 +        }
 +    }
 +
@@ -5334,7 +5239,7 @@ index 786c98e6..72209185 100644
  
      // Proxy properties for Bar/Notch synchronization
      // Note: BarContent and NotchContent already handle their internal sync using Visibilities.
-@@ -101,22 +299,54 @@ PanelWindow {
+@@ -101,22 +254,54 @@ PanelWindow {
      readonly property bool keepBarBorder: Config.bar.keepBarBorder ?? false
      readonly property bool containBar: Config.bar.containBar && (Config.bar.frameEnabled ?? false)
  
@@ -5401,7 +5306,7 @@ index 786c98e6..72209185 100644
      }
  
      // Full-screen mask item (used when modules/popups are open)
-@@ -132,6 +362,16 @@ PanelWindow {
+@@ -132,6 +317,16 @@ PanelWindow {
          // Full-screen capture when any module/popup is open
          item: unifiedPanel.needsFullScreenInput ? fullScreenMask : null
          regions: [
@@ -5418,7 +5323,7 @@ index 786c98e6..72209185 100644
              Region {
                  item: barContent.visible ? barContent.barHitbox : null
              },
-@@ -173,6 +413,10 @@ PanelWindow {
+@@ -173,6 +368,10 @@ PanelWindow {
  
          onClicked: {
              FocusGrabManager.clearTopGrab();
@@ -5429,7 +5334,7 @@ index 786c98e6..72209185 100644
              if (assistantSidebar.active && assistantSidebar.wantsFocus) {
                  assistantSidebar.wantsFocus = false;
              }
-@@ -202,21 +446,82 @@ PanelWindow {
+@@ -202,15 +401,74 @@ PanelWindow {
              id: barContent
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -5497,7 +5402,6 @@ index 786c98e6..72209185 100644
  
          DockContent {
              id: dockContent
-+            openSpecialWorkspaceId: unifiedPanel.openSpecialWorkspaceId
              unifiedEffectActive: unifiedPanel.unifiedEffectActive
              anchors.fill: parent
              screen: unifiedPanel.targetScreen
@@ -5505,14 +5409,7 @@ index 786c98e6..72209185 100644
              z: 3
              visible: unifiedPanel.dockEnabled
          }
- 
-         NotchContent {
-             id: notchContent
-+            openSpecialWorkspaceId: unifiedPanel.openSpecialWorkspaceId
-             unifiedEffectActive: unifiedPanel.unifiedEffectActive
-             anchors.fill: parent
-             screen: unifiedPanel.targetScreen
-@@ -276,4 +581,20 @@ PanelWindow {
+@@ -276,4 +534,20 @@ PanelWindow {
              }
          }
      }
@@ -5609,10 +5506,10 @@ index 292f58c4..723c17f5 100644
                  easing.type: Easing.OutCubic
              }
 diff --git a/modules/theme/Icons.qml b/modules/theme/Icons.qml
-index 3333506c..362151ca 100644
+index cbe463b5..4942f6d0 100644
 --- a/modules/theme/Icons.qml
 +++ b/modules/theme/Icons.qml
-@@ -266,4 +266,43 @@ QtObject {
+@@ -265,4 +265,43 @@ QtObject {
      readonly property string thermometer: temperature
      readonly property string windowsLogo: terminalWindow
      readonly property string frameCorners: crop
@@ -5790,10 +5687,10 @@ index 6b60935c..00d65a92 100644
 +    }
  }
 diff --git a/modules/widgets/dashboard/controls/ModsPanel.qml b/modules/widgets/dashboard/controls/ModsPanel.qml
-index 66cbd27d..fc8f603c 100644
+index 6ee88c15..6973030b 100644
 --- a/modules/widgets/dashboard/controls/ModsPanel.qml
 +++ b/modules/widgets/dashboard/controls/ModsPanel.qml
-@@ -83,6 +83,8 @@ Item {
+@@ -90,6 +90,8 @@ Item {
          "mods.package_source": "Package source",
          "mods.package_status": "Package status",
          "mods.permissions": "Declared permissions",
@@ -5802,29 +5699,7 @@ index 66cbd27d..fc8f603c 100644
          "mods.rebuild": "Rebuild",
          "mods.rebuild_required": "Rebuild required: %1",
          "mods.refresh": "Refresh mod state",
-@@ -121,6 +123,21 @@ Item {
-         "mods.unknown_fields": "Manifest keys this Ambxst does not know: %1",
-         "mods.untested_base": "%1. You can still enable it.",
-         "mods.update": "Update",
-+        "mods.updates_auto_description": "Look for new versions of installed mods shortly after the shell starts and every few hours after that, and send a notification when any are found.",
-+        "mods.updates_auto_install_description": "Install what an automatic check finds right away, then notify you to restart Ambxst.",
-+        "mods.updates_auto_install_title": "Install mod updates automatically",
-+        "mods.updates_auto_title": "Check for mod updates automatically",
-+        "mods.updates_available": "Update to %1",
-+        "mods.updates_check": "Check for updates",
-+        "mods.updates_checking": "Checking…",
-+        "mods.updates_install_all": "Install %1 updates",
-+        "mods.updates_install_one": "Install 1 update",
-+        "mods.updates_needs_ambxst": "%1 needs Ambxst %2",
-+        "mods.updates_none": "No updates",
-+        "mods.updates_not_for_ambxst": "%1 is not for this Ambxst",
-+        "mods.updates_waiting_ambxst": "Waiting for Ambxst %1",
-+        "mods.updates_with_ambxst": "Update Ambxst to %1 and its mods",
-+        "mods.updates_with_ambxst_plain": "Update Ambxst and its mods",
-         "mods.working": "Working…"
-     })
- 
-@@ -335,6 +352,153 @@ Item {
+@@ -432,6 +434,153 @@ Item {
          }
      }
  
@@ -5978,199 +5853,7 @@ index 66cbd27d..fc8f603c 100644
      Flickable {
          id: mainFlickable
          anchors.fill: parent
-@@ -588,6 +752,91 @@ Item {
-                 }
-             }
- 
-+            StyledRect {
-+                Layout.fillWidth: true
-+                Layout.preferredHeight: autoCheckColumn.implicitHeight + 28
-+                variant: "pane"
-+                radius: Styling.radius(0)
-+
-+                ColumnLayout {
-+                    id: autoCheckColumn
-+                    anchors.left: parent.left
-+                    anchors.right: parent.right
-+                    anchors.top: parent.top
-+                    anchors.margins: 14
-+                    spacing: 12
-+
-+                    RowLayout {
-+                        Layout.fillWidth: true
-+                        spacing: 8
-+
-+                        ColumnLayout {
-+                            Layout.fillWidth: true
-+                            spacing: 2
-+
-+                            Text {
-+                                text: root.tr("mods.updates_auto_title")
-+                                font.family: Config.theme.font
-+                                font.pixelSize: Styling.fontSize(-1)
-+                                font.weight: Font.DemiBold
-+                                color: Colors.overBackground
-+                            }
-+
-+                            Text {
-+                                Layout.fillWidth: true
-+                                text: root.tr("mods.updates_auto_description")
-+                                font.family: Config.theme.font
-+                                font.pixelSize: Styling.fontSize(-2)
-+                                color: Colors.outline
-+                                wrapMode: Text.Wrap
-+                            }
-+                        }
-+
-+                        ActionButton {
-+                            text: ModUpdateService.autoCheck ? root.tr("common.on") : root.tr("common.off")
-+                            primary: ModUpdateService.autoCheck
-+                            enabled: !ModsService.busy && ModUpdateService.settingsLoaded
-+                            onClicked: ModUpdateService.setAutoCheck(!ModUpdateService.autoCheck)
-+                        }
-+                    }
-+
-+                    RowLayout {
-+                        Layout.fillWidth: true
-+                        spacing: 8
-+                        opacity: ModUpdateService.autoCheck ? 1 : 0.5
-+
-+                        ColumnLayout {
-+                            Layout.fillWidth: true
-+                            spacing: 2
-+
-+                            Text {
-+                                text: root.tr("mods.updates_auto_install_title")
-+                                font.family: Config.theme.font
-+                                font.pixelSize: Styling.fontSize(-1)
-+                                font.weight: Font.DemiBold
-+                                color: Colors.overBackground
-+                            }
-+
-+                            Text {
-+                                Layout.fillWidth: true
-+                                text: root.tr("mods.updates_auto_install_description")
-+                                font.family: Config.theme.font
-+                                font.pixelSize: Styling.fontSize(-2)
-+                                color: Colors.outline
-+                                wrapMode: Text.Wrap
-+                            }
-+                        }
-+
-+                        ActionButton {
-+                            text: ModUpdateService.autoInstall ? root.tr("common.on") : root.tr("common.off")
-+                            primary: ModUpdateService.autoInstall
-+                            enabled: !ModsService.busy && ModUpdateService.settingsLoaded && ModUpdateService.autoCheck
-+                            onClicked: ModUpdateService.setAutoInstall(!ModUpdateService.autoInstall)
-+                        }
-+                    }
-+                }
-+            }
-+
-             RowLayout {
-                 Layout.fillWidth: true
-                 Layout.topMargin: 2
-@@ -603,6 +852,71 @@ Item {
- 
-                 Item { Layout.fillWidth: true }
- 
-+                // roadie: updates that need a newer Ambxst than the installed
-+                // one. The manager refuses those, so they are offered together
-+                // with the Ambxst update, in the order that works.
-+                ActionButton {
-+                    visible: root.hasInstalledMods && ModUpdateService.blockedCount > 0
-+                    primary: ModUpdateService.ambxstReady
-+                    enabled: !ModsService.busy && !ModUpdateService.checking && !ModUpdateService.installing
-+                        && ModUpdateService.ambxstReady
-+                    text: !ModUpdateService.ambxstReady ? root.tr("mods.updates_waiting_ambxst", ModUpdateService.ambxstNeeded)
-+                        : ModUpdateService.ambxstAvailable !== "" ? root.tr("mods.updates_with_ambxst", ModUpdateService.ambxstAvailable)
-+                        : root.tr("mods.updates_with_ambxst_plain")
-+                    onClicked: ModUpdateService.updateWithAmbxst()
-+                }
-+
-+                ActionButton {
-+                    id: updateCheckButton
-+                    visible: root.hasInstalledMods
-+                    primary: ModUpdateService.updateCount > 0
-+                    enabled: !ModsService.busy && !ModUpdateService.checking && !ModUpdateService.installing
-+                        && !ModUpdateService.noUpdatesFlash
-+                    // The label is derived here and copied into text by a short
-+                    // crossfade, so "No updates" fades back into the idle label
-+                    // instead of snapping.
-+                    readonly property string label: ModUpdateService.checking ? root.tr("mods.updates_checking")
-+                        : ModUpdateService.updateCount === 1 ? root.tr("mods.updates_install_one")
-+                        : ModUpdateService.updateCount > 1 ? root.tr("mods.updates_install_all", String(ModUpdateService.updateCount))
-+                        : ModUpdateService.noUpdatesFlash ? root.tr("mods.updates_none")
-+                        : root.tr("mods.updates_check")
-+                    text: label
-+                    onLabelChanged: {
-+                        if (Config.animDuration > 0)
-+                            labelFade.restart();
-+                        else
-+                            text = label;
-+                    }
-+
-+                    SequentialAnimation {
-+                        id: labelFade
-+                        NumberAnimation {
-+                            target: updateCheckButton.contentItem
-+                            property: "opacity"
-+                            to: 0
-+                            duration: Config.animDuration / 3
-+                            easing.type: Easing.OutQuad
-+                        }
-+                        ScriptAction {
-+                            script: updateCheckButton.text = updateCheckButton.label
-+                        }
-+                        NumberAnimation {
-+                            target: updateCheckButton.contentItem
-+                            property: "opacity"
-+                            to: 1
-+                            duration: Config.animDuration / 2
-+                            easing.type: Easing.InQuad
-+                        }
-+                    }
-+
-+                    onClicked: {
-+                        if (ModUpdateService.updateCount > 0)
-+                            ModUpdateService.updateAll(false);
-+                        else
-+                            ModUpdateService.checkForUpdates(false);
-+                    }
-+                }
-+
-                 SearchInput {
-                     Layout.preferredWidth: 220
-                     visible: root.hasInstalledMods
-@@ -788,6 +1102,27 @@ Item {
-                                     }
-                                 }
- 
-+                                ActionButton {
-+                                    id: pendingButton
-+                                    readonly property var pending: ModUpdateService.updates[modRow.modelData.id]
-+                                    readonly property bool blocked: !!pending && !!pending.blocked
-+                                    visible: !!pending
-+                                    primary: !blocked
-+                                    enabled: !ModsService.busy && !ModUpdateService.installing
-+                                        && (!blocked || (pending.needs !== "" && ModUpdateService.ambxstReady))
-+                                    text: !pending ? ""
-+                                        : !blocked ? root.tr("mods.updates_available", pending.version)
-+                                        : pending.needs !== "" ? root.tr("mods.updates_needs_ambxst", pending.version).replace("%2", pending.needs)
-+                                        : root.tr("mods.updates_not_for_ambxst", pending.version)
-+                                    onClicked: {
-+                                        root.selectedId = modRow.modelData.id;
-+                                        if (blocked)
-+                                            ModUpdateService.updateWithAmbxst();
-+                                        else
-+                                            ModUpdateService.updateOne(modRow.modelData.id);
-+                                    }
-+                                }
-+
-                                 ActionButton {
-                                     text: modRow.modelData.enabled ? root.tr("mods.disable") : root.tr("mods.enable")
-                                     primary: !modRow.modelData.enabled
-@@ -1020,10 +1355,8 @@ Item {
+@@ -1445,10 +1594,8 @@ Item {
                          }
                      }
  
@@ -6183,15 +5866,18 @@ index 66cbd27d..fc8f603c 100644
                      }
  
                      MetaRow {
-@@ -1442,10 +1775,10 @@ Item {
+@@ -1920,11 +2067,12 @@ Item {
                      }
                  }
  
 -                MetaRow {
--                    visible: (root.confirmMod?.permissions ?? []).length > 0
+-                    visible: root.confirmKind !== "remove" && root.confirmKind !== "menuIndex"
+-                        && (root.confirmMod?.permissions ?? []).length > 0
 -                    label: root.tr("mods.permissions")
 -                    value: (root.confirmMod?.permissions ?? []).join(", ")
 +                PermissionsRow {
++                    // roadie: stock hides the permissions on remove and menu-index confirms.
++                    visible: root.confirmKind !== "remove" && root.confirmKind !== "menuIndex" && items.length > 0
 +                    permissions: root.confirmMod?.permissions ?? []
 +                    // Opened, the dialog still has to fit the window.
 +                    maxListHeight: Math.max(64, Math.min(168, root.height - 480))
@@ -6199,37 +5885,34 @@ index 66cbd27d..fc8f603c 100644
  
                  MetaRow {
 diff --git a/modules/widgets/dashboard/controls/SettingsTab.qml b/modules/widgets/dashboard/controls/SettingsTab.qml
-index aaef9eca..03ee0f0e 100644
+index 57b16601..e220dd15 100644
 --- a/modules/widgets/dashboard/controls/SettingsTab.qml
 +++ b/modules/widgets/dashboard/controls/SettingsTab.qml
-@@ -261,6 +261,17 @@ Rectangle {
+@@ -266,6 +266,15 @@ Rectangle {
              section: 10,
              isIcon: true
          },
 +        {
-+            // roadie: its own page (RoadiePanel.qml), above Ambxst. The section
-+            // id is wherever the panel entry sits in panelComponents (the panel
-+            // Loader indexes that list by position), read when asked rather than
-+            // claimed as a number, so other mods adding pages before or after
-+            // this one, in any load order, cannot make it open the wrong panel.
++            // roadie: its own page (RoadiePanel.qml). Section 11 is declared in
++            // the manifest's settingsMenu, so the mod manager places it, lets
++            // the user move it, and renumbers it if another mod claims 11.
 +            icon: Icons.lightning,
 +            label: "Roadie",
-+            get section() { return contentArea.panelComponents.findIndex(p => p && p.roadiePanel); },
++            section: 11,
 +            isIcon: true
 +        },
          {
              icon: Qt.resolvedUrl("../../../../assets/ambxst/ambxst-icon.svg"),
              label: I18n.t("settings.ambxst"),
-@@ -606,6 +617,12 @@ Rectangle {
+@@ -611,6 +620,11 @@ Rectangle {
                  {
                      component: "ModsPanel.qml",
                      section: 10
 +                },
 +                {
-+                    // roadie (see the sidebar entry): section = its own position.
++                    // roadie (see the sidebar entry).
 +                    component: "RoadiePanel.qml",
-+                    roadiePanel: true,
-+                    get section() { return contentArea.panelComponents.findIndex(p => p && p.roadiePanel); }
++                    section: 11
                  }
              ]
  
@@ -6783,10 +6466,10 @@ index a8a61a86..87322803 100644
              HoverHandler {
                  onHoveredChanged: root.hovered = hovered
 diff --git a/modules/widgets/launcher/LauncherView.qml b/modules/widgets/launcher/LauncherView.qml
-index f30909eb..f71e54c2 100644
+index 5f6e392c..8ec96594 100644
 --- a/modules/widgets/launcher/LauncherView.qml
 +++ b/modules/widgets/launcher/LauncherView.qml
-@@ -755,6 +755,17 @@ Rectangle {
+@@ -768,6 +768,17 @@ Rectangle {
                              Tinted {
                                  anchors.fill: parent
                                  sourceItem: appIconImage
@@ -6818,7 +6501,7 @@ index ea23135e..85448993 100644
  
      visible: overviewOpen
 diff --git a/modules/widgets/powermenu/PowerMenu.qml b/modules/widgets/powermenu/PowerMenu.qml
-index a03eed50..3ad69e52 100644
+index 653210d9..97d800ff 100644
 --- a/modules/widgets/powermenu/PowerMenu.qml
 +++ b/modules/widgets/powermenu/PowerMenu.qml
 @@ -23,6 +23,11 @@ ActionGrid {
@@ -6833,7 +6516,7 @@ index a03eed50..3ad69e52 100644
      actions: [
          {
              icon: Icons.lock,
-@@ -47,17 +52,24 @@ ActionGrid {
+@@ -48,17 +53,24 @@ ActionGrid {
          {
              icon: Icons.reboot,
              tooltip: I18n.t("powermenu.reboot"),
@@ -6886,7 +6569,7 @@ index e5a3f75f..a4da9aa0 100644
 +  pulseaudio
  ]
 diff --git a/shell.qml b/shell.qml
-index 888996d3..34a15395 100644
+index 888996d3..3b78be7d 100644
 --- a/shell.qml
 +++ b/shell.qml
 @@ -77,7 +77,24 @@ ShellRoot {
@@ -7002,7 +6685,7 @@ index 888996d3..34a15395 100644
          onTriggered: {
              let _ = NightLightClient.active;
              _ = GameModeClient.toggled;
-+            _ = ModUpdateService.autoCheck; // roadie: force init (mod update checks)
++            _ = ModUpdateService.enabled; // roadie: force init (mod update notifications)
 +            _ = RoadieEthernet.present; // roadie: force init (the notch's Ethernet switch is settled before the dashboard first opens)
          }
      }

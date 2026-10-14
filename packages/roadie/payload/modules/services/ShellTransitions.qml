@@ -595,17 +595,11 @@ Singleton {
             return JSON.stringify({ enabled: ShellFarewell.farewellEnabled, active: ShellFarewell.active, kind: ShellFarewell.kind, quote: ShellFarewell.quote, source: ShellFarewell.source, screen: ShellFarewell.screenName, expand: ShellFarewell.expand, solid: ShellFarewell.solid, text: ShellFarewell.text, holding: ShellFarewell.holding, committed: ShellFarewell.committed, dryRun: ShellFarewell.dryRun, holdMs: ShellFarewell.holdMs });
         }
 
-        // Mod updates: `updateCheck` looks for newer versions now (as the
-        // panel's button does), `updateState` prints what the last check
-        // found -- which updates can be installed, and which are waiting for
-        // a newer Ambxst.
+        // Mod updates: `updateCheck` asks Ambxst's own updater to check every
+        // mod now (as Settings > Mods' button does); Roadie notifies when it
+        // finds something. `updateState` prints what is offered and announced.
         function updateCheck(): void {
-            ModUpdateService.checkForUpdates(false);
-        }
-        // The same check the way the automatic one runs it: with the
-        // notification (or the automatic install) if anything is found.
-        function updateCheckAuto(): void {
-            ModUpdateService.checkForUpdates(true);
+            ModsService.checkUpdates([]);
         }
         function updateState(): string {
             return JSON.stringify(ModUpdateService.report(), null, 2);

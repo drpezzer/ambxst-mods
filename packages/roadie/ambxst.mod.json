@@ -3,17 +3,21 @@
   "manifestVersion": 1,
   "id": "drpezzer.roadie",
   "name": "Ambxst Roadie",
-  "version": "3.0.5",
-  "description": "Everything in one package. Shell start, reload and boot as one staged movement, with a farewell on reboot and power off. Monitors coming and going without a reload, a bar that follows the focused screen, staged chrome around fullscreen windows (special workspaces included), notifications on one screen. Bar and notch: frame-attached popouts, a Bluetooth widget with a battery readout, night weather glyphs, an audio routing tab in the dashboard, an Ethernet switch in the notch.for any provider, a stop button and a fix for the shell freezing once a chat is as tall as the sidebar. Icons: True Matugen Icons and True Monochrome under Theme. Mods: update checks that say when a mod needs a newer Ambxst before anything is installed, and can update Ambxst and the mods together. Also: a floating Settings window, idle dimming for laptops only or never, a permissions list that fits. Every feature has a switch or a Stock mode under Settings > Roadie. Replaces Clean Load, Multi-monitor fixes, Mod Updater, Settings Float, Bar at a Glance, Audio Routing and Tinted Icons; it cannot be enabled together with any of them.",
+  "version": "4.0.0",
+  "description": "Everything in one package. Shell start, reload and boot as one staged movement, with a farewell on reboot and power off. Monitors coming and going without a reload, a bar that follows the focused screen, staged chrome around fullscreen windows (special workspaces included), notifications on one screen. Bar and notch: frame-attached popouts, a Bluetooth widget with a battery readout, night weather glyphs, an audio routing tab in the dashboard, an Ethernet switch in the notch. Icons: True Matugen Icons and True Monochrome under Theme. Mods: a notification when Ambxst's mod updater finds new versions. Also: a floating Settings window, idle dimming for laptops only or never, a permissions list that fits. Every feature has a switch or a Stock mode under Settings > Roadie. Replaces Clean Load, Multi-monitor fixes, Mod Updater, Settings Float, Bar at a Glance, Audio Routing and Tinted Icons; it cannot be enabled together with any of them.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
   "homepage": "https://github.com/drpezzer/ambxst-mods",
+  "settingsMenu": {
+    "section": 11,
+    "index": -2
+  },
   "compatibility": {
     "api": 1,
-    "ambxst": ">=1.3.10 <2.0.0",
+    "ambxst": ">=1.3.12 <2.0.0",
     "testedBaseCommits": [
-      "bc60230283a3822eec2e23c949f44990480d0f43"
+      "1e1a56493582f34e5e5593bc9d3c2f87246266fb"
     ]
   },
   "dependencies": [],
@@ -28,8 +32,6 @@
   ],
   "commands": [
     "setsid",
-    "git",
-    "curl",
     "nmcli",
     "pgrep"
   ],
@@ -38,8 +40,7 @@
     "Runs `ambxst reload`, and the power menu's reboot or power off command, when you ask for them",
     "On Hyprland, retunes the window animation with `hyprctl eval` during a transition, then restores it",
     "At boot, reads the login session's service name and looks for a running locker, to decide whether to lock",
-    "Reads other mods' manifests from their sources, and Ambxst's version from GitHub, when checking for updates",
-    "Installs mod updates through the mod manager; runs Ambxst's installer in a terminal when you ask it to update Ambxst too",
+    "Sends a notification when Ambxst's mod updater finds updates; once, turns on its scheduled checks if Roadie's own were on",
     "Controls Bluetooth adapters and devices (BlueZ)",
     "Lists wired network devices and connects or disconnects them with nmcli; at shell start, ends `nmcli monitor` processes an earlier Ambxst daemon left behind",
     "Reads and moves audio streams with pactl and changes volumes; sets EasyEffects' output device and restarts it when asked",
@@ -170,18 +171,8 @@
     },
     {
       "type": "overlay",
-      "source": "payload/modules/services/mod_update_check.sh",
-      "target": "modules/services/mod_update_check.sh"
-    },
-    {
-      "type": "overlay",
       "source": "payload/modules/services/roadie_nmcli_reap.sh",
       "target": "modules/services/roadie_nmcli_reap.sh"
-    },
-    {
-      "type": "overlay",
-      "source": "payload/modules/services/roadie_update.sh",
-      "target": "modules/services/roadie_update.sh"
     },
     {
       "type": "overlay",
