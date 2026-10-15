@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "drpezzer.video-wallpaper-optimizer",
+  "name": "Video Wallpaper Optimizer",
+  "version": "1.0.0",
+  "description": "Plays video wallpapers through skwd-wall's renderer instead of inside the shell. Ambxst keeps its picker, library, per-screen choices and matugen colours; only the playback moves out. skwd decodes a video once for every screen with zero-copy presentation, which measured at about half the video-decoder load, a quarter of the CPU and roughly 450 MB less VRAM than Ambxst's QtMultimedia player on a 4K wallpaper across two monitors. When no screen shows a video, skwd is stopped and Ambxst draws images (and their transitions) itself. Needs skwd-wall's skwd-deck and skwd-paper installed; without them, or if skwd fails, videos play in Ambxst as before.",
+  "license": "MIT",
+  "author": "drpezzer",
+  "authorUrl": "https://github.com/drpezzer",
+  "homepage": "https://github.com/drpezzer/ambxst-mods",
+  "compatibility": {
+    "api": 1,
+    "ambxst": ">=1.3.12 <2.0.0",
+    "testedBaseCommits": [
+      "1e1a56493582f34e5e5593bc9d3c2f87246266fb"
+    ]
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "commands": ["skwd-helm", "systemctl"],
+  "permissions": [
+    "Starts and stops your skwd-walld user service (systemctl --user) while a screen shows a video wallpaper",
+    "Tells skwd which wallpaper each screen shows, and pauses or resumes it, with skwd-helm",
+    "Keeps its options in ~/.config/ambxst/video-wallpaper-optimizer.json"
+  ],
+  "operations": [
+    {
+      "type": "overlay",
+      "source": "payload/modules/services/VideoWallpaperOptimizer.qml",
+      "target": "modules/services/VideoWallpaperOptimizer.qml"
+    },
+    {
+      "type": "patch",
+      "source": "patches/video-wallpaper-optimizer.patch"
+    }
+  ]
+}

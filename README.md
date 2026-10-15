@@ -38,6 +38,7 @@ the shell fails to start within eight seconds Ambxst rolls back on its own.
 | [mod-updater](packages/mod-updater) | *Superseded by roadie 1.4.0, which includes it.* Update checking for Settings > Mods: a Check for updates button, per-mod Update buttons, optional automatic checks and installs |
 | [settings-float](packages/settings-float) | *Superseded by roadie 1.5.0, which includes it.* Opens the Settings window floating and centred, sized to the screen, through Ambxst's own compositor abstraction (Hyprland, Niri, Mango) |
 | [live-notifications](packages/live-notifications) | Notifications that replace themselves (`notify-send -r`, download and copy progress) update in place in the notch and the history instead of freezing on their first text |
+| [video-wallpaper-optimizer](packages/video-wallpaper-optimizer) | Plays video wallpapers through [skwd-wall](https://github.com/liixini/skwd-wall)'s renderer instead of inside the shell: about half the video-decoder load, a quarter of the CPU and ~450 MB less VRAM on a 4K wallpaper. Ambxst keeps its picker, per-screen wallpapers and matugen colours; falls back to Ambxst's player if skwd is missing |
 
 More are on the way as they are ported from a long-running personal fork.
 
