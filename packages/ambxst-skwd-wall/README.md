@@ -139,6 +139,7 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 
 ## Changelog
 
+- 1.2.3: `ambxst run wallpaper-settings` opens the wallpaper settings (for a keybind).
 - 1.2.2: game mode also pauses Ambxst's own video player (tinted videos) on every
   monitor, not only the focused one.
 - 1.2.1: video wallpapers no longer stay paused because of a fullscreen window on a
