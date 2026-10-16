@@ -82,6 +82,12 @@ Pull, and so on). Easing curves are gone: skwd-wall's transitions have none.
 
 ## How it behaves
 
+- **Pausing**: the mod decides when a video wallpaper pauses (a fullscreen, or with
+  *Maximized*, a screen-filling window on the workspace shown on that monitor) and
+  tells skwd-wall; skwd-wall's own fullscreen detection is switched off because on
+  Hyprland it cannot tell hidden workspaces apart. **Game mode** pauses every video
+  wallpaper, whatever the pause setting.
+
 - **Tint** (the button in the Wallpapers tab): for images, skwd-wall shows a copy
   recoloured onto your theme palette with its Palette effect (the same palette and
   maths as Ambxst's own tint), made again whenever your colours change and kept in
@@ -133,6 +139,10 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 
 ## Changelog
 
+- 1.2.1: video wallpapers no longer stay paused because of a fullscreen window on a
+  hidden (special) workspace: Ambxst now decides when to pause and tells skwd-wall
+  per monitor, counting only the workspace actually shown. Ambxst's game mode
+  pauses every video wallpaper.
 - 1.2.0: Ambxst's Tint button works with skwd-wall (images recoloured onto your
   theme palette; tinted videos and GIFs fall back to Ambxst).
 - 1.1.0: one-button install and update of skwd-wall from its official releases (in

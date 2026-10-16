@@ -212,6 +212,92 @@ Singleton {
     }
 
     onDesiredChanged: syncDebounce.restart()
+
+    // ── pausing ─────────────────────────────────────────────────────────
+    // A screen showing a video pauses while a window covers it on the
+    // workspace actually shown there (an open special workspace counts, a
+    // hidden one does not). Game mode pauses every screen. Mode: fullscreen |
+    // maximized (also a window filling the screen) | never. Scope: perScreen
+    // pauses only that screen, allScreens pauses every screen.
+    function coveredScreen(name) {
+        const mons = AxctlService.monitors.values || [];
+        const mon = mons.find(m => m.name === name);
+        if (!mon)
+            return false;
+        const ws = mon.visibleWorkspace ? mon.visibleWorkspace.id : (mon.activeWorkspace ? mon.activeWorkspace.id : 0);
+        const area = mon.width * mon.height;
+        return (AxctlService.clients.values || []).some(c => {
+            if (c.monitor !== mon.id || !c.workspace || c.workspace.id !== ws || c.hidden)
+                return false;
+            if (c.fullscreen)
+                return true;
+            return pauseMode === "maximized" && c.size && area > 0 && (c.size[0] * c.size[1]) >= area * 0.9;
+        });
+    }
+    readonly property var pauses: {
+        const out = {};
+        const names = Object.keys(desired).filter(n => isMoving(desired[n]));
+        // Ambxst's game mode pauses every video wallpaper, whatever the mode.
+        if (GameModeClient.toggled) {
+            names.forEach(n => out[n] = true);
+            return out;
+        }
+        if (pauseMode === "never")
+            return out;
+        const wants = {};
+        names.forEach(n => wants[n] = coveredScreen(n));
+        const any = names.some(n => wants[n]);
+        names.forEach(n => {
+            if (pauseScope === "allScreens" ? any : wants[n])
+                out[n] = true;
+        });
+        return out;
+    }
+    property var pauseSent: ({})        // output (or "*") -> paused state skwd was last told
+    onPausesChanged: pauseDebounce.restart()
+
+    Timer {
+        id: pauseDebounce
+        interval: 250
+        onTriggered: root.sendPauses()
+    }
+
+    function sendPauses() {
+        if (!active || !daemonUp)
+            return;
+        const names = Object.keys(desired).filter(n => isMoving(desired[n]));
+        if (pauseScope === "allScreens") {
+            const want = names.length > 0 && names.every(n => pauses[n] === true);
+            if (pauseSent["*"] !== want)
+                setPaused("*", want);
+            return;
+        }
+        if (pauseSent["*"] === true)
+            setPaused("*", false);
+        names.forEach(n => {
+            const want = pauses[n] === true;
+            // Unpaused screens are only told when they were paused before:
+            // a per-screen message makes skwd give each screen its own player.
+            if ((pauseSent[n] === true) !== want)
+                setPaused(n, want);
+        });
+    }
+
+    // skwd-helm has no per-output pause; the daemon's RPC does (wall.set_paused).
+    function setPaused(output, paused) {
+        const next = Object.assign({}, pauseSent);
+        next[output] = paused;
+        pauseSent = next;
+        const req = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "wall.set_paused", params: { paused: paused, output: output } });
+        run(["python3", "-c", "import os,socket,sys\ns=socket.socket(socket.AF_UNIX)\ns.settimeout(5)\ns.connect(os.environ.get('SKWD_WALL_V2_SOCK') or os.path.join(os.environ.get('XDG_RUNTIME_DIR','/tmp'),'skwd-wall-v2','wall.sock'))\ns.sendall(sys.argv[1].encode()+b'\\n')\nr=s.makefile().readline()\nsys.exit(1 if '\"error\"' in r else 0)", req], code => {
+            if (code !== 0) {
+                const again = Object.assign({}, root.pauseSent);
+                delete again[output];
+                root.pauseSent = again;
+                console.warn("SkwdWall: could not", paused ? "pause" : "resume", output);
+            }
+        });
+    }
     onActiveChanged: {
         syncDebounce.restart();
         if (active)
@@ -357,6 +443,8 @@ Singleton {
             root.applied = same ? ({}) : seen;
             root.daemonUp = true;
             root.startAttempts = 0;
+            root.pauseSent = ({});
+            pauseDebounce.restart();
             root.sync();
         });
     }
@@ -364,6 +452,7 @@ Singleton {
     function stopDaemon() {
         started = false;
         daemonUp = false;
+        pauseSent = ({});
         applied = ({});
         run(["systemctl", "--user", "stop", root.unit], null);
     }
@@ -414,9 +503,11 @@ Singleton {
         if (!instant)
             put("transition.shader", transitionStyle);
         put("transition.durationMs", transitionDuration);
-        // Pause mode: fullscreen | maximized | never; scope: perScreen | allScreens.
-        put("playback.fullscreen", pauseMode !== "never");
-        put("playback.maximized", pauseMode === "maximized");
+        // Pausing is decided here (see `pauses`), not by skwd: on Hyprland its
+        // window watcher cannot see workspaces, so a fullscreen window parked
+        // on a hidden (special) workspace paused that screen's video for good.
+        put("playback.fullscreen", false);
+        put("playback.maximized", false);
         put("playback.fullscreenScope", pauseScope === "allScreens" ? "all" : "display");
         if (JSON.stringify(cfg) === before)
             return;
