@@ -920,6 +920,12 @@ FocusScope {
                 width: scrollArea.width - (vScrollBar.visible ? 16 : 4)
                 spacing: 16
 
+                // skwd-wall itself: install, update, or what is missing (hidden
+                // when a system install is in use).
+                SkwdInstallCard {
+                    Layout.fillWidth: true
+                }
+
                 // Section 0: Transition Style — a carousel of skwd-wall's transitions
                 ColumnLayout {
                     id: sectionStyle
@@ -2710,6 +2716,19 @@ FocusScope {
                                 }
 
                                 Item { Layout.fillWidth: true }
+                            }
+
+                            // skwd-wall can only pause one monitor on its own by giving each
+                            // monitor its own player, which decodes a shared video twice.
+                            Text {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: GlobalStates.wallpaperPauseScope === "allScreens"
+                                    ? "All monitors share one video player, so a video shown on several screens is decoded once."
+                                    : "Each monitor gets its own video player so it can pause on its own; a video shown on several screens is decoded once per screen."
+                                font.family: Config.theme.font
+                                font.pixelSize: Styling.fontSize(-3)
+                                color: Colors.outline
                             }
                         }
                     }

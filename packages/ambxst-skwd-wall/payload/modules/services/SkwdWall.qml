@@ -24,7 +24,15 @@ Singleton {
     id: root
 
     readonly property bool enabled: options.adapter.enabled
-    property bool available: false      // skwd-helm and skwd-walld are on PATH
+    readonly property bool available: source !== "none"
+
+    // ── which skwd: the system's (AUR / distro package), the copy this mod
+    // installed into ~/.local/share/ambxst/skwd-wall, or none ──────────────
+    property string source: "unknown"   // unknown | system | local | none
+    readonly property string localRoot: Quickshell.env("HOME") + "/.local/share/ambxst/skwd-wall"
+    readonly property string helm: source === "local" ? localRoot + "/current/bin/skwd-helm" : "skwd-helm"
+    readonly property string unit: source === "local" ? "ambxst-skwd-walld.service" : "skwd-walld.service"
+    readonly property string installer: Quickshell.shellDir + "/scripts/skwd_install.sh"
     property bool failed: false         // the daemon could not be reached
     readonly property bool active: enabled && available && !failed
 
@@ -173,17 +181,47 @@ Singleton {
             startDaemon(0);
             return;
         }
+        // The same file on every screen: one apply for all outputs, so skwd
+        // decodes it once and shares the frames. Different files: per output.
+        const names = Object.keys(desired);
+        const files = names.map(n => desired[n]);
+        const same = names.length > 0 && files.every(f => f === files[0]);
+        if (same) {
+            if (names.some(n => applied[n] !== files[0]))
+                applyAll(files[0]);
+            return;
+        }
         for (const name in desired) {
             if (applied[name] !== desired[name])
                 applyTo(name, desired[name]);
         }
     }
 
+    function applyAll(file) {
+        const next = {};
+        for (const n in desired)
+            next[n] = file;
+        applied = next;
+        run([root.helm, "apply", file], code => {
+            if (code === 0)
+                return;
+            root.applied = ({});
+            if (code === 3) {
+                root.daemonUp = false;
+                root.startDaemon(0);
+                return;
+            }
+            console.warn("SkwdWall: skwd-helm apply failed with exit code", code, "for", file, "- Ambxst draws wallpapers itself");
+            root.failed = true;
+            root.stopDaemon();
+        });
+    }
+
     function applyTo(screenName, file) {
         const next = Object.assign({}, applied);
         next[screenName] = file;
         applied = next;
-        run(["skwd-helm", "apply", file, "-o", screenName], code => {
+        run([root.helm, "apply", file, "-o", screenName], code => {
             if (code === 0)
                 return;
             const again = Object.assign({}, root.applied);
@@ -212,9 +250,9 @@ Singleton {
         startAttempts++;
         started = true;
         writeSkwdConfig();
-        run(["systemctl", "--user", "start", "skwd-walld.service"], code => {
+        run(["systemctl", "--user", "start", root.unit], code => {
             if (code !== 0) {
-                console.warn("SkwdWall: could not start skwd-walld.service (exit", code + ") - Ambxst draws wallpapers itself");
+                console.warn("SkwdWall: could not start", root.unit, "(exit", code + ") - Ambxst draws wallpapers itself");
                 root.failed = true;
                 root.started = false;
                 return;
@@ -234,7 +272,7 @@ Singleton {
     // skwd restores its own last wallpapers on start: read what it shows so
     // nothing is applied twice, then bring every screen in line.
     function readCurrent(attempt) {
-        run(["skwd-helm", "current"], (code, out) => {
+        run([root.helm, "current"], (code, out) => {
             if (code === 3) {
                 if (attempt < 10) {
                     daemonWait.attempt = attempt + 1;
@@ -254,7 +292,12 @@ Singleton {
                         seen[line.substring(0, tab)] = line.substring(tab + 1).trim();
                 });
             }
-            root.applied = seen;
+            // skwd restores what it showed, possibly as one renderer per output.
+            // With the same file everywhere, apply it once more for all outputs
+            // so it is decoded once.
+            const files = Object.keys(root.desired).map(n => root.desired[n]);
+            const same = files.length > 1 && files.every(f => f === files[0]);
+            root.applied = same ? ({}) : seen;
             root.daemonUp = true;
             root.startAttempts = 0;
             root.sync();
@@ -265,7 +308,7 @@ Singleton {
         started = false;
         daemonUp = false;
         applied = ({});
-        run(["systemctl", "--user", "stop", "skwd-walld.service"], null);
+        run(["systemctl", "--user", "stop", root.unit], null);
     }
 
     // ── settings → skwd's config.json ──────────────────────────────────
@@ -381,23 +424,145 @@ Singleton {
         }
     }
 
-    // Is skwd installed? Checked once at start.
-    Process {
-        id: probe
-        command: ["sh", "-c", "command -v skwd-helm >/dev/null && command -v skwd-walld >/dev/null"]
-        running: true
-        onExited: exitCode => {
-            root.available = exitCode === 0;
-            if (!root.available) {
-                console.log("SkwdWall: skwd-wall is not installed (skwd-helm / skwd-walld not on PATH); Ambxst draws wallpapers itself");
+    // Which skwd? Checked at start and after an install.
+    function detect() {
+        detectTimer.restart();
+    }
+    // Restarted on the next turn: switching `running` off and on in one go
+    // does not start the process again.
+    Timer {
+        id: detectTimer
+        interval: 50
+        onTriggered: {
+            if (probe.running) {
+                restart();
                 return;
             }
-            // A daemon left running by an earlier shell (a reload) is ours too.
-            root.run(["systemctl", "--user", "is-active", "--quiet", "skwd-walld.service"], code => {
-                if (code === 0)
-                    root.started = true;
-                syncDebounce.restart();
-            });
+            probe.running = true;
+        }
+    }
+    Process {
+        id: probe
+        // `source` option: "auto" prefers a system install, "local" always uses
+        // the mod's own copy (installing it if needed).
+        running: false   // started once the options are read (see `options`)
+        command: ["sh", "-c", "local_ok() { [ -x \"$HOME/.local/share/ambxst/skwd-wall/current/bin/skwd-helm\" ]; }; " + (options.adapter.source === "local" ? "if local_ok; then echo local; else echo none; fi" : "if command -v skwd-helm >/dev/null && command -v skwd-walld >/dev/null; then echo system; elif local_ok; then echo local; else echo none; fi")]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const found = text.trim() || "none";
+                const was = root.source;
+                if (found !== was)
+                    console.log("SkwdWall: using", found === "system" ? "the system's skwd-wall" : found === "local" ? "the copy in ~/.local/share/ambxst/skwd-wall" : "nothing (skwd-wall is not installed)");
+                // Switching between the system's daemon and the mod's own: the
+                // other one stops first (two would fight over the outputs).
+                const oldUnit = was === "local" ? "ambxst-skwd-walld.service" : "skwd-walld.service";
+                if ((was === "system" || was === "local") && was !== found && root.started) {
+                    root.started = false;
+                    root.daemonUp = false;
+                    root.applied = ({});
+                    root.run(["systemctl", "--user", "stop", oldUnit], null);
+                }
+                root.source = found;
+                if (found === "none") {
+                    console.log("SkwdWall: skwd-wall is not installed; Ambxst draws wallpapers itself until it is (Wallpapers > settings)");
+                    root.checkLatest();
+                    if (!options.adapter.installPrompted) {
+                        options.adapter.installPrompted = true;
+                        Quickshell.execDetached(["notify-send", "-a", "Ambxst Skwd-wall", "Ambxst Skwd-wall", "skwd-wall is not installed yet. Open the Wallpapers tab, press the gear and choose Install skwd-wall."]);
+                    }
+                    return;
+                }
+                if (found === "local")
+                    root.checkLatest();
+                // A daemon left running by an earlier shell (a reload) is ours too.
+                root.run(["systemctl", "--user", "is-active", "--quiet", root.unit], code => {
+                    if (code === 0)
+                        root.started = true;
+                    syncDebounce.restart();
+                });
+                if (was !== found && found !== "none")
+                    root.writeSkwdConfig();
+            }
+        }
+    }
+
+    // ── installing and updating the mod's own copy ─────────────────────
+    property string installState: "idle"     // idle | running | done | failed
+    property string installStep: ""
+    property string installError: ""
+    property var missingLibs: []              // [{ lib, pkg }]
+    property string installedVersion: ""
+    property string latestVersion: ""
+    readonly property bool updateAvailable: source === "local" && latestVersion !== "" && installedVersion !== "" && latestVersion !== installedVersion
+
+    function checkLatest() {
+        if (!statusProc.running)
+            statusProc.running = true;
+    }
+    Process {
+        id: statusProc
+        command: ["bash", root.installer, "status"]
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.startsWith("VERSION "))
+                    root.installedVersion = line.substring(8).trim();
+                else if (line.startsWith("LATEST "))
+                    root.latestVersion = line.substring(7).trim();
+            }
+        }
+    }
+
+    function install() {
+        if (installProc.running || source === "system")
+            return;
+        installState = "running";
+        installStep = "Starting";
+        installError = "";
+        missingLibs = [];
+        installProc.running = true;
+    }
+    Process {
+        id: installProc
+        command: ["bash", root.installer, "install"]
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.startsWith("STEP ")) {
+                    root.installStep = line.substring(5);
+                } else if (line.startsWith("MISSING ")) {
+                    const parts = line.substring(8).split(" ");
+                    root.missingLibs = root.missingLibs.concat([{
+                            lib: parts[0],
+                            pkg: parts[1] || "?"
+                        }]);
+                } else if (line.startsWith("DONE ")) {
+                    root.installedVersion = line.substring(5).trim();
+                    root.installState = "done";
+                } else if (line.startsWith("FAIL ")) {
+                    root.installError = line.substring(5);
+                    root.installState = "failed";
+                }
+            }
+        }
+        onExited: code => {
+            if (root.installState === "running") {
+                root.installState = code === 0 ? "done" : "failed";
+                if (code !== 0 && !root.installError)
+                    root.installError = "the installer stopped (exit " + code + ")";
+            }
+            if (root.installState !== "done")
+                return;
+            // An update of a running copy: restart it on the new version.
+            if (root.source === "local" && root.started) {
+                root.daemonUp = false;
+                root.applied = ({});
+                root.run(["systemctl", "--user", "restart", root.unit], () => {
+                    daemonWait.attempt = 0;
+                    daemonWait.restart();
+                });
+            }
+            root.failed = false;
+            root.startAttempts = 0;
+            root.detect();
         }
     }
 
@@ -407,13 +572,22 @@ Singleton {
         watchChanges: true
         onFileChanged: reload()
         onAdapterUpdated: writeAdapter()
+        // Which skwd to use depends on `source`, so look only once it is read.
+        onLoaded: if (root.source === "unknown") root.detect()
         onLoadFailed: error => {
             if (error === FileViewError.FileNotFound)
                 writeAdapter();
+            if (root.source === "unknown")
+                root.detect();
         }
 
         adapter: JsonAdapter {
             property bool enabled: true
+            property bool installPrompted: false
+            property string source: "auto"
         }
+        // A change of `source` picks the daemon again.
+        property string watchedSource: adapter.source
+        onWatchedSourceChanged: if (root.source !== "unknown") root.detect()
     }
 }

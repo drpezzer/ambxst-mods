@@ -391,7 +391,7 @@ index 6b60935c..1c3cc7e2 100644
                  stack.navigateToTab(GlobalStates.dashboardCurrentTab);
              }
 diff --git a/modules/widgets/dashboard/controls/ModsPanel.qml b/modules/widgets/dashboard/controls/ModsPanel.qml
-index 6ee88c15..a1155f71 100644
+index 6ee88c15..29b7a0f6 100644
 --- a/modules/widgets/dashboard/controls/ModsPanel.qml
 +++ b/modules/widgets/dashboard/controls/ModsPanel.qml
 @@ -8,6 +8,7 @@ import qs.config
@@ -402,10 +402,16 @@ index 6ee88c15..a1155f71 100644
  
  Item {
      id: root
-@@ -1165,6 +1166,47 @@ Item {
+@@ -1165,6 +1166,53 @@ Item {
                          wrapMode: Text.Wrap
                      }
  
++                    // ambxst-skwd-wall: install or update skwd-wall from the mod's page.
++                    SkwdInstallCard {
++                        Layout.fillWidth: true
++                        visible: root.selectedMod?.id === "drpezzer.ambxst-skwd-wall" && shouldShow
++                    }
++
 +                    StyledRect {
 +                        visible: root.selectedMod?.id === "drpezzer.ambxst-skwd-wall"
 +                        Layout.fillWidth: true

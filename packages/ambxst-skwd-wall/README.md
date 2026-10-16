@@ -26,15 +26,19 @@ Your numbers will differ with your GPU, monitors and videos.
 
 ## Requirements
 
-skwd-wall's renderer and its control daemon. On Arch:
+skwd-wall's renderer and its control daemon. You don't have to install them
+yourself: with the mod enabled, open the **Wallpapers** tab, press the gear (or
+select the mod in **Settings → Mods**) and press **Install skwd-wall**. It downloads
+skwd-deck and skwd-paper from liixini's
+[GitHub releases](https://github.com/liixini/skwd-wall/releases), checks them against
+the release's `SHA256SUMS`, and unpacks them into `~/.local/share/ambxst/skwd-wall`
+with a user service, `ambxst-skwd-walld`. No password, nothing outside your home,
+about 70 MB. The same card offers an **Update** when a newer release is out, and
+lists any system package the binaries need that you don't have.
 
-```bash
-yay -S skwd-deck-bin skwd-paper-bin
-```
-
-You do not need skwd-wall's own picker, and you do not need to enable its service:
-the mod starts `skwd-walld` itself. Other distributions: see
-[skwd-wall's install notes](https://github.com/liixini/skwd-wall#installation).
+Already have skwd from your distribution or the AUR (`yay -S skwd-deck-bin
+skwd-paper-bin`)? The mod uses that instead and never downloads anything.
+Until skwd is installed, Ambxst draws your wallpapers itself, as before.
 
 ## Install
 
@@ -64,7 +68,8 @@ Open the notch on the **Wallpapers** tab:
     sunset and night), and which folders and kinds the shuffle draws from.
   - **Live Wallpaper Playback & Power Saving**: pause videos while a window is
     fullscreen (or maximized), on that monitor only or on all of them. skwd-wall does
-    the pausing itself.
+    the pausing itself. *That monitor only* gives each monitor its own video player,
+    so a video shown on two screens is decoded twice; *All monitors* shares one.
   - **Material You colour schemes** and **colour presets**.
 
 Everything in the panel follows your Ambxst theme, including the colours and
@@ -93,18 +98,24 @@ Pull, and so on). Easing curves are gone: skwd-wall's transitions have none.
 
 ```json
 {
-    "enabled": true
+    "enabled": true,
+    "source": "auto"
 }
 ```
 
-`enabled: false` hands everything back to Ambxst and stops skwd-wall. The transition
+- `enabled: false` hands everything back to Ambxst and stops skwd-wall.
+- `source`: `auto` uses a system install of skwd when there is one, otherwise the
+  copy the mod installed. `local` always uses the mod's own copy (and offers to
+  install it). The transition
 and pause settings are written into skwd-wall's own config
 (`~/.config/skwd-wall-v2/config.json`, the `transition` and `playback` keys).
 
 ## Removing it
 
-Disable the mod and `ambxst reload`, then `systemctl --user stop skwd-walld` (the mod
-stops it itself while it runs, but a disabled mod no longer runs).
+Disable the mod and `ambxst reload`, then stop skwd-wall's daemon
+(`systemctl --user stop skwd-walld`, or `ambxst-skwd-walld` for the copy the mod
+installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
+~/.config/systemd/user/ambxst-skwd-walld.service`.
 
 ## Credits
 
@@ -115,4 +126,8 @@ stops it itself while it runs, but a disabled mod no longer runs).
 
 ## Changelog
 
+- 1.1.0: one-button install and update of skwd-wall from its official releases (in
+  the wallpaper settings and on the mod's page), a `source` option, one shared video
+  player when every screen shows the same wallpaper, a note on what per-monitor
+  pausing costs.
 - 1.0.0: first release, tested on Ambxst 1.3.12 with skwd-wall 1.0.0-beta.26.
