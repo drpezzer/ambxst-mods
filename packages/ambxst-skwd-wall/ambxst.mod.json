@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Axenide/Ambxst/dev/docs/mods/manifest.schema.json",
+  "manifestVersion": 1,
+  "id": "drpezzer.ambxst-skwd-wall",
+  "name": "Ambxst Skwd-wall",
+  "version": "1.0.0",
+  "description": "Hands every wallpaper (images, videos and GIFs) to skwd-wall's renderer and brings its 39 transitions into the notch's Wallpapers tab: a carousel of transition cards with line-art previews, animation duration, automatic rotation with Match Time of Day, shuffle, pause-on-fullscreen and Material You colour settings, all following your Ambxst theme. Ambxst keeps its library, picker, per-screen wallpapers and matugen colours. On a 4K video wallpaper across two monitors it measured about half the video-decoder load, a quarter of the CPU and ~450 MB less VRAM than Ambxst's own player. Replaces Wallpaper Transitions (by POSiTiiiV, MIT), whose settings panel it builds on. Needs skwd-wall's skwd-deck and skwd-paper; without them Ambxst draws wallpapers itself as before.",
+  "license": "MIT",
+  "author": "drpezzer",
+  "authorUrl": "https://github.com/drpezzer",
+  "homepage": "https://github.com/drpezzer/ambxst-mods",
+  "compatibility": {
+    "api": 1,
+    "ambxst": ">=1.3.12 <2.0.0",
+    "testedBaseCommits": [
+      "1e1a56493582f34e5e5593bc9d3c2f87246266fb"
+    ]
+  },
+  "dependencies": [],
+  "conflicts": ["positive.wallpaper-transitions", "drpezzer.video-wallpaper-optimizer"],
+  "commands": ["skwd-helm", "systemctl", "python3", "magick"],
+  "permissions": [
+    "Starts and stops your skwd-walld user service (systemctl --user) and tells it which wallpaper each screen shows with skwd-helm",
+    "Writes the transition and playback keys of skwd-wall's config, ~/.config/skwd-wall-v2/config.json",
+    "Sorts your wallpapers by brightness and warmth for Match Time of Day (python3 + ImageMagick), cached in ~/.cache/ambxst/wallpaper_solar_cache.json",
+    "Keeps its options in ~/.config/ambxst/skwd-wall.json and its wallpaper settings in Ambxst's state file"
+  ],
+  "operations": [
+    { "type": "overlay", "source": "payload/modules/services/SkwdWall.qml", "target": "modules/services/SkwdWall.qml" },
+    { "type": "overlay", "source": "payload/modules/widgets/dashboard/wallpapers/WallpaperSettingsView.qml", "target": "modules/widgets/dashboard/wallpapers/WallpaperSettingsView.qml" },
+    { "type": "overlay", "source": "payload/modules/widgets/dashboard/wallpapers/TransitionIcon.qml", "target": "modules/widgets/dashboard/wallpapers/TransitionIcon.qml" },
+    { "type": "overlay", "source": "payload/modules/widgets/dashboard/wallpapers/TransitionIconArt.js", "target": "modules/widgets/dashboard/wallpapers/TransitionIconArt.js" },
+    { "type": "overlay", "source": "payload/scripts/skwd_solar_index.py", "target": "scripts/skwd_solar_index.py" },
+    { "type": "patch", "source": "patches/ambxst-skwd-wall.patch" }
+  ]
+}

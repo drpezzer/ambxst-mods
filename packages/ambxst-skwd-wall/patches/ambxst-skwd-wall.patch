@@ -1,0 +1,1151 @@
+diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
+index eb6e9ccd..d3a0bd6b 100644
+--- a/modules/globals/GlobalStates.qml
++++ b/modules/globals/GlobalStates.qml
+@@ -190,6 +190,318 @@ Singleton {
+         wallpaperSelectedIndex = -1;
+     }
+ 
++    // Wallpaper Transitions & Automation State (persisted via StateService)
++    // Ambxst Skwd-wall: the transition is one of skwd-wall's (SkwdWall.transitions),
++    // "random" picks a different one each time; duration is in milliseconds.
++    property string wallpaperTransitionStyle: StateService.get("wallpaperTransitionStyle", "random")
++    property int wallpaperTransitionDuration: StateService.get("wallpaperTransitionDuration", 700)
++    property string wallpaperPauseMode: StateService.get("wallpaperPauseMode", "fullscreen")
++    property string wallpaperPauseScope: StateService.get("wallpaperPauseScope", "perScreen")
++    property bool wallpapersTabShowSettings: false
++    property bool wallpaperPeriodicEnabled: StateService.get("wallpaperPeriodicEnabled", false)
++    property int wallpaperPeriodicSeconds: StateService.get("wallpaperPeriodicSeconds", StateService.get("wallpaperPeriodicInterval", 15) * 60)
++    property int wallpaperPeriodicInterval: Math.max(1, Math.round(wallpaperPeriodicSeconds / 60))
++    property bool wallpaperSolarSyncEnabled: StateService.get("wallpaperSolarSyncEnabled", false)
++    property string lastTriggeredSolarPeriod: ""
++    property var wallpaperRandomSourceFilters: StateService.get("wallpaperRandomSourceFilters", [])
++    property var solarCacheMap: ({})
++
++    FileView {
++        id: solarCacheFileView
++        path: Quickshell.env("HOME") + "/.cache/ambxst/wallpaper_solar_cache.json"
++        onLoaded: {
++            try {
++                let txt = solarCacheFileView.text();
++                if (txt && txt.length > 2) {
++                    root.solarCacheMap = JSON.parse(txt);
++                }
++            } catch (e) {
++                console.warn("GlobalStates: Failed to parse wallpaper_solar_cache.json:", e);
++            }
++        }
++    }
++
++    Process {
++        id: solarIndexProcess
++        // Ambxst Skwd-wall ships the indexer the original mod called but never installed.
++        command: ["python3", Quickshell.shellDir + "/scripts/skwd_solar_index.py"]
++        running: false
++        onExited: (code) => {
++            if (code === 0) {
++                solarCacheFileView.reload();
++            }
++        }
++    }
++
++    function refreshSolarCache() {
++        if (!solarIndexProcess.running) {
++            solarIndexProcess.running = true;
++        }
++    }
++
++    function getCurrentSolarPeriod() {
++        let hour = new Date().getHours();
++        if (hour >= 6 && hour < 11) return "morning";
++        if (hour >= 11 && hour < 17) return "afternoon";
++        if (hour >= 17 && hour < 21) return "sunset";
++        return "night";
++    }
++
++    function setWallpaperPauseMode(mode) {
++        wallpaperPauseMode = mode;
++        if (StateService && StateService.initialized) StateService.set("wallpaperPauseMode", mode);
++    }
++
++    function setWallpaperPauseScope(scope) {
++        wallpaperPauseScope = scope;
++        if (StateService && StateService.initialized) StateService.set("wallpaperPauseScope", scope);
++    }
++
++    function setWallpaperTransitionStyle(style) {
++        wallpaperTransitionStyle = style;
++        if (StateService && StateService.initialized) StateService.set("wallpaperTransitionStyle", style);
++    }
++
++    function setWallpaperTransitionDuration(duration) {
++        wallpaperTransitionDuration = duration;
++        if (StateService && StateService.initialized) StateService.set("wallpaperTransitionDuration", duration);
++    }
++
++    function setWallpaperPeriodicEnabled(enabled) {
++        wallpaperPeriodicEnabled = enabled;
++        if (StateService && StateService.initialized) StateService.set("wallpaperPeriodicEnabled", enabled);
++    }
++
++    function setWallpaperSolarSyncEnabled(enabled) {
++        wallpaperSolarSyncEnabled = enabled;
++        if (StateService && StateService.initialized) StateService.set("wallpaperSolarSyncEnabled", enabled);
++        if (enabled) {
++            if (!solarCacheMap || Object.keys(solarCacheMap).length === 0) {
++                refreshSolarCache();
++            }
++        }
++    }
++
++    function setWallpaperPeriodicSeconds(sec) {
++        let val = Math.max(5, Math.round(sec));
++        wallpaperPeriodicSeconds = val;
++        wallpaperPeriodicInterval = Math.max(1, Math.round(val / 60));
++        if (StateService && StateService.initialized) {
++            StateService.set("wallpaperPeriodicSeconds", val);
++            StateService.set("wallpaperPeriodicInterval", wallpaperPeriodicInterval);
++        }
++    }
++
++    function setWallpaperPeriodicInterval(interval) {
++        setWallpaperPeriodicSeconds(Math.max(1, interval) * 60);
++    }
++
++    function setWallpaperRandomSourceFilters(filters) {
++        wallpaperRandomSourceFilters = filters;
++        if (StateService && StateService.initialized) StateService.set("wallpaperRandomSourceFilters", filters);
++    }
++
++    function toggleWallpaperRandomSourceFilter(filterKey) {
++        let cur = (root.wallpaperRandomSourceFilters && Array.isArray(root.wallpaperRandomSourceFilters)) ? root.wallpaperRandomSourceFilters.slice() : [];
++        let idx = cur.indexOf(filterKey);
++        if (idx >= 0) {
++            cur.splice(idx, 1);
++        } else {
++            cur.push(filterKey);
++        }
++        root.setWallpaperRandomSourceFilters(cur);
++    }
++
++    property var wallpaperShuffleDeck: []
++    property string wallpaperShufflePoolKey: ""
++
++    function triggerRandomWallpaper() {
++        if (!wallpaperManager || !wallpaperManager.wallpaperPaths || wallpaperManager.wallpaperPaths.length === 0) return;
++        let allPaths = wallpaperManager.wallpaperPaths;
++        if (allPaths.length === 0) return;
++
++        let paths = allPaths;
++        let activeFilters = (root.wallpaperRandomSourceFilters && Array.isArray(root.wallpaperRandomSourceFilters)) ? root.wallpaperRandomSourceFilters : [];
++        if (activeFilters.length > 0) {
++            let basePath = wallpaperManager.wallpaperDir || "";
++            if (basePath && !basePath.endsWith("/")) basePath += "/";
++
++            let hasImage = activeFilters.includes("image");
++            let hasGif = activeFilters.includes("gif");
++            let hasVideo = activeFilters.includes("video");
++            let subfilters = [];
++            for (let j = 0; j < activeFilters.length; j++) {
++                let f = activeFilters[j];
++                if (f.startsWith("subfolder_")) {
++                    subfilters.push(f.replace("subfolder_", ""));
++                } else if (f !== "image" && f !== "gif" && f !== "video") {
++                    subfilters.push(f);
++                }
++            }
++
++            let filtered = allPaths.filter(function(path) {
++                let ext = path.substring(path.lastIndexOf('.') + 1).toLowerCase();
++                let isImg = (ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'webp' || ext === 'bmp' || ext === 'tif' || ext === 'tiff');
++                let isG = (ext === 'gif');
++                let isV = (ext === 'mp4' || ext === 'webm' || ext === 'mov' || ext === 'avi' || ext === 'mkv');
++
++                if ((hasImage && isImg) || (hasGif && isG) || (hasVideo && isV)) {
++                    return true;
++                }
++
++                if (subfilters.length > 0 && basePath) {
++                    let rel = path.startsWith(basePath) ? path.substring(basePath.length) : path;
++                    let slashIdx = rel.indexOf('/');
++                    if (slashIdx !== -1) {
++                        let topDir = rel.substring(0, slashIdx);
++                        if (subfilters.includes(topDir)) {
++                            return true;
++                        }
++                    }
++                }
++                return false;
++            });
++            if (filtered.length > 0) {
++                paths = filtered;
++            }
++        }
++
++        if (root.wallpaperSolarSyncEnabled) {
++            let period = root.getCurrentSolarPeriod();
++            let basePath = wallpaperManager.wallpaperDir || "";
++            if (basePath && !basePath.endsWith("/")) basePath += "/";
++
++            let solarFiltered = paths.filter(function(path) {
++                let rel = path.startsWith(basePath) ? path.substring(basePath.length) : path;
++                if (root.solarCacheMap && root.solarCacheMap[rel]) {
++                    return root.solarCacheMap[rel] === period;
++                }
++                // Fallback to keyword matching if not cached
++                let lower = path.toLowerCase();
++                let keywords = [];
++                if (period === "morning") {
++                    keywords = ["morning", "dawn", "sunrise", "early", "daybreak", "light"];
++                } else if (period === "afternoon") {
++                    keywords = ["afternoon", "midday", "noon", "day", "bright", "sun", "warm"];
++                } else if (period === "sunset") {
++                    keywords = ["sunset", "dusk", "evening", "golden", "twilight", "sundown", "orange"];
++                } else {
++                    keywords = ["night", "dark", "midnight", "stars", "moon", "starry", "neon", "space"];
++                }
++                for (let k = 0; k < keywords.length; k++) {
++                    if (lower.indexOf(keywords[k]) !== -1) return true;
++                }
++                return false;
++            });
++
++            if (solarFiltered.length > 0) {
++                paths = solarFiltered;
++            }
++        }
++
++        let screenName = (typeof AxctlService !== "undefined" && AxctlService.focusedMonitor && AxctlService.focusedMonitor.name)
++            ? AxctlService.focusedMonitor.name
++            : ((wallpaperManager.screen && wallpaperManager.screen.name) ? wallpaperManager.screen.name : (wallpaperManager.currentScreenName || ""));
++        let perScreen = wallpaperManager.perScreenWallpapers || {};
++        let isPerScreen = (screenName !== "" && perScreen[screenName] !== undefined);
++        let curPath = isPerScreen ? perScreen[screenName] : ((wallpaperManager.effectiveWallpaper !== undefined && wallpaperManager.effectiveWallpaper !== "") ? wallpaperManager.effectiveWallpaper : (wallpaperManager.currentWallpaper || ""));
++
++        // Shuffle Deck management: 100% fair random permutation without repetition
++        let periodKey = root.wallpaperSolarSyncEnabled ? (":" + root.getCurrentSolarPeriod()) : "";
++        let poolKey = activeFilters.slice().sort().join("|") + ":" + paths.length + periodKey;
++        if (root.wallpaperShufflePoolKey !== poolKey || !Array.isArray(root.wallpaperShuffleDeck)) {
++            root.wallpaperShuffleDeck = [];
++            root.wallpaperShufflePoolKey = poolKey;
++        }
++
++        if (root.wallpaperShuffleDeck.length === 0) {
++            let deck = paths.slice();
++            // Fisher-Yates shuffle
++            for (let i = deck.length - 1; i > 0; i--) {
++                let j = Math.floor(Math.random() * (i + 1));
++                let temp = deck[i];
++                deck[i] = deck[j];
++                deck[j] = temp;
++            }
++            // Avoid repeating curPath on reshuffle boundary
++            if (deck.length > 1 && deck[0] === curPath) {
++                let swapIdx = 1 + Math.floor(Math.random() * (deck.length - 1));
++                let temp = deck[0];
++                deck[0] = deck[swapIdx];
++                deck[swapIdx] = temp;
++            }
++            root.wallpaperShuffleDeck = deck;
++        }
++
++        let nextWallpaper = root.wallpaperShuffleDeck.shift();
++        if (nextWallpaper === curPath && root.wallpaperShuffleDeck.length > 0) {
++            let alt = root.wallpaperShuffleDeck.shift();
++            root.wallpaperShuffleDeck.push(nextWallpaper);
++            nextWallpaper = alt;
++        }
++
++        if (isPerScreen) {
++            wallpaperManager.setWallpaper(nextWallpaper, screenName);
++        } else {
++            wallpaperManager.setWallpaper(nextWallpaper);
++        }
++        wallpaperSelectedIndex = allPaths.indexOf(nextWallpaper);
++    }
++
++    Timer {
++        id: wallpaperPeriodicTimer
++        interval: Math.max(5, root.wallpaperPeriodicSeconds) * 1000
++        repeat: true
++        running: root.wallpaperPeriodicEnabled
++        onTriggered: {
++            root.triggerRandomWallpaper();
++        }
++    }
++
++    Timer {
++        id: solarPhaseCheckTimer
++        interval: 30000
++        repeat: true
++        running: root.wallpaperPeriodicEnabled && root.wallpaperSolarSyncEnabled
++        onTriggered: {
++            let curPeriod = root.getCurrentSolarPeriod();
++            if (root.lastTriggeredSolarPeriod === "") {
++                root.lastTriggeredSolarPeriod = curPeriod;
++            } else if (curPeriod !== root.lastTriggeredSolarPeriod) {
++                root.lastTriggeredSolarPeriod = curPeriod;
++                root.triggerRandomWallpaper();
++            }
++        }
++    }
++
++    Connections {
++        target: StateService
++        function onInitializedChanged() {
++            if (StateService.initialized) {
++                root.wallpaperTransitionStyle = StateService.get("wallpaperTransitionStyle", "random");
++                root.wallpaperTransitionDuration = StateService.get("wallpaperTransitionDuration", 700);
++                root.wallpaperPeriodicEnabled = StateService.get("wallpaperPeriodicEnabled", false);
++                root.wallpaperPeriodicSeconds = StateService.get("wallpaperPeriodicSeconds", StateService.get("wallpaperPeriodicInterval", 15) * 60);
++                root.wallpaperPeriodicInterval = Math.max(1, Math.round(root.wallpaperPeriodicSeconds / 60));
++                root.wallpaperSolarSyncEnabled = StateService.get("wallpaperSolarSyncEnabled", false);
++                root.wallpaperRandomSourceFilters = StateService.get("wallpaperRandomSourceFilters", []);
++                root.wallpaperPauseMode = StateService.get("wallpaperPauseMode", "fullscreen");
++                root.wallpaperPauseScope = StateService.get("wallpaperPauseScope", "perScreen");
++            }
++        }
++        function onStateLoaded() {
++            root.wallpaperTransitionStyle = StateService.get("wallpaperTransitionStyle", "random");
++            root.wallpaperTransitionDuration = StateService.get("wallpaperTransitionDuration", 700);
++            root.wallpaperPeriodicEnabled = StateService.get("wallpaperPeriodicEnabled", false);
++            root.wallpaperPeriodicSeconds = StateService.get("wallpaperPeriodicSeconds", StateService.get("wallpaperPeriodicInterval", 15) * 60);
++            root.wallpaperPeriodicInterval = Math.max(1, Math.round(root.wallpaperPeriodicSeconds / 60));
++            root.wallpaperSolarSyncEnabled = StateService.get("wallpaperSolarSyncEnabled", false);
++            root.wallpaperRandomSourceFilters = StateService.get("wallpaperRandomSourceFilters", []);
++            root.wallpaperPauseMode = StateService.get("wallpaperPauseMode", "fullscreen");
++            root.wallpaperPauseScope = StateService.get("wallpaperPauseScope", "perScreen");
++        }
++    }
++
+     function getNotchOpen(screenName) {
+         let visibilities = Visibilities.getForScreen(screenName);
+         return visibilities.launcher || visibilities.dashboard || visibilities.overview || visibilities.presets;
+diff --git a/modules/services/GlobalShortcuts.qml b/modules/services/GlobalShortcuts.qml
+index b1aa3be4..e421dc4d 100644
+--- a/modules/services/GlobalShortcuts.qml
++++ b/modules/services/GlobalShortcuts.qml
+@@ -46,10 +46,21 @@ QtObject {
+ 
+             // Dashboard
+             case "dashboard": toggleDashboardTab(0); break;
+-            case "wallpapers": toggleDashboardTab(1); break;
++            case "wallpapers":
++            case "dashboard-wallpapers":
++                if (Visibilities.currentActiveModule === "dashboard" && GlobalStates.dashboardCurrentTab === 1 && GlobalStates.wallpapersTabShowSettings) {
++                    GlobalStates.wallpapersTabShowSettings = false;
++                } else {
++                    GlobalStates.wallpapersTabShowSettings = false;
++                    toggleDashboardTab(1);
++                }
++                break;
+             case "assistant": toggleAssistant(); break;
+             case "dashboard-widgets": toggleDashboardTab(0); break;
+-            case "dashboard-wallpapers": toggleDashboardTab(1); break;
++            case "wallpaper-random":
++            case "random-wallpaper":
++                GlobalStates.triggerRandomWallpaper();
++                break;
+             case "dashboard-kanban": toggleDashboardTab(2); break;
+             case "dashboard-assistant": toggleAssistant(); break;
+             case "dashboard-controls": toggleSettings(); break;
+diff --git a/modules/widgets/dashboard/Dashboard.qml b/modules/widgets/dashboard/Dashboard.qml
+index 6b60935c..1c3cc7e2 100644
+--- a/modules/widgets/dashboard/Dashboard.qml
++++ b/modules/widgets/dashboard/Dashboard.qml
+@@ -88,6 +88,11 @@ NotchAnimationBehavior {
+ 
+         if (tabIndex === 0) return true; // Always load WidgetsTab (Tab 0)
+ 
++        // Always load current active tab when dashboard is open
++        if (root.state.currentTab === tabIndex || GlobalStates.dashboardCurrentTab === tabIndex) {
++            return true;
++        }
++
+         if (Config.performance.dashboardPersistTabs) {
+             return lruTabsLoaded[tabIndex] === true;
+         } else {
+@@ -104,11 +109,16 @@ NotchAnimationBehavior {
+     // Navegar a la pestaña seleccionada cuando se abre el dashboard
+     Component.onCompleted: {
+         root.state.currentTab = GlobalStates.dashboardCurrentTab;
++        root.updateLRUAccess(GlobalStates.dashboardCurrentTab);
+     }
+ 
+     // Focus search input when dashboard opens to different tabs
+     onIsVisibleChanged: {
+         if (isVisible) {
++            root.updateLRUAccess(GlobalStates.dashboardCurrentTab);
++            if (root.state.currentTab !== GlobalStates.dashboardCurrentTab) {
++                stack.navigateToTab(GlobalStates.dashboardCurrentTab);
++            }
+             // Check if current item supports focus, otherwise default logic for launcher
+             if (stack.currentItem && stack.currentItem.focusSearchInput) {
+                 focusUnifiedLauncherTimer.restart();
+@@ -138,6 +148,7 @@ NotchAnimationBehavior {
+     Connections {
+         target: GlobalStates
+         function onDashboardCurrentTabChanged() {
++            root.updateLRUAccess(GlobalStates.dashboardCurrentTab);
+             if (GlobalStates.dashboardCurrentTab !== root.state.currentTab) {
+                 stack.navigateToTab(GlobalStates.dashboardCurrentTab);
+             }
+diff --git a/modules/widgets/dashboard/controls/ModsPanel.qml b/modules/widgets/dashboard/controls/ModsPanel.qml
+index 6ee88c15..a1155f71 100644
+--- a/modules/widgets/dashboard/controls/ModsPanel.qml
++++ b/modules/widgets/dashboard/controls/ModsPanel.qml
+@@ -8,6 +8,7 @@ import qs.config
+ import qs.modules.components
+ import qs.modules.services
+ import qs.modules.theme
++import qs.modules.globals
+ 
+ Item {
+     id: root
+@@ -1165,6 +1166,47 @@ Item {
+                         wrapMode: Text.Wrap
+                     }
+ 
++                    StyledRect {
++                        visible: root.selectedMod?.id === "drpezzer.ambxst-skwd-wall"
++                        Layout.fillWidth: true
++                        Layout.preferredHeight: 38
++                        variant: openWallMa.containsMouse ? "primary" : "focus"
++                        radius: Styling.radius(4)
++
++                        MouseArea {
++                            id: openWallMa
++                            anchors.fill: parent
++                            hoverEnabled: true
++                            cursorShape: Qt.PointingHandCursor
++                            onClicked: {
++                                GlobalStates.settingsWindowVisible = false;
++                                GlobalStates.wallpapersTabShowSettings = true;
++                                GlobalStates.dashboardCurrentTab = 1;
++                                Visibilities.setActiveModule("dashboard");
++                            }
++
++                            RowLayout {
++                                anchors.centerIn: parent
++                                spacing: 8
++
++                                Text {
++                                    text: Icons.gear
++                                    font.family: Icons.font
++                                    font.pixelSize: 18
++                                    color: openWallMa.containsMouse ? Styling.srItem("primary") : Colors.overSurface
++                                }
++
++                                Text {
++                                    text: "Open Wallpaper & Transition Settings"
++                                    font.family: Config.theme.font
++                                    font.pixelSize: Styling.fontSize(0)
++                                    font.weight: Font.Medium
++                                    color: openWallMa.containsMouse ? Styling.srItem("primary") : Colors.overSurface
++                                }
++                            }
++                        }
++                    }
++
+                     Text {
+                         visible: (root.selectedMod?.error ?? "") !== ""
+                             || (root.selectedMod?.compatibilityError ?? "") !== ""
+diff --git a/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml b/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
+index 30c36e6f..5ddf470e 100644
+--- a/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
++++ b/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
+@@ -39,12 +39,18 @@ Item {
+         player.stop();
+         player.source = "file://" + sourceFile;
+         syncDebounce.restart();
++        // ambxst-skwd-wall: skwd-wall plays this one; leave the player empty.
++        if (skwdHandOff())
++            return;
+         updatePlayback();
+     }
+ 
+     function updatePlayback() {
+         if (!sourceFile)
+             return;
++        // ambxst-skwd-wall: skwd-wall pauses it itself (Wallpaper settings).
++        if (skwdOffloaded)
++            return;
+         if (shouldPausePlayback) {
+             if (player.playbackState === MediaPlayer.PlayingState)
+                 player.pause();
+@@ -127,9 +133,33 @@ Item {
+         function onVideoSyncTickChanged() {
+             if (videoWallpaper.shouldPausePlayback)
+                 return;
++            // ambxst-skwd-wall: nothing to realign, skwd-wall plays it.
++            if (videoWallpaper.skwdOffloaded)
++                return;
+             player.seek(0);
+             if (player.playbackState !== MediaPlayer.PlayingState)
+                 player.play();
+         }
+     }
++
++    // ── ambxst-skwd-wall ──────────────────────────────────────────────
++    // skwd-wall renders this video (SkwdWall) instead of the QtMultimedia
++    // player above, so the player is left empty.
++    readonly property bool skwdOffloaded: SkwdWall.offloads(sourceFile)
++    // Handed over, or handed back (skwd stopped or failed): start over.
++    onSkwdOffloadedChanged: restartPlayback()
++
++    function skwdHandOff() {
++        if (!skwdOffloaded)
++            return false;
++        player.stop();
++        player.source = "";
++        // Renderers that wait for the first decoded frame count a handed-off
++        // video as shown.
++        if ("hasFirstFrame" in videoWallpaper && !videoWallpaper.hasFirstFrame) {
++            videoWallpaper.hasFirstFrame = true;
++            videoWallpaper.firstFrameReady();
++        }
++        return true;
++    }
+ }
+diff --git a/modules/widgets/dashboard/wallpapers/Wallpaper.qml b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
+index 63137c2a..f15abb3d 100644
+--- a/modules/widgets/dashboard/wallpapers/Wallpaper.qml
++++ b/modules/widgets/dashboard/wallpapers/Wallpaper.qml
+@@ -91,6 +91,8 @@ PanelWindow {
+     // React to light/dark mode changes
+     property bool isLightMode: Config.theme.lightMode
+     onIsLightModeChanged: {
++        if (GlobalStates.wallpaperManager && GlobalStates.wallpaperManager !== wallpaper)
++            return;
+         if (activeColorPreset) {
+             applyColorPreset();
+         } else {
+@@ -99,6 +101,8 @@ PanelWindow {
+     }
+ 
+     onActiveColorPresetChanged: {
++        if (GlobalStates.wallpaperManager && GlobalStates.wallpaperManager !== wallpaper)
++            return;
+         if (activeColorPreset) {
+             applyColorPreset();
+         } else {
+@@ -111,6 +115,10 @@ PanelWindow {
+     }
+ 
+     function applyColorPreset() {
++        if (GlobalStates.wallpaperManager && GlobalStates.wallpaperManager !== wallpaper) {
++            GlobalStates.wallpaperManager.applyColorPreset();
++            return;
++        }
+         if (!activeColorPreset)
+             return;
+ 
+@@ -130,8 +138,19 @@ PanelWindow {
+     }
+ 
+     function setColorPreset(name) {
++        if (GlobalStates.wallpaperManager && GlobalStates.wallpaperManager !== wallpaper) {
++            GlobalStates.wallpaperManager.setColorPreset(name);
++            return;
++        }
++        if (wallpaper.activeColorPreset === name) {
++            wallpaperConfig.adapter.activeColorPreset = "";
++            wallpaper.activeColorPreset = "";
++            runMatugenForCurrentWallpaper();
++            return;
++        }
+         wallpaperConfig.adapter.activeColorPreset = name;
+-    // activeColorPreset property will update automatically via binding to adapter
++        wallpaper.activeColorPreset = name;
++        applyColorPreset();
+     }
+ 
+     // Funciones utilitarias para tipos de archivo
+@@ -402,27 +421,36 @@ PanelWindow {
+ 
+     // Función para re-ejecutar Matugen con el wallpaper actual
+     function setMatugenScheme(scheme) {
++        if (GlobalStates.wallpaperManager && GlobalStates.wallpaperManager !== wallpaper) {
++            GlobalStates.wallpaperManager.setMatugenScheme(scheme);
++            return;
++        }
+         wallpaperConfig.adapter.matugenScheme = scheme;
+ 
+-        if (wallpaperConfig.adapter.activeColorPreset) {
++        if (wallpaperConfig.adapter.activeColorPreset || wallpaper.activeColorPreset) {
+             console.log("Switching to Matugen scheme, clearing preset");
+             wallpaperConfig.adapter.activeColorPreset = "";
+-        } else {
+-            runMatugenForCurrentWallpaper();
++            wallpaper.activeColorPreset = "";
+         }
++        runMatugenForCurrentWallpaper();
+     }
+ 
+-    function runMatugenForCurrentWallpaper() {
++    function runMatugenForCurrentWallpaper(targetPath) {
++        if (GlobalStates.wallpaperManager && GlobalStates.wallpaperManager !== wallpaper) {
++            GlobalStates.wallpaperManager.runMatugenForCurrentWallpaper(targetPath);
++            return;
++        }
+         if (activeColorPreset) {
+             console.log("Skipping Matugen because color preset is active:", activeColorPreset);
+             return;
+         }
+ 
+-        if (currentWallpaper && initialLoadCompleted) {
+-            console.log("Running Matugen for current wallpaper:", currentWallpaper);
++        var wall = targetPath || currentWallpaper;
++        if (wall && initialLoadCompleted) {
++            console.log("Running Matugen for current wallpaper:", wall);
+ 
+-            var fileType = getFileType(currentWallpaper);
+-            var matugenSource = getColorSource(currentWallpaper);
++            var fileType = getFileType(wall);
++            var matugenSource = getColorSource(wall);
+ 
+             console.log("Using source for matugen:", matugenSource, "(type:", fileType + ")");
+ 
+diff --git a/modules/widgets/dashboard/wallpapers/WallpapersTab.qml b/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
+index 195fd45f..f9147307 100644
+--- a/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
++++ b/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
+@@ -11,6 +11,7 @@ import qs.config
+ // Componente principal para el selector de fondos de pantalla.
+ FocusScope {
+     id: wallpapersTabRoot
++    focus: true
+ 
+     // Propiedades personalizadas para la funcionalidad del componente.
+     property string searchText: ""
+@@ -30,6 +31,47 @@ FocusScope {
+         return perScreen[currentScreenName] !== undefined;
+     }
+ 
++    readonly property string activeWallpaperPath: {
++        if (!GlobalStates.wallpaperManager) return "";
++        let perScreen = GlobalStates.wallpaperManager.perScreenWallpapers || {};
++        if (currentScreenName !== "" && perScreen[currentScreenName] !== undefined) {
++            return perScreen[currentScreenName];
++        }
++        return GlobalStates.wallpaperManager.currentWallpaper || "";
++    }
++
++    property bool showSettings: GlobalStates.wallpapersTabShowSettings
++
++    Connections {
++        target: GlobalStates
++        function onDashboardOpenChanged() {
++            if (!GlobalStates.dashboardOpen) {
++                wallpapersTabRoot.showSettings = false;
++            }
++        }
++        function onWallpapersTabShowSettingsChanged() {
++            if (wallpapersTabRoot.showSettings !== GlobalStates.wallpapersTabShowSettings) {
++                wallpapersTabRoot.showSettings = GlobalStates.wallpapersTabShowSettings;
++            }
++        }
++    }
++
++    onShowSettingsChanged: {
++        if (GlobalStates.wallpapersTabShowSettings !== showSettings) {
++            GlobalStates.wallpapersTabShowSettings = showSettings;
++        }
++        if (showSettings) {
++            wallpaperSettingsView.forceActiveFocus();
++        } else {
++            wallpapersTabRoot.forceActiveFocus();
++            wallpapersTabRoot.focusSearch();
++            Qt.callLater(function() {
++                wallpapersTabRoot.forceActiveFocus();
++                wallpapersTabRoot.focusSearch();
++            });
++        }
++    }
++
+     function togglePerScreenMode() {
+         if (!GlobalStates.wallpaperManager || currentScreenName === "") return;
+         
+@@ -74,9 +116,24 @@ FocusScope {
+             }
+         },
+         {
+-            id: "schemeSelector",
++            id: "dayNightToggle",
+             focusFunc: function () {
+-                schemeSelector.openAndFocus();
++                dayNightContainer.keyboardNavigationActive = true;
++                dayNightBtn.forceActiveFocus();
++            }
++        },
++        {
++            id: "randomButton",
++            focusFunc: function () {
++                randomBtnContainer.keyboardNavigationActive = true;
++                randomBtn.forceActiveFocus();
++            }
++        },
++        {
++            id: "settingsButton",
++            focusFunc: function () {
++                settingsBtnContainer.keyboardNavigationActive = true;
++                settingsBtn.forceActiveFocus();
+             }
+         },
+         {
+@@ -91,7 +148,12 @@ FocusScope {
+ 
+     // Función para enfocar el campo de búsqueda
+     function focusSearch() {
++        if (showSettings) {
++            wallpaperSettingsView.forceActiveFocus();
++            return;
++        }
+         currentFocusIndex = -1;
++        wallpapersTabRoot.forceActiveFocus();
+         wallpaperSearchInput.focusInput();
+ 
+         // Restaurar índice válido si está en -1 y hay wallpapers
+@@ -128,8 +190,11 @@ FocusScope {
+ 
+     // Función para navegar hacia atrás (Shift+Tab)
+     function focusPreviousElement() {
+-        if (currentFocusIndex === -1 || currentFocusIndex === 0) {
+-            // Si estamos en el search o en el primer elemento focusable, volver al search
++        if (currentFocusIndex === -1) {
++            currentFocusIndex = focusableElements.length - 1;
++            focusableElements[currentFocusIndex].focusFunc();
++        } else if (currentFocusIndex === 0) {
++            // Si estamos en el primer elemento focusable, volver al search
+             focusSearch();
+         } else {
+             currentFocusIndex--;
+@@ -155,24 +220,10 @@ FocusScope {
+ 
+     // Función para encontrar el índice del wallpaper actual en la lista filtrada
+     function findCurrentWallpaperIndex() {
+-        if (!GlobalStates.wallpaperManager) {
++        if (!activeWallpaperPath) {
+             return -1;
+         }
+-
+-        let perScreen = GlobalStates.wallpaperManager.perScreenWallpapers || {};
+-        let currentWallpaper = "";
+-        
+-        if (currentScreenName !== "" && perScreen[currentScreenName] !== undefined) {
+-            currentWallpaper = perScreen[currentScreenName];
+-        } else {
+-            currentWallpaper = GlobalStates.wallpaperManager.currentWallpaper;
+-        }
+-
+-        if (!currentWallpaper) {
+-            return -1;
+-        }
+-
+-        return filteredWallpapers.indexOf(currentWallpaper);
++        return filteredWallpapers.indexOf(activeWallpaperPath);
+     }
+ 
+     // Llama a focusSearch una vez que el componente se ha completado.
+@@ -180,22 +231,20 @@ FocusScope {
+         centerTimer.start();
+     }
+ 
+-    // Actualizar subcarpetas cuando la pestaña se haga visible
++    // Reposicionar al wallpaper actual cuando la pestaña se haga visible
+     onVisibleChanged: {
+         if (visible) {
+-            if (GlobalStates.wallpaperManager) {
+-                console.log("WallpapersTab became visible, updating subfolders");
+-                GlobalStates.wallpaperManager.scanSubfolders();
+-            }
++            showSettings = false;
++            GlobalStates.wallpapersTabShowSettings = false;
+             // Reposicionar al wallpaper actual cuando se hace visible
+             centerTimer.restart();
+         }
+     }
+ 
+-    // Timer para asegurar que el centrado ocurre después de que el GridView esté listo
++    // Timer para asegurar que el centrado ocurre suavemente después de la animación de apertura
+     Timer {
+         id: centerTimer
+-        interval: 50
++        interval: 220
+         repeat: false
+         onTriggered: {
+             centerCurrentWallpaper();
+@@ -244,6 +293,9 @@ FocusScope {
+     ColumnLayout {
+         anchors.fill: parent
+         spacing: 8
++        // ambxst-skwd-wall: the settings view draws no background of its own
++        // (the notch's themed one shows through), so the grid steps aside.
++        visible: !wallpapersTabRoot.showSettings
+ 
+         // Barra superior con OLED mode, búsqueda y scheme selector
+         RowLayout {
+@@ -769,14 +821,240 @@ FocusScope {
+                 }
+             }
+ 
+-            // Spacer
+-            // Item { Layout.fillWidth: true }
++            // Day / Night Mode Toggle
++            Item {
++                id: dayNightContainer
++                Layout.preferredWidth: 84
++                Layout.preferredHeight: 48
+ 
+-            // Scheme Selector a la derecha
++                property bool keyboardNavigationActive: false
++
++                StyledRect {
++                    variant: (dayNightContainer.keyboardNavigationActive && dayNightBtn.activeFocus) || dayNightMa.containsMouse ? "focus" : "pane"
++                    anchors.fill: parent
++                    radius: Styling.radius(4)
++
++                    Item {
++                        id: dayNightBtn
++                        anchors.fill: parent
++
++                        onActiveFocusChanged: {
++                            if (!activeFocus) {
++                                dayNightContainer.keyboardNavigationActive = false;
++                            }
++                        }
++
++                        Keys.onPressed: event => {
++                            if (event.key === Qt.Key_Tab) {
++                                dayNightContainer.keyboardNavigationActive = false;
++                                if (event.modifiers & Qt.ShiftModifier) {
++                                    wallpapersTabRoot.focusPreviousElement();
++                                } else {
++                                    wallpapersTabRoot.focusNextElement();
++                                }
++                                event.accepted = true;
++                            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
++                                Config.theme.lightMode = !Config.theme.lightMode;
++                                event.accepted = true;
++                            } else if (event.key === Qt.Key_Escape) {
++                                dayNightContainer.keyboardNavigationActive = false;
++                                focusSearch();
++                                event.accepted = true;
++                            }
++                        }
++
++                        MouseArea {
++                            id: dayNightMa
++                            anchors.fill: parent
++                            hoverEnabled: true
++                            cursorShape: Qt.PointingHandCursor
++                            onClicked: {
++                                Config.theme.lightMode = !Config.theme.lightMode;
++                            }
++
++                            RowLayout {
++                                anchors.fill: parent
++                                anchors.margins: 4
++                                spacing: 4
++
++                                Rectangle {
++                                    Layout.fillWidth: true
++                                    Layout.fillHeight: true
++                                    color: Colors.background
++                                    radius: Styling.radius(0)
++
++                                    Text {
++                                        anchors.fill: parent
++                                        text: Config.theme.lightMode ? "Day" : "Night"
++                                        color: Colors.overSurface
++                                        font.family: Config.theme.font
++                                        font.pixelSize: Config.theme.fontSize
++                                        font.weight: Font.Medium
++                                        verticalAlignment: Text.AlignVCenter
++                                        horizontalAlignment: Text.AlignHCenter
++                                    }
++                                }
++
++                                Item {
++                                    Layout.preferredWidth: 36
++                                    Layout.preferredHeight: 36
++
++                                    StyledRect {
++                                        variant: Config.theme.lightMode ? "primary" : "pane"
++                                        anchors.fill: parent
++                                        radius: Styling.radius(0)
++
++                                        Text {
++                                            anchors.centerIn: parent
++                                            text: Config.theme.lightMode ? Icons.sun : Icons.moon
++                                            color: Config.theme.lightMode ? Styling.srItem("primary") : Colors.overSurface
++                                            font.family: Icons.font
++                                            font.pixelSize: 18
++                                        }
++                                    }
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++
++            // Random Wallpaper Shuffle Button
+             Item {
+-                Layout.preferredWidth: 200
++                id: randomBtnContainer
++                Layout.preferredWidth: 48
+                 Layout.preferredHeight: 48
+ 
++                property bool keyboardNavigationActive: false
++
++                StyledRect {
++                    variant: (randomBtnContainer.keyboardNavigationActive && randomBtn.activeFocus) || randomMa.containsMouse ? "focus" : "pane"
++                    anchors.fill: parent
++                    radius: Styling.radius(4)
++
++                    Item {
++                        id: randomBtn
++                        anchors.fill: parent
++
++                        onActiveFocusChanged: {
++                            if (!activeFocus) {
++                                randomBtnContainer.keyboardNavigationActive = false;
++                            }
++                        }
++
++                        Keys.onPressed: event => {
++                            if (event.key === Qt.Key_Tab) {
++                                randomBtnContainer.keyboardNavigationActive = false;
++                                if (event.modifiers & Qt.ShiftModifier) {
++                                    wallpapersTabRoot.focusPreviousElement();
++                                } else {
++                                    wallpapersTabRoot.focusNextElement();
++                                }
++                                event.accepted = true;
++                            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
++                                randomBtnContainer.keyboardNavigationActive = false;
++                                GlobalStates.triggerRandomWallpaper();
++                                event.accepted = true;
++                            } else if (event.key === Qt.Key_Escape) {
++                                randomBtnContainer.keyboardNavigationActive = false;
++                                focusSearch();
++                                event.accepted = true;
++                            }
++                        }
++
++                        MouseArea {
++                            id: randomMa
++                            anchors.fill: parent
++                            hoverEnabled: true
++                            cursorShape: Qt.PointingHandCursor
++                            onClicked: {
++                                randomBtnContainer.keyboardNavigationActive = false;
++                                GlobalStates.triggerRandomWallpaper();
++                            }
++
++                            Text {
++                                anchors.centerIn: parent
++                                text: Icons.shuffle
++                                font.family: Icons.font
++                                font.pixelSize: 20
++                                color: (randomBtnContainer.keyboardNavigationActive && randomBtn.activeFocus) || randomMa.containsMouse ? Styling.srItem("focus") : Colors.overSurface
++                            }
++                        }
++                    }
++                }
++            }
++
++            // Advanced Settings Button
++            Item {
++                id: settingsBtnContainer
++                Layout.preferredWidth: 48
++                Layout.preferredHeight: 48
++
++                property bool keyboardNavigationActive: false
++
++                StyledRect {
++                    variant: (settingsBtnContainer.keyboardNavigationActive && settingsBtn.activeFocus) || settingsMa.containsMouse ? "focus" : "pane"
++                    anchors.fill: parent
++                    radius: Styling.radius(4)
++
++                    Item {
++                        id: settingsBtn
++                        anchors.fill: parent
++
++                        onActiveFocusChanged: {
++                            if (!activeFocus) {
++                                settingsBtnContainer.keyboardNavigationActive = false;
++                            }
++                        }
++
++                        Keys.onPressed: event => {
++                            if (event.key === Qt.Key_Tab) {
++                                settingsBtnContainer.keyboardNavigationActive = false;
++                                if (event.modifiers & Qt.ShiftModifier) {
++                                    wallpapersTabRoot.focusPreviousElement();
++                                } else {
++                                    wallpapersTabRoot.focusNextElement();
++                                }
++                                event.accepted = true;
++                            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
++                                settingsBtnContainer.keyboardNavigationActive = false;
++                                wallpapersTabRoot.showSettings = true;
++                                event.accepted = true;
++                            } else if (event.key === Qt.Key_Escape) {
++                                settingsBtnContainer.keyboardNavigationActive = false;
++                                focusSearch();
++                                event.accepted = true;
++                            }
++                        }
++
++                        MouseArea {
++                            id: settingsMa
++                            anchors.fill: parent
++                            hoverEnabled: true
++                            cursorShape: Qt.PointingHandCursor
++                            onClicked: {
++                                settingsBtnContainer.keyboardNavigationActive = false;
++                                wallpapersTabRoot.showSettings = true;
++                            }
++
++                            Text {
++                                anchors.centerIn: parent
++                                text: Icons.gear
++                                font.family: Icons.font
++                                font.pixelSize: 20
++                                color: (settingsBtnContainer.keyboardNavigationActive && settingsBtn.activeFocus) || settingsMa.containsMouse ? Styling.srItem("focus") : Colors.overSurface
++                            }
++                        }
++                    }
++                }
++            }
++
++            // Scheme Selector a la derecha
++            Item {
++                visible: false
++                Layout.preferredWidth: 0
++                Layout.preferredHeight: 0
++
+                 SchemeSelector {
+                     id: schemeSelector
+                     anchors.top: parent.top
+@@ -864,9 +1142,9 @@ FocusScope {
+                 highlightFollowsCurrentItem: !isScrolling
+ 
+                 // Optimizaciones de rendimiento
+-                cacheBuffer: cellHeight
+-                displayMarginBeginning: cellHeight
+-                displayMarginEnd: cellHeight
++                cacheBuffer: cellHeight * 3
++                displayMarginBeginning: cellHeight * 2
++                displayMarginEnd: cellHeight * 2
+                 reuseItems: true
+ 
+                 // Configuración de scroll optimizada
+@@ -940,20 +1218,7 @@ FocusScope {
+                                 clip: true
+ 
+                                 property var currentItem: wallpaperGrid.currentItem
+-                                property bool isCurrentWallpaper: {
+-                                    if (!GlobalStates.wallpaperManager || wallpaperGrid.currentIndex < 0)
+-                                        return false;
+-                                        
+-                                    let perScreen = GlobalStates.wallpaperManager.perScreenWallpapers || {};
+-                                    let currentWall = "";
+-                                    if (currentScreenName !== "" && perScreen[currentScreenName] !== undefined) {
+-                                        currentWall = perScreen[currentScreenName];
+-                                    } else {
+-                                        currentWall = GlobalStates.wallpaperManager.currentWallpaper;
+-                                    }
+-                                        
+-                                    return currentWall === filteredWallpapers[wallpaperGrid.currentIndex];
+-                                }
++                                property bool isCurrentWallpaper: (wallpaperGrid.currentIndex >= 0 && wallpaperGrid.currentIndex < filteredWallpapers.length) ? (filteredWallpapers[wallpaperGrid.currentIndex] === wallpapersTabRoot.activeWallpaperPath) : false
+                                 property bool showHoveredItem: currentItem && currentItem.isHovered && !visible
+ 
+                                 visible: selectedIndex >= 0 || showHoveredItem
+@@ -1056,32 +1321,20 @@ FocusScope {
+                     height: wallpaperGrid.cellHeight
+                     color: "transparent"
+ 
+-                    property bool isCurrentWallpaper: {
+-                        if (!GlobalStates.wallpaperManager)
+-                            return false;
+-                            
+-                        let perScreen = GlobalStates.wallpaperManager.perScreenWallpapers || {};
+-                        let currentWall = "";
+-                        if (currentScreenName !== "" && perScreen[currentScreenName] !== undefined) {
+-                            currentWall = perScreen[currentScreenName];
+-                        } else {
+-                            currentWall = GlobalStates.wallpaperManager.currentWallpaper;
+-                        }
+-                        return currentWall === modelData;
+-                    }
++                    property bool isCurrentWallpaper: modelData === wallpapersTabRoot.activeWallpaperPath
+ 
+                     property bool isHovered: false
+                     property bool isSelected: selectedIndex === index
+ 
+-                    // Calcular si el item está visible en el viewport (con buffer para precarga)
++                    // Calcular si el item está visible en el viewport (con buffer amplio para precarga suave)
+                     readonly property bool isInViewport: {
+                         var gridTop = wallpaperGrid.contentY;
+                         var gridBottom = gridTop + wallpaperGrid.height;
+                         var itemTop = y;
+                         var itemBottom = itemTop + height;
+ 
+-                        // Buffer de una fila arriba y abajo para precarga suave
+-                        var buffer = wallpaperGrid.cellHeight;
++                        // Buffer de 3 filas arriba y abajo para precarga suave sin churn
++                        var buffer = wallpaperGrid.cellHeight * 3;
+                         return itemBottom + buffer >= gridTop && itemTop - buffer <= gridBottom;
+                     }
+ 
+@@ -1097,6 +1350,7 @@ FocusScope {
+ 
+                                 // Lazy loader que solo carga cuando el item está visible
+                                 Loader {
++                                    id: thumbLoader
+                                     anchors.fill: parent
+                                     sourceComponent: staticImageComponent
+                                     property string sourceFile: modelData
+@@ -1107,7 +1361,7 @@ FocusScope {
+                                 Rectangle {
+                                     anchors.fill: parent
+                                     color: Colors.surface
+-                                    visible: !parent.active || parent.status !== Loader.Ready
++                                    visible: !thumbLoader.active || thumbLoader.status !== Loader.Ready
+ 
+                                     Text {
+                                         anchors.centerIn: parent
+@@ -1122,7 +1376,7 @@ FocusScope {
+                                             to: 360
+                                             duration: 1000
+                                             loops: Animation.Infinite
+-                                            running: parent.visible
++                                            running: parent.visible && thumbLoader.status === Loader.Loading
+                                         }
+                                     }
+                                 }
+@@ -1227,4 +1481,20 @@ FocusScope {
+             }
+         }
+     }
++
++    WallpaperSettingsView {
++        id: wallpaperSettingsView
++        anchors.fill: parent
++        visible: wallpapersTabRoot.showSettings
++        z: 2000
++        onBackClicked: {
++            wallpapersTabRoot.showSettings = false;
++            wallpapersTabRoot.forceActiveFocus();
++            wallpapersTabRoot.focusSearch();
++            Qt.callLater(function() {
++                wallpapersTabRoot.forceActiveFocus();
++                wallpapersTabRoot.focusSearch();
++            });
++        }
++    }
+ }
