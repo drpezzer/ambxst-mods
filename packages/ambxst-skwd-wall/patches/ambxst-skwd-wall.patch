@@ -457,10 +457,24 @@ index 6ee88c15..29b7a0f6 100644
                          visible: (root.selectedMod?.error ?? "") !== ""
                              || (root.selectedMod?.compatibilityError ?? "") !== ""
 diff --git a/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml b/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
-index 30c36e6f..5ddf470e 100644
+index 30c36e6f..a07d382d 100644
 --- a/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
 +++ b/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
-@@ -39,12 +39,18 @@ Item {
+@@ -21,11 +21,9 @@ Item {
+         const clients = AxctlService.clients.values || [];
+         return clients.some(client => client.fullscreen === true && client.monitor === screenMonitor.id);
+     }
++    // Game mode pauses every video wallpaper, on every screen.
+     readonly property bool gameModeOnScreen: GameModeClient.toggled
+-        && screenMonitor !== null
+-        && AxctlService.focusedMonitor
+-        && AxctlService.focusedMonitor.id === screenMonitor.id
+-    readonly property bool shouldPausePlayback: Config.performance.pauseWallpapersOnFullscreen && (screenHasFullscreen || gameModeOnScreen)
++    readonly property bool shouldPausePlayback: gameModeOnScreen || (Config.performance.pauseWallpapersOnFullscreen && screenHasFullscreen)
+ 
+     readonly property var optimizedPalette: ["background", "overBackground", "shadow", "surface", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primary", "secondary", "tertiary", "red", "lightRed", "green", "lightGreen", "blue", "lightBlue", "yellow", "lightYellow", "cyan", "lightCyan", "magenta", "lightMagenta"]
+ 
+@@ -39,12 +37,18 @@ Item {
          player.stop();
          player.source = "file://" + sourceFile;
          syncDebounce.restart();
@@ -479,7 +493,7 @@ index 30c36e6f..5ddf470e 100644
          if (shouldPausePlayback) {
              if (player.playbackState === MediaPlayer.PlayingState)
                  player.pause();
-@@ -127,9 +133,33 @@ Item {
+@@ -127,9 +131,33 @@ Item {
          function onVideoSyncTickChanged() {
              if (videoWallpaper.shouldPausePlayback)
                  return;

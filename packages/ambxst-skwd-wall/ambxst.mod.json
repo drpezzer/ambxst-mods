@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "drpezzer.ambxst-skwd-wall",
   "name": "Ambxst Skwd-wall",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Hands every wallpaper (images, videos and GIFs) to skwd-wall's renderer and brings its 39 transitions into the notch's Wallpapers tab: a carousel of transition cards with line-art previews, animation duration, automatic rotation with Match Time of Day, shuffle, pause-on-fullscreen and Material You colour settings, all following your Ambxst theme. Ambxst keeps its library, picker, per-screen wallpapers and matugen colours. On a 4K video wallpaper across two monitors it measured about half the video-decoder load, a quarter of the CPU and ~450 MB less VRAM than Ambxst's own player. Replaces Wallpaper Transitions (by POSiTiiiV, MIT), whose settings panel it builds on. Installs skwd-wall for you from its official releases with one button (or uses your system's copy); until then Ambxst draws wallpapers itself as before.",
   "license": "MIT",
   "author": "drpezzer",

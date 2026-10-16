@@ -139,6 +139,8 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 
 ## Changelog
 
+- 1.2.2: game mode also pauses Ambxst's own video player (tinted videos) on every
+  monitor, not only the focused one.
 - 1.2.1: video wallpapers no longer stay paused because of a fullscreen window on a
   hidden (special) workspace: Ambxst now decides when to pause and tells skwd-wall
   per monitor, counting only the workspace actually shown. Ambxst's game mode
