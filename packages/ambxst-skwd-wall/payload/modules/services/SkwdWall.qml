@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.modules.globals
+import qs.modules.theme
 
 // Ambxst Skwd-wall: skwd-wall (https://github.com/liixini/skwd-wall) draws every
 // wallpaper; Ambxst keeps the picker, the library, per-screen choices, rotation
@@ -34,7 +35,12 @@ Singleton {
     readonly property string unit: source === "local" ? "ambxst-skwd-walld.service" : "skwd-walld.service"
     readonly property string installer: Quickshell.shellDir + "/scripts/skwd_install.sh"
     property bool failed: false         // the daemon could not be reached
-    readonly property bool active: enabled && available && !failed
+    // Ambxst's Tint maps the wallpaper onto the theme palette. skwd does the
+    // same for images with its Palette effect (a recoloured copy is made and
+    // shown); it cannot recolour videos, so a tinted video stays in Ambxst.
+    readonly property bool tint: manager ? manager.tintEnabled === true : false
+    readonly property bool tintBlocks: tint && Object.keys(desired).some(n => isMoving(desired[n]))
+    readonly property bool active: enabled && available && !failed && !tintBlocks
 
     readonly property var manager: GlobalStates.wallpaperManager
     readonly property var videoExtensions: ["mp4", "webm", "mov", "avi", "mkv", "gif"]
@@ -138,6 +144,57 @@ Singleton {
         return out;
     }
 
+    // The palette Ambxst's tint shader uses (VideoWallpaper.optimizedPalette).
+    readonly property var tintRoles: ["background", "overBackground", "shadow", "surface", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primary", "secondary", "tertiary", "red", "lightRed", "green", "lightGreen", "blue", "lightBlue", "yellow", "lightYellow", "cyan", "lightCyan", "magenta", "lightMagenta"]
+    readonly property var tintPalette: tintRoles.map(r => {
+        const c = Colors[r];
+        if (c === undefined || c === null)
+            return null;
+        const hex = v => ("0" + Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16)).slice(-2);
+        return "#" + hex(c.r) + hex(c.g) + hex(c.b);
+    }).filter(h => h !== null)
+    readonly property string tintKey: tintPalette.join(",")
+    readonly property string tintDir: Quickshell.env("HOME") + "/.cache/ambxst/skwd-tint"
+    readonly property string effectsBin: source === "local" ? localRoot + "/current/bin/skwd-wall-effects" : "skwd-wall-effects"
+    property var tintSources: ({})      // tinted copy -> the wallpaper it was made from
+
+    function tintedPath(file) {
+        const ext = String(file).toLowerCase().split('.').pop();
+        return tintDir + "/" + Qt.md5(file + "|" + tintKey) + (ext === "jpg" || ext === "jpeg" ? ".jpg" : ".png");
+    }
+
+    // What skwd should show on each screen: the wallpaper, or its tinted copy.
+    readonly property var shown: {
+        const out = {};
+        const map = {};
+        for (const n in desired) {
+            const f = desired[n];
+            if (tint && !isMoving(f)) {
+                const t = tintedPath(f);
+                map[t] = f;
+                out[n] = t;
+            } else {
+                out[n] = f;
+            }
+        }
+        root.tintSources = map;
+        return out;
+    }
+    onShownChanged: syncDebounce.restart()
+
+    // skwd-helm apply, making the tinted copy first when it does not exist yet.
+    function applyCommand(file, output) {
+        const src = tintSources[file];
+        if (!src)
+            return output ? [root.helm, "apply", file, "-o", output] : [root.helm, "apply", file];
+        const params = JSON.stringify({ palette: tintPalette });
+        return ["sh", "-c",
+            'mkdir -p "$1" && find "$1" -type f -mmin +30 -delete 2>/dev/null; '
+            + '[ -s "$2" ] || "$3" render --input "$4" --effect theme --params "$5" --output "$2" >/dev/null || exit 70; '
+            + 'if [ -n "$7" ]; then exec "$6" apply "$2" -o "$7"; else exec "$6" apply "$2"; fi',
+            "sh", tintDir, file, effectsBin, src, params, root.helm, output || ""];
+    }
+
     property var applied: ({})          // screen name -> file skwd was last told to show
     property bool daemonUp: false
     property bool started: false        // this service started the daemon and owns stopping it
@@ -183,26 +240,26 @@ Singleton {
         }
         // The same file on every screen: one apply for all outputs, so skwd
         // decodes it once and shares the frames. Different files: per output.
-        const names = Object.keys(desired);
-        const files = names.map(n => desired[n]);
+        const names = Object.keys(shown);
+        const files = names.map(n => shown[n]);
         const same = names.length > 0 && files.every(f => f === files[0]);
         if (same) {
             if (names.some(n => applied[n] !== files[0]))
                 applyAll(files[0]);
             return;
         }
-        for (const name in desired) {
-            if (applied[name] !== desired[name])
-                applyTo(name, desired[name]);
+        for (const name in shown) {
+            if (applied[name] !== shown[name])
+                applyTo(name, shown[name]);
         }
     }
 
     function applyAll(file) {
         const next = {};
-        for (const n in desired)
+        for (const n in shown)
             next[n] = file;
         applied = next;
-        run([root.helm, "apply", file], code => {
+        run(applyCommand(file, ""), code => {
             if (code === 0)
                 return;
             root.applied = ({});
@@ -221,7 +278,7 @@ Singleton {
         const next = Object.assign({}, applied);
         next[screenName] = file;
         applied = next;
-        run([root.helm, "apply", file, "-o", screenName], code => {
+        run(applyCommand(file, screenName), code => {
             if (code === 0)
                 return;
             const again = Object.assign({}, root.applied);
@@ -295,7 +352,7 @@ Singleton {
             // skwd restores what it showed, possibly as one renderer per output.
             // With the same file everywhere, apply it once more for all outputs
             // so it is decoded once.
-            const files = Object.keys(root.desired).map(n => root.desired[n]);
+            const files = Object.keys(root.shown).map(n => root.shown[n]);
             const same = files.length > 1 && files.every(f => f === files[0]);
             root.applied = same ? ({}) : seen;
             root.daemonUp = true;

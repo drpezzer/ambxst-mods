@@ -82,6 +82,13 @@ Pull, and so on). Easing curves are gone: skwd-wall's transitions have none.
 
 ## How it behaves
 
+- **Tint** (the button in the Wallpapers tab): for images, skwd-wall shows a copy
+  recoloured onto your theme palette with its Palette effect (the same palette and
+  maths as Ambxst's own tint), made again whenever your colours change and kept in
+  `~/.cache/ambxst/skwd-tint`. skwd-wall cannot recolour videos or GIFs, so while
+  Tint is on and a screen shows one, Ambxst draws and tints everything itself
+  until Tint is off again.
+
 - skwd-wall runs while the mod is enabled and draws every screen's wallpaper.
   Ambxst's own video player sits idle.
 - If skwd-wall is not installed, or its daemon cannot be reached, Ambxst draws and
@@ -126,6 +133,8 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 
 ## Changelog
 
+- 1.2.0: Ambxst's Tint button works with skwd-wall (images recoloured onto your
+  theme palette; tinted videos and GIFs fall back to Ambxst).
 - 1.1.0: one-button install and update of skwd-wall from its official releases (in
   the wallpaper settings and on the mod's page), a `source` option, one shared video
   player when every screen shows the same wallpaper, a note on what per-monitor
