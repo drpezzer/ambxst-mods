@@ -301,9 +301,12 @@ Singleton {
         id: lockTimer
         property int waited: 0
         onTriggered: {
-            // The decision needs the settings; they normally land well before
-            // this, but never lock on a default the user may have changed.
-            if (!root.settingsLoaded && waited < 3000) {
+            // The decision needs the settings and the start probe (login
+            // service, external locker); they normally land well before this,
+            // but never lock on a default the user may have changed, and never
+            // read an unknown login service as "no greeter" -- on a busy first
+            // boot loginctl can take longer than the enter animation.
+            if ((!root.settingsLoaded || !root.startKnown) && waited < 3000) {
                 waited += 200;
                 interval = 200;
                 restart();

@@ -762,6 +762,13 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 4.0.1: **No surprise boot lock after a greeter login.** With the boot lock
+  on `auto`, the lock decision ran when the enter animation ended (about
+  0.9 s) but only waited for the settings, not for the login-service probe.
+  On a slow first boot `loginctl` could answer later than that, so an unknown
+  service was read as "no greeter" and the shell locked right after an SDDM
+  (or gdm, greetd, ...) login. The decision now also waits for the probe
+  (same 3 s cap as the settings).
 - 4.0.0: **Ambxst 1.3.12; mod updates are Ambxst's now.** Needs Ambxst
   1.3.12 (base 1e1a5649); on 1.3.10 stay on 3.0.5.
   - Ambxst 1.3.11 brought its own mod updater (checks, scheduled checks,
