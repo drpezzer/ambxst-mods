@@ -270,10 +270,6 @@ Left edge of a 4K screen, real time. The whole sequence: [demo.mp4](media/demo.m
   unplugged that role died with it and every other screen kept a wallpaper it
   could no longer rescan or re-theme. The role is now handed to a surviving
   instance, carrying the current state across so nothing blanks.
-- **No more invisible view stuck in the notch.** Moving an open module to the
-  newly focused monitor could set and clear a screen's flag inside one event
-  loop turn, leaving a deferred push behind that parked a hidden 900 px view
-  in the notch. The push re-checks the flag and the close unwinds the stack.
 - **Fullscreen games on a special workspace are detected.** The panel only
   caught them through a fast path gated on the focused monitor, so the shell
   came back over the game whenever focus moved. The output's open special
@@ -702,7 +698,8 @@ ambxst mods enable drpezzer.roadie
 ambxst reload
 ```
 
-Works with Ambxst `>=1.3.10` (Roadie 2.1.0 is the last one for 1.3.9, 1.3.0
+Works with Ambxst `>=1.3.14` (Roadie 4.0.1 is the last one for 1.3.12 and
+1.3.13, 3.0.5 the last one for 1.3.10, 2.1.0 the last one for 1.3.9, 1.3.0
 the last one for 1.3.6 to 1.3.8). Coming from the two old mods: settings do not
 carry over (a mod's settings are keyed by its id), so copy the values from
 `~/.config/ambxst/mods/drpezzer.clean-load.json` and
@@ -762,6 +759,13 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 4.1.0: ported to Ambxst 1.3.14 (base 83e8462a; requires it). Ambxst now
+  keeps the notch's view stack in sync itself (one sync function, immediate
+  pushes and pops, a repair pass when a transition ends), which fixes the
+  invisible view stuck in the notch that Roadie used to fix, so Roadie's
+  own push/pop helpers are removed and the stock code runs. The notch's
+  size animations keep Ambxst's new run-to-end behaviour underneath the
+  farewell.
 - 4.0.1: **No surprise boot lock after a greeter login.** With the boot lock
   on `auto`, the lock decision ran when the enter animation ended (about
   0.9 s) but only waited for the settings, not for the login-service probe.

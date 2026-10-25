@@ -139,6 +139,7 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 
 ## Changelog
 
+- 1.2.4: verified on Ambxst 1.3.14 (base 83e8462a, notch stack rework, maximize and fake-fullscreen binds; also covers 1.3.13); patch applies verbatim, no source changes.
 - 1.2.3: `ambxst run wallpaper-settings` opens the wallpaper settings (for a keybind).
 - 1.2.2: game mode also pauses Ambxst's own video player (tinted videos) on every
   monitor, not only the focused one.

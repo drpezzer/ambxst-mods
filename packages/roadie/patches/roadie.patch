@@ -1,5 +1,5 @@
 diff --git a/config/Config.qml b/config/Config.qml
-index 547cb5eb..b53b2b82 100644
+index d9125341..c20998a8 100644
 --- a/config/Config.qml
 +++ b/config/Config.qml
 @@ -138,7 +138,7 @@ Singleton {
@@ -164,7 +164,7 @@ index 547cb5eb..b53b2b82 100644
                  handleMissingConfig("general", generalLoader, GeneralDefaults.data, () => {
                      root.generalReady = true;
                  });
-@@ -3493,29 +3506,42 @@ Singleton {
+@@ -3549,29 +3562,42 @@ Singleton {
      }
  
      // Handle missing config files - copy from preset or create with defaults
@@ -3560,7 +3560,7 @@ index eb6e9ccd..9d880a6c 100644
      // ASSISTANT SIDEBAR STATE
      // ═══════════════════════════════════════════════════════════════
 diff --git a/modules/notch/Notch.qml b/modules/notch/Notch.qml
-index 557c3261..b4cc1e4c 100644
+index 28e30cf5..d774c109 100644
 --- a/modules/notch/Notch.qml
 +++ b/modules/notch/Notch.qml
 @@ -43,7 +43,8 @@ Item {
@@ -3573,7 +3573,7 @@ index 557c3261..b4cc1e4c 100644
  
      property int defaultHeight: Config.showBackground ? (screenNotchOpen || hasActiveNotifications ? Math.max(stackContainer.height, 44) : 44) : (screenNotchOpen || hasActiveNotifications ? Math.max(stackContainer.height, 40) : 40)
      property int islandHeight: screenNotchOpen || hasActiveNotifications ? Math.max(stackContainer.height, 36) : 36
-@@ -54,10 +55,24 @@ Item {
+@@ -54,8 +55,22 @@ Item {
      readonly property int cornerSize: Config.roundness > 0 ? Config.roundness + 4 : 0
      readonly property int totalCornerWidth: Config.notchTheme === "default" ? cornerSize * 2 : 0
  
@@ -3589,19 +3589,25 @@ index 557c3261..b4cc1e4c 100644
 +    property real farewellWidth: 0
 +    property real farewellHeight: 0
 +    readonly property real farewellRadius: Config.roundness > 0 ? Config.roundness + 20 : 0
- 
--    Behavior on implicitWidth {
++
 +    property real baseWidth: screenNotchOpen ? Math.max(stackContainer.width + totalCornerWidth, 290) : stackContainer.width + totalCornerWidth
 +    property real baseHeight: Config.notchTheme === "default" ? defaultHeight : (Config.notchTheme === "island" ? islandHeight : defaultHeight)
 +
 +    implicitWidth: baseWidth + Math.max(0, farewellWidth + 2 * (cornerSize + farewellRadius) + 8 - baseWidth) * farewell
 +    implicitHeight: baseHeight + Math.max(0, farewellHeight + farewellRadius + 8 - baseHeight) * farewell
-+
+ 
+     // Animate only around open/close transitions. While idle the background
+     // must track content-driven size changes (notification arrival, hover
+@@ -64,7 +79,7 @@ Item {
+     // background lagging behind the content. alwaysRunToEnd keeps a
+     // mid-flight animation finishing after the Behavior is disabled, so a
+     // transition ending early can no longer freeze the size halfway.
+-    Behavior on implicitWidth {
 +    Behavior on baseWidth {
          enabled: (screenNotchOpen || stackViewInternal.busy) && Config.animDuration > 0
          NumberAnimation {
-             duration: Config.animDuration
-@@ -66,7 +81,7 @@ Item {
+             alwaysRunToEnd: true
+@@ -74,7 +89,7 @@ Item {
          }
      }
  
@@ -3609,8 +3615,8 @@ index 557c3261..b4cc1e4c 100644
 +    Behavior on baseHeight {
          enabled: (screenNotchOpen || stackViewInternal.busy) && Config.animDuration > 0
          NumberAnimation {
-             duration: Config.animDuration
-@@ -296,6 +311,8 @@ Item {
+             alwaysRunToEnd: true
+@@ -305,6 +320,8 @@ Item {
  
          Item {
              id: stackContainer
@@ -3619,7 +3625,7 @@ index 557c3261..b4cc1e4c 100644
              anchors.centerIn: parent
              width: stackViewInternal.currentItem ? stackViewInternal.currentItem.implicitWidth + (screenNotchOpen ? 32 : 0) : (screenNotchOpen ? 32 : 0)
              height: stackViewInternal.currentItem ? stackViewInternal.currentItem.implicitHeight + (screenNotchOpen ? 32 : 0) : (screenNotchOpen ? 32 : 0)
-@@ -470,7 +487,10 @@ Item {
+@@ -481,7 +498,10 @@ Item {
          readonly property int borderWidth: borderData[1]
          readonly property color borderColor: Config.resolveColor(borderData[0])
  
@@ -3632,7 +3638,7 @@ index 557c3261..b4cc1e4c 100644
          onPaint: {
              if (Config.notchTheme !== "default")
 diff --git a/modules/notch/NotchContent.qml b/modules/notch/NotchContent.qml
-index 8ef85f11..8bcb90db 100644
+index 9c8caaad..fcc63c7f 100644
 --- a/modules/notch/NotchContent.qml
 +++ b/modules/notch/NotchContent.qml
 @@ -22,8 +22,8 @@ Item {
@@ -3758,161 +3764,10 @@ index 8ef85f11..8bcb90db 100644
  
                  // layer.enabled: true
                  // layer.effect: Shadow {}
-@@ -417,95 +443,141 @@ Item {
+@@ -495,6 +521,69 @@ Item {
          }
      }
  
-+    // Park one of the persistent views into this screen's notch stack.
-+    //
-+    // The push has to be deferred -- the Loader needs a turn to build its item
-+    // -- and the module can be switched back off before that turn arrives.
-+    // That is exactly what Visibilities.clearAll() does when the focused
-+    // monitor changes while a module is open: this screen's flag goes false in
-+    // the same event loop turn it went true. The close then ran against a stack
-+    // still at depth 1, so it popped nothing, and the deferred push landed
-+    // afterwards and stuck there for good.
-+    //
-+    // The loaders park their views `visible: false`, so a stuck view paints
-+    // nothing while still driving the notch's implicit size -- a 900x392
-+    // launcher-shaped hole, invisible until a notification forced the notch to
-+    // reveal on that screen. Re-checking the module inside the deferred call is
-+    // what makes the push cancellable.
-+    function pushNotchView(loader, moduleName) {
-+        loader.active = true;
-+        Qt.callLater(() => {
-+            if (!screenVisibilities || !screenVisibilities[moduleName])
-+                return;
-+            if (!loader.item)
-+                return;
-+
-+            notchContainer.stackView.push(loader.item);
-+            Qt.callLater(() => {
-+                if (notchContainer.stackView.currentItem) {
-+                    notchContainer.stackView.currentItem.forceActiveFocus();
-+                }
-+            });
-+        });
-+    }
-+
-+    // Unwind to the default view. pop(null) takes the stack all the way back to
-+    // its initial item, so a stack that somehow got more than one view deep
-+    // cannot strand one on top.
-+    function popNotchView() {
-+        if (notchContainer.stackView.depth > 1) {
-+            notchContainer.stackView.pop(null);
-+        }
-+        notchContainer.isShowingDefault = true;
-+        notchContainer.isShowingNotifications = false;
-+    }
-+
-     // Listen for dashboard and powermenu state changes
-     Connections {
-         target: screenVisibilities
- 
-         function onLauncherChanged() {
--            if (screenVisibilities.launcher) {
--                persistentLauncherViewLoader.active = true;
--                Qt.callLater(() => {
--                    if (persistentLauncherViewLoader.item) {
--                        notchContainer.stackView.push(persistentLauncherViewLoader.item);
--                        Qt.callLater(() => {
--                            if (notchContainer.stackView.currentItem) {
--                                notchContainer.stackView.currentItem.forceActiveFocus();
--                            }
--                        });
--                    }
--                });
--            } else {
--                if (notchContainer.stackView.depth > 1) {
--                    notchContainer.stackView.pop();
--                    notchContainer.isShowingDefault = true;
--                    notchContainer.isShowingNotifications = false;
--                }
--            }
-+            if (screenVisibilities.launcher)
-+                root.pushNotchView(persistentLauncherViewLoader, "launcher");
-+            else
-+                root.popNotchView();
-         }
- 
-         function onDashboardChanged() {
--            if (screenVisibilities.dashboard) {
--                persistentDashboardViewLoader.active = true;
--                Qt.callLater(() => {
--                    if (persistentDashboardViewLoader.item) {
--                        notchContainer.stackView.push(persistentDashboardViewLoader.item);
--                        Qt.callLater(() => {
--                            if (notchContainer.stackView.currentItem) {
--                                notchContainer.stackView.currentItem.forceActiveFocus();
--                            }
--                        });
--                    }
--                });
--            } else {
--                if (notchContainer.stackView.depth > 1) {
--                    notchContainer.stackView.pop();
--                    notchContainer.isShowingDefault = true;
--                    notchContainer.isShowingNotifications = false;
--                }
--            }
-+            if (screenVisibilities.dashboard)
-+                root.pushNotchView(persistentDashboardViewLoader, "dashboard");
-+            else
-+                root.popNotchView();
-         }
- 
-         function onPowermenuChanged() {
--            if (screenVisibilities.powermenu) {
--                persistentPowerMenuViewLoader.active = true;
--                Qt.callLater(() => {
--                    if (persistentPowerMenuViewLoader.item) {
--                        notchContainer.stackView.push(persistentPowerMenuViewLoader.item);
--                        Qt.callLater(() => {
--                            if (notchContainer.stackView.currentItem) {
--                                notchContainer.stackView.currentItem.forceActiveFocus();
--                            }
--                        });
--                    }
--                });
--            } else {
--                if (notchContainer.stackView.depth > 1) {
--                    notchContainer.stackView.pop();
--                    notchContainer.isShowingDefault = true;
--                    notchContainer.isShowingNotifications = false;
--                }
--            }
-+            if (screenVisibilities.powermenu)
-+                root.pushNotchView(persistentPowerMenuViewLoader, "powermenu");
-+            else
-+                root.popNotchView();
-         }
- 
-         function onToolsChanged() {
--            if (screenVisibilities.tools) {
--                persistentToolsMenuViewLoader.active = true;
--                Qt.callLater(() => {
--                    if (persistentToolsMenuViewLoader.item) {
--                        notchContainer.stackView.push(persistentToolsMenuViewLoader.item);
--                        Qt.callLater(() => {
--                            if (notchContainer.stackView.currentItem) {
--                                notchContainer.stackView.currentItem.forceActiveFocus();
--                            }
--                        });
--                    }
--                });
--            } else {
--                if (notchContainer.stackView.depth > 1) {
--                    notchContainer.stackView.pop();
--                    notchContainer.isShowingDefault = true;
--                    notchContainer.isShowingNotifications = false;
--                }
-+            if (screenVisibilities.tools)
-+                root.pushNotchView(persistentToolsMenuViewLoader, "tools");
-+            else
-+                root.popNotchView();
-+        }
-+    }
-+
 +    // roadie: the farewell's top layer. The notch underneath has grown over
 +    // the screen by the time any of this is visible: a sheet in the theme
 +    // background colour makes the ground solid whatever the notch's own fill
@@ -3972,9 +3827,13 @@ index 8ef85f11..8bcb90db 100644
 +            function onActiveChanged() {
 +                if (ShellFarewell.active && farewellLayer.speaks)
 +                    farewellKeys.forceActiveFocus();
-             }
-         }
-     }
++            }
++        }
++    }
++
+     // Export some internal items for Visibilities
+     property alias notchContainerRef: notchContainer
+ }
 diff --git a/modules/notch/NotchWindow.qml b/modules/notch/NotchWindow.qml
 index 5a80e6bd..c3b9019b 100644
 --- a/modules/notch/NotchWindow.qml
