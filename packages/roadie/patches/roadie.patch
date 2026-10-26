@@ -3560,7 +3560,7 @@ index eb6e9ccd..9d880a6c 100644
      // ASSISTANT SIDEBAR STATE
      // ═══════════════════════════════════════════════════════════════
 diff --git a/modules/notch/Notch.qml b/modules/notch/Notch.qml
-index 28e30cf5..d774c109 100644
+index 28e30cf5..5f206ed4 100644
 --- a/modules/notch/Notch.qml
 +++ b/modules/notch/Notch.qml
 @@ -43,7 +43,8 @@ Item {
@@ -3616,7 +3616,38 @@ index 28e30cf5..d774c109 100644
          enabled: (screenNotchOpen || stackViewInternal.busy) && Config.animDuration > 0
          NumberAnimation {
              alwaysRunToEnd: true
-@@ -305,6 +320,8 @@ Item {
+@@ -139,6 +154,15 @@ Item {
+             }
+         }
+ 
++        // roadie: the farewell turns the notch black as it swells, whatever
++        // the theme's fill is (translucent, glass, gradient, light).
++        Rectangle {
++            anchors.fill: parent
++            color: "black"
++            visible: notchContainer.farewell > 0
++            opacity: Math.min(1, notchContainer.farewell / 0.8)
++        }
++
+         layer.enabled: true
+         layer.smooth: true
+         layer.effect: MultiEffect {
+@@ -251,6 +275,14 @@ Item {
+             // Usar el islandRadius como radius base también
+             radius: parent.islandRadius
+ 
++            // roadie: the farewell turns the island black too (see above).
++            Rectangle {
++                anchors.fill: parent
++                color: "black"
++                visible: notchContainer.farewell > 0
++                opacity: Math.min(1, notchContainer.farewell / 0.8)
++            }
++
+             topLeftRadius: parent.topLeftRadius
+             topRightRadius: parent.topRightRadius
+             bottomLeftRadius: parent.bottomLeftRadius
+@@ -305,6 +337,8 @@ Item {
  
          Item {
              id: stackContainer
@@ -3625,7 +3656,7 @@ index 28e30cf5..d774c109 100644
              anchors.centerIn: parent
              width: stackViewInternal.currentItem ? stackViewInternal.currentItem.implicitWidth + (screenNotchOpen ? 32 : 0) : (screenNotchOpen ? 32 : 0)
              height: stackViewInternal.currentItem ? stackViewInternal.currentItem.implicitHeight + (screenNotchOpen ? 32 : 0) : (screenNotchOpen ? 32 : 0)
-@@ -481,7 +498,10 @@ Item {
+@@ -481,7 +515,10 @@ Item {
          readonly property int borderWidth: borderData[1]
          readonly property color borderColor: Config.resolveColor(borderData[0])
  
@@ -3638,7 +3669,7 @@ index 28e30cf5..d774c109 100644
          onPaint: {
              if (Config.notchTheme !== "default")
 diff --git a/modules/notch/NotchContent.qml b/modules/notch/NotchContent.qml
-index 9c8caaad..fcc63c7f 100644
+index 9c8caaad..39d86592 100644
 --- a/modules/notch/NotchContent.qml
 +++ b/modules/notch/NotchContent.qml
 @@ -22,8 +22,8 @@ Item {
@@ -3764,14 +3795,14 @@ index 9c8caaad..fcc63c7f 100644
  
                  // layer.enabled: true
                  // layer.effect: Shadow {}
-@@ -495,6 +521,69 @@ Item {
+@@ -495,6 +521,72 @@ Item {
          }
      }
  
 +    // roadie: the farewell's top layer. The notch underneath has grown over
-+    // the screen by the time any of this is visible: a sheet in the theme
-+    // background colour makes the ground solid whatever the notch's own fill
-+    // is (translucent, gradient), and the quote fades in on it -- on the screen
++    // the screen by the time any of this is visible: a black sheet makes the
++    // ground solid whatever the notch's own fill or the theme is (translucent,
++    // glass, gradient, light), and the quote fades in on it -- on the screen
 +    // the power menu was used on; the others stay plain. Escape backs out while
 +    // that is still possible, a click or Return stops waiting once the quote
 +    // is fully up.
@@ -3781,11 +3812,12 @@ index 9c8caaad..fcc63c7f 100644
 +        z: 2000
 +        visible: ShellFarewell.active
 +
++        readonly property bool darkTheme: Colors.background.hslLightness < 0.5
 +        readonly property bool speaks: ShellFarewell.screenName === "" || ShellFarewell.screenName === (root.screen?.name ?? "")
 +
 +        Rectangle {
 +            anchors.fill: parent
-+            color: Colors.background
++            color: "black"
 +            opacity: ShellFarewell.solid
 +        }
 +
@@ -3805,8 +3837,10 @@ index 9c8caaad..fcc63c7f 100644
 +            quote: ShellFarewell.quote
 +            source: ShellFarewell.source
 +            showSource: ShellFarewell.showSource
-+            quoteColor: Colors.overBackground
-+            sourceColor: Colors.outline
++            // The ground is always black: a light theme's text colours
++            // would vanish on it, so those use their dark-theme twins.
++            quoteColor: farewellLayer.darkTheme ? Colors.overBackground : Colors.background
++            sourceColor: farewellLayer.darkTheme ? Colors.outline : Colors.outlineVariant
 +            fontFamily: Config.theme.font
 +            reveal: ShellFarewell.text
 +        }
