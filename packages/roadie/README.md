@@ -759,6 +759,10 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 4.1.1: **The farewell ends on black on every theme.** With a translucent
+  or glass notch the swell stayed see-through; the notch now fades to black
+  as it grows, and the sheet under the quote is black rather than the
+  theme's background (so light themes go black too).
 - 4.1.0: ported to Ambxst 1.3.14 (base 83e8462a; requires it). Ambxst now
   keeps the notch's view stack in sync itself (one sync function, immediate
   pushes and pops, a repair pass when a transition ends), which fixes the
