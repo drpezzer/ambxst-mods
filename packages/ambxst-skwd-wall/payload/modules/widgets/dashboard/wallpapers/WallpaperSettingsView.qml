@@ -134,6 +134,8 @@ FocusScope {
     // 4: Material You Schemes, 5: Color Presets, 6: Back Button
     // (1 was Easing Curve: skwd-wall's transitions have no easing.)
     property int currentSection: 0
+    property bool bellFocused: false // in section 6: the bell left of Back
+    onCurrentSectionChanged: if (currentSection !== 6) bellFocused = false
     property int focusedStyleIndex: 0
     property int focusedSpeedIndex: 1
     property int focusedAutomationIndex: 0 // 0: Periodic Toggle, 1-6: Intervals, 7: All Wallpapers, 8+: Sources
@@ -557,8 +559,13 @@ FocusScope {
 
     function handleArrowKey(key) {
         switch (currentSection) {
-        case 6: // Back to Wallpapers button (at top)
-            if (key === Qt.Key_Down) {
+        case 6: // Bell + Back to Wallpapers buttons (at top)
+            if (key === Qt.Key_Left) {
+                bellFocused = true;
+            } else if (key === Qt.Key_Right) {
+                bellFocused = false;
+            } else if (key === Qt.Key_Down) {
+                bellFocused = false;
                 currentSection = 0;
                 focusedStyleIndex = 0;
             }
@@ -746,7 +753,10 @@ FocusScope {
             }
             break;
         case 6:
-            root.goBack();
+            if (bellFocused)
+                SkwdWall.setSilenceNotifications(!SkwdWall.silenceNotifications);
+            else
+                root.goBack();
             break;
         }
     }
@@ -828,12 +838,45 @@ FocusScope {
             Layout.preferredHeight: 48
             spacing: 12
 
+            // Bell: silences skwd-wall's "Wallpaper Changed" notifications
+            // (sound, popup and notification centre). Silenced by default.
+            StyledRect {
+                id: bellBtnRect
+                Layout.preferredHeight: 44
+                Layout.preferredWidth: 44
+                readonly property bool isFocused: root.currentSection === 6 && root.bellFocused
+                readonly property bool lit: isFocused || bellMa.containsMouse
+                variant: lit ? "primary" : "pane"
+                radius: Styling.radius(4)
+
+                MouseArea {
+                    id: bellMa
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: SkwdWall.setSilenceNotifications(!SkwdWall.silenceNotifications)
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: SkwdWall.silenceNotifications ? Icons.bellSlash : Icons.bell
+                    font.family: Icons.font
+                    font.pixelSize: 18
+                    color: bellBtnRect.lit ? Styling.srItem("primary") : Colors.overSurface
+                }
+
+                StyledToolTip {
+                    show: bellMa.containsMouse
+                    tooltipText: SkwdWall.silenceNotifications ? "Wallpaper change notifications are off" : "Wallpaper change notifications are on"
+                }
+            }
+
             // Back Button
             StyledRect {
                 id: backBtnRect
                 Layout.preferredHeight: 44
                 Layout.preferredWidth: 160
-                readonly property bool isFocused: root.currentSection === 6
+                readonly property bool isFocused: root.currentSection === 6 && !root.bellFocused
                 variant: isFocused || backMa.containsMouse ? "primary" : "pane"
                 radius: Styling.radius(4)
 

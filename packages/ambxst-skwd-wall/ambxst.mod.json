@@ -3,8 +3,8 @@
   "manifestVersion": 1,
   "id": "drpezzer.ambxst-skwd-wall",
   "name": "Ambxst Skwd-wall",
-  "version": "1.2.4",
-  "description": "Hands every wallpaper (images, videos and GIFs) to skwd-wall's renderer and brings its 39 transitions into the notch's Wallpapers tab: a carousel of transition cards with line-art previews, animation duration, automatic rotation with Match Time of Day, shuffle, pause-on-fullscreen and Material You colour settings, all following your Ambxst theme. Ambxst keeps its library, picker, per-screen wallpapers and matugen colours. On a 4K video wallpaper across two monitors it measured about half the video-decoder load, a quarter of the CPU and ~450 MB less VRAM than Ambxst's own player. Replaces Wallpaper Transitions (by POSiTiiiV, MIT), whose settings panel it builds on. Installs skwd-wall for you from its official releases with one button (or uses your system's copy); until then Ambxst draws wallpapers itself as before.",
+  "version": "1.3.0",
+  "description": "Hands every wallpaper (images, videos and GIFs) to skwd-wall's renderer and brings its 39 transitions into the notch's Wallpapers tab: a carousel of transition cards with line-art previews, animation duration, automatic rotation with Match Time of Day, shuffle, pause-on-fullscreen and Material You colour settings, and a bell that silences skwd-wall's wallpaper-change notifications (on by default), all following your Ambxst theme. Ambxst keeps its library, picker, per-screen wallpapers and matugen colours. On a 4K video wallpaper across two monitors it measured about half the video-decoder load, a quarter of the CPU and ~450 MB less VRAM than Ambxst's own player. Replaces Wallpaper Transitions (by POSiTiiiV, MIT), whose settings panel it builds on. Installs skwd-wall for you from its official releases with one button (or uses your system's copy); until then Ambxst draws wallpapers itself as before.",
   "license": "MIT",
   "author": "drpezzer",
   "authorUrl": "https://github.com/drpezzer",
@@ -35,7 +35,7 @@
   "permissions": [
     "Starts and stops skwd-wall's daemon as a user service (systemctl --user) and tells it which wallpaper each screen shows with skwd-helm",
     "When you press Install or Update: downloads skwd-wall's deck and paper packages from liixini's GitHub releases, checks them against the release's SHA256SUMS, unpacks them into ~/.local/share/ambxst/skwd-wall and writes ~/.config/systemd/user/ambxst-skwd-walld.service. Nothing outside your home, no password",
-    "Writes the transition and playback keys of skwd-wall's config, ~/.config/skwd-wall-v2/config.json",
+    "Writes the transition, playback and wallpaper-change-notification keys of skwd-wall's config, ~/.config/skwd-wall-v2/config.json",
     "Sorts your wallpapers by brightness and warmth for Match Time of Day (python3 + ImageMagick), cached in ~/.cache/ambxst/wallpaper_solar_cache.json",
     "Sends one notification if skwd-wall is not installed yet",
     "Keeps its options in ~/.config/ambxst/skwd-wall.json and its wallpaper settings in Ambxst's state file"

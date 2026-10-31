@@ -57,6 +57,9 @@ Open the notch on the **Wallpapers** tab:
 
 - **Shuffle** picks a random wallpaper (also `ambxst run wallpaper-random`, for a keybind).
 - **The gear** opens the wallpaper settings inside the notch:
+  - **The bell** (top left) silences skwd-wall's "Wallpaper Changed" notification
+    completely: no sound, no popup, nothing in the notification centre. Silenced by
+    default; press it to get the notifications back.
   - **Transition Style**: a looping carousel of skwd-wall's 39 transitions plus
     Random and Instant. The chosen one is the card in the middle, playing a line
     drawing of the effect; its neighbours fold into named bars on either side. Scroll,
@@ -112,7 +115,8 @@ Pull, and so on). Easing curves are gone: skwd-wall's transitions have none.
 ```json
 {
     "enabled": true,
-    "source": "auto"
+    "source": "auto",
+    "silenceNotifications": true
 }
 ```
 
@@ -120,8 +124,9 @@ Pull, and so on). Easing curves are gone: skwd-wall's transitions have none.
 - `source`: `auto` uses a system install of skwd when there is one, otherwise the
   copy the mod installed. `local` always uses the mod's own copy (and offers to
   install it). The transition
-and pause settings are written into skwd-wall's own config
-(`~/.config/skwd-wall-v2/config.json`, the `transition` and `playback` keys).
+and pause settings and the bell are written into skwd-wall's own config
+(`~/.config/skwd-wall-v2/config.json`, the `transition` and `playback` keys and
+`general.notifyOnWallpaperChange`).
 
 ## Removing it
 
@@ -139,6 +144,8 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 
 ## Changelog
 
+- 1.3.0: a bell at the top left of the wallpaper settings silences skwd-wall's
+  "Wallpaper Changed" notifications (sound, popup and notification centre). On by default.
 - 1.2.4: verified on Ambxst 1.3.14 (base 83e8462a, notch stack rework, maximize and fake-fullscreen binds; also covers 1.3.13); patch applies verbatim, no source changes.
 - 1.2.3: `ambxst run wallpaper-settings` opens the wallpaper settings (for a keybind).
 - 1.2.2: game mode also pauses Ambxst's own video player (tinted videos) on every

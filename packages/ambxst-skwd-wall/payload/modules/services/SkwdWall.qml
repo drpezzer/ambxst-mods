@@ -25,6 +25,14 @@ Singleton {
     id: root
 
     readonly property bool enabled: options.adapter.enabled
+    // The bell in the wallpaper settings. On (the default) = skwd-wall sends
+    // no "Wallpaper Changed" notification at all: no sound, no popup, nothing
+    // in the notification centre.
+    readonly property bool silenceNotifications: options.adapter.silenceNotifications
+    function setSilenceNotifications(on) {
+        options.adapter.silenceNotifications = on;
+    }
+    onSilenceNotificationsChanged: configDebounce.restart()
     readonly property bool available: source !== "none"
 
     // ── which skwd: the system's (AUR / distro package), the copy this mod
@@ -509,6 +517,7 @@ Singleton {
         put("playback.fullscreen", false);
         put("playback.maximized", false);
         put("playback.fullscreenScope", pauseScope === "allScreens" ? "all" : "display");
+        put("general.notifyOnWallpaperChange", !silenceNotifications);
         if (JSON.stringify(cfg) === before)
             return;
         skwdConfig.setText(JSON.stringify(cfg, null, 2) + "\n");
@@ -732,6 +741,7 @@ Singleton {
         adapter: JsonAdapter {
             property bool enabled: true
             property bool installPrompted: false
+            property bool silenceNotifications: true
             property string source: "auto"
         }
         // A change of `source` picks the daemon again.
