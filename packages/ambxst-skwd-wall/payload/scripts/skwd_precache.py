@@ -71,6 +71,10 @@ def get_cache_path(src_path, target_w, target_h):
 
 
 def optimize_file_worker(args):
+    try:
+        os.nice(15)
+    except Exception:
+        pass
     src_path, target_w, target_h = args
     try:
         dest_path = get_cache_path(src_path, target_w, target_h)
@@ -147,6 +151,8 @@ def get_cache_stats(target_w, target_h, wall_dir):
 def main():
     target_w, target_h = detect_resolution()
     wall_dir = get_wallpaper_dir()
+    max_cores = max(1, os.cpu_count() or 4)
+    threads = min(4, max_cores)
 
     # Parse args
     args = sys.argv[1:]
@@ -162,6 +168,12 @@ def main():
             mode = "status"
         elif arg == "--clear":
             mode = "clear"
+        elif arg in ("--threads", "-j") and idx + 1 < len(args):
+            try:
+                threads = max(1, min(max_cores, int(args[idx + 1])))
+            except ValueError:
+                pass
+            idx += 1
         elif arg == "--get" and idx + 1 < len(args):
             mode = "get"
             get_file = args[idx + 1]
@@ -180,7 +192,7 @@ def main():
     if mode == "status":
         total, cached, size_mb = get_cache_stats(target_w, target_h, wall_dir)
         pct = int(round((cached / total * 100))) if total > 0 else 100
-        print(f"STATUS {cached} {total} {size_mb} {pct}")
+        print(f"STATUS {cached} {total} {size_mb} {pct} {max_cores}")
         return
 
     if mode == "clear":
@@ -188,7 +200,7 @@ def main():
         if os.path.isdir(cache_dir):
             import shutil
             shutil.rmtree(cache_dir)
-        print(f"STATUS 0 0 0.0 0")
+        print(f"STATUS 0 0 0.0 0 {max_cores}")
         return
 
     if mode == "get":
@@ -211,7 +223,7 @@ def main():
             return
 
         worker_args = [(f, target_w, target_h) for f in all_files]
-        workers = max(1, os.cpu_count() or 4)
+        workers = max(1, min(threads, max_cores))
 
         done_count = 0
         last_reported_pct = -1

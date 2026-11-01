@@ -116,14 +116,18 @@ Pull, and so on). Easing curves are gone: skwd-wall's transitions have none.
 {
     "enabled": true,
     "source": "auto",
-    "silenceNotifications": true
+    "silenceNotifications": true,
+    "precacheThreads": 4
 }
 ```
 
 - `enabled: false` hands everything back to Ambxst and stops skwd-wall.
 - `source`: `auto` uses a system install of skwd when there is one, otherwise the
   copy the mod installed. `local` always uses the mod's own copy (and offers to
-  install it). The transition
+  install it).
+- `silenceNotifications`: silences skwd-wall's notification on wallpaper change.
+- `precacheThreads`: number of worker threads allocated to wallpaper pre-caching (defaults to 4; adjustable from 1 to your CPU's maximum cores).
+The transition
 and pause settings and the bell are written into skwd-wall's own config
 (`~/.config/skwd-wall-v2/config.json`, the `transition` and `playback` keys and
 `general.notifyOnWallpaperChange`).
@@ -147,7 +151,7 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 - 1.4.0: instant transitions, zero-flash rendering, library pre-caching, bounded transition scroll area, and video wallpaper audio controls.
   - Zero-flash rendering: eliminates the 1-frame pre-transition flash by synchronizing static renderer activation with Vulkan shader readiness and suppressing Ambxst's underlying canvas while skwd-wall is active.
   - Near-instant trigger: removes the 300 ms debounce delay in SkwdWall and adopts a non-blocking low-latency pipe reader for wallpaper-change shortcuts.
-  - Wallpaper pre-caching: multi-threaded screen-resolution optimizer (`skwd_precache.py`) and Settings card in the notch for zero-stutter transitions on heavy 4K+ wallpapers.
+  - Wallpaper pre-caching: multi-threaded screen-resolution optimizer (`skwd_precache.py`) with configurable worker thread allocation (defaults to 4, adjustable from 1 to CPU max), low-priority background scheduling (`nice 15`) to keep the desktop fluid during batch runs, and a Settings card in the notch for zero-stutter transitions.
   - Bounded transition scroll region: constrains the mouse wheel capture area of the transition style carousel to the active cards container with a themed visual border, allowing mouse wheel events in outer margins to smoothly scroll the settings page vertically.
   - Video wallpaper audio controls: integrated volume slider and mute toggle in Wallpaper Settings, synchronizing directly with `skwd-helm volume` / `mute` and Ambxst's fallback player.
 - 1.3.0: a bell at the top left of the wallpaper settings silences skwd-wall's

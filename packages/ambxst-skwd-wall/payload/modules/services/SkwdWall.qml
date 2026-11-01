@@ -759,6 +759,7 @@ Singleton {
             property bool installPrompted: false
             property bool silenceNotifications: true
             property string source: "auto"
+            property int precacheThreads: 4
         }
         // A change of `source` picks the daemon again.
         property string watchedSource: adapter.source
@@ -771,7 +772,13 @@ Singleton {
     property int precacheTotal: 0
     property string precacheSizeMb: "0.0"
     property int precachePercent: 0
+    property int precacheMaxThreads: 12
+    readonly property int precacheThreads: Math.max(1, Math.min(precacheMaxThreads, options.adapter.precacheThreads !== undefined ? options.adapter.precacheThreads : 4))
     readonly property string precacheScript: Quickshell.shellDir + "/scripts/skwd_precache.py"
+
+    function setPrecacheThreads(n) {
+        options.adapter.precacheThreads = Math.max(1, Math.min(precacheMaxThreads, n));
+    }
 
     function refreshPrecacheStatus() {
         if (!precacheStatusProc.running && !precacheRunProc.running) {
@@ -805,6 +812,9 @@ Singleton {
                         root.precacheTotal = parseInt(parts[1], 10) || 0;
                         root.precacheSizeMb = parts[2];
                         root.precachePercent = parseInt(parts[3], 10) || 0;
+                        if (parts.length >= 5) {
+                            root.precacheMaxThreads = parseInt(parts[4], 10) || 12;
+                        }
                     }
                 }
             }
@@ -813,7 +823,7 @@ Singleton {
 
     Process {
         id: precacheRunProc
-        command: ["python3", root.precacheScript, "--all"]
+        command: ["python3", root.precacheScript, "--all", "--threads", String(root.precacheThreads)]
         stdout: SplitParser {
             onRead: line => {
                 if (line.startsWith("PROGRESS ")) {

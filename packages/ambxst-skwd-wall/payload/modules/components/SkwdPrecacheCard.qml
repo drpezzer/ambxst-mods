@@ -87,6 +87,92 @@ StyledRect {
                     }
                 }
             }
+
+            // Worker threads selector
+            RowLayout {
+                spacing: 6
+                Layout.topMargin: 2
+
+                Text {
+                    text: "Threads:"
+                    font.family: Config.theme.font
+                    font.pixelSize: Styling.fontSize(-3)
+                    font.weight: Font.Medium
+                    color: Colors.outline
+                }
+
+                // Decrement button [-]
+                StyledRect {
+                    Layout.preferredWidth: 20
+                    Layout.preferredHeight: 20
+                    variant: (maDec.containsMouse && !precacheCard.busy && SkwdWall.precacheThreads > 1) ? "focus" : "pane"
+                    radius: Styling.radius(2)
+                    opacity: (!precacheCard.busy && SkwdWall.precacheThreads > 1) ? 1.0 : 0.35
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "-"
+                        font.family: Config.theme.font
+                        font.pixelSize: Styling.fontSize(-1)
+                        font.weight: Font.Bold
+                        color: Colors.overSurface
+                    }
+
+                    MouseArea {
+                        id: maDec
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: (SkwdWall.precacheThreads > 1 && !precacheCard.busy) ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        enabled: SkwdWall.precacheThreads > 1 && !precacheCard.busy
+                        onClicked: SkwdWall.setPrecacheThreads(SkwdWall.precacheThreads - 1)
+                    }
+                }
+
+                Text {
+                    text: SkwdWall.precacheThreads
+                    font.family: Config.theme.font
+                    font.pixelSize: Styling.fontSize(-2)
+                    font.weight: Font.Bold
+                    color: Styling.srItem("overprimary")
+                    Layout.preferredWidth: 24
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                // Increment button [+]
+                StyledRect {
+                    Layout.preferredWidth: 20
+                    Layout.preferredHeight: 20
+                    variant: (maInc.containsMouse && !precacheCard.busy && SkwdWall.precacheThreads < SkwdWall.precacheMaxThreads) ? "focus" : "pane"
+                    radius: Styling.radius(2)
+                    opacity: (!precacheCard.busy && SkwdWall.precacheThreads < SkwdWall.precacheMaxThreads) ? 1.0 : 0.35
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "+"
+                        font.family: Config.theme.font
+                        font.pixelSize: Styling.fontSize(-1)
+                        font.weight: Font.Bold
+                        color: Colors.overSurface
+                    }
+
+                    MouseArea {
+                        id: maInc
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: (SkwdWall.precacheThreads < SkwdWall.precacheMaxThreads && !precacheCard.busy) ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        enabled: SkwdWall.precacheThreads < SkwdWall.precacheMaxThreads && !precacheCard.busy
+                        onClicked: SkwdWall.setPrecacheThreads(SkwdWall.precacheThreads + 1)
+                    }
+                }
+
+                Text {
+                    text: "(" + (SkwdWall.precacheThreads === 4 ? "recommended default" : (SkwdWall.precacheThreads === SkwdWall.precacheMaxThreads ? "max cores" : "1–" + SkwdWall.precacheMaxThreads + " cores")) + ")"
+                    font.family: Config.theme.font
+                    font.pixelSize: Styling.fontSize(-3)
+                    color: Colors.outline
+                    opacity: 0.7
+                }
+            }
         }
 
         // Action Buttons Row
