@@ -144,10 +144,12 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 
 ## Changelog
 
-- 1.4.0: instant wallpaper transitions with zero-flash rendering and library pre-caching.
+- 1.4.0: instant transitions, zero-flash rendering, library pre-caching, bounded transition scroll area, and video wallpaper audio controls.
   - Zero-flash rendering: eliminates the 1-frame pre-transition flash by synchronizing static renderer activation with Vulkan shader readiness and suppressing Ambxst's underlying canvas while skwd-wall is active.
   - Near-instant trigger: removes the 300 ms debounce delay in SkwdWall and adopts a non-blocking low-latency pipe reader for wallpaper-change shortcuts.
   - Wallpaper pre-caching: multi-threaded screen-resolution optimizer (`skwd_precache.py`) and Settings card in the notch for zero-stutter transitions on heavy 4K+ wallpapers.
+  - Bounded transition scroll region: constrains the mouse wheel capture area of the transition style carousel to the active cards container with a themed visual border, allowing mouse wheel events in outer margins to smoothly scroll the settings page vertically.
+  - Video wallpaper audio controls: integrated volume slider and mute toggle in Wallpaper Settings, synchronizing directly with `skwd-helm volume` / `mute` and Ambxst's fallback player.
 - 1.3.0: a bell at the top left of the wallpaper settings silences skwd-wall's
   "Wallpaper Changed" notifications (sound, popup and notification centre). On by default.
 - 1.2.4: verified on Ambxst 1.3.14 (base 83e8462a, notch stack rework, maximize and fake-fullscreen binds; also covers 1.3.13); patch applies verbatim, no source changes.

@@ -308,8 +308,10 @@ Singleton {
     }
     onActiveChanged: {
         syncDebounce.restart();
-        if (active)
+        if (active) {
             writeSkwdConfig();
+            syncAudio();
+        }
     }
     // Turning it back on gives skwd another chance after a failure.
     onEnabledChanged: if (enabled) failed = false
@@ -454,6 +456,7 @@ Singleton {
             root.pauseSent = ({});
             pauseDebounce.restart();
             root.sync();
+            root.syncAudio();
         });
     }
 
@@ -470,10 +473,22 @@ Singleton {
     readonly property int transitionDuration: Math.max(50, Math.min(10000, GlobalStates.wallpaperTransitionDuration))
     readonly property string pauseMode: GlobalStates.wallpaperPauseMode
     readonly property string pauseScope: GlobalStates.wallpaperPauseScope
+    readonly property real videoWallpaperVolume: (GlobalStates && GlobalStates.videoWallpaperVolume !== undefined) ? GlobalStates.videoWallpaperVolume : 0.5
+    readonly property bool videoWallpaperMuted: (GlobalStates && GlobalStates.videoWallpaperMuted !== undefined) ? GlobalStates.videoWallpaperMuted : true
     onTransitionStyleChanged: configDebounce.restart()
     onTransitionDurationChanged: configDebounce.restart()
     onPauseModeChanged: configDebounce.restart()
     onPauseScopeChanged: configDebounce.restart()
+    onVideoWallpaperVolumeChanged: syncAudio()
+    onVideoWallpaperMutedChanged: syncAudio()
+
+    function syncAudio() {
+        if (!active || !daemonUp)
+            return;
+        const vol = Math.max(0, Math.min(100, Math.round(videoWallpaperVolume * 100)));
+        run([root.helm, "volume", String(vol)], null);
+        run([root.helm, videoWallpaperMuted ? "mute" : "unmute"], null);
+    }
 
     Timer {
         id: configDebounce
