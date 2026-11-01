@@ -188,7 +188,7 @@ Singleton {
         root.tintSources = map;
         return out;
     }
-    onShownChanged: syncDebounce.restart()
+    onShownChanged: root.sync()
 
     // skwd-helm apply, making the tinted copy first when it does not exist yet.
     function applyCommand(file, output) {
@@ -219,7 +219,7 @@ Singleton {
         return active && isMoving(path);
     }
 
-    onDesiredChanged: syncDebounce.restart()
+    onDesiredChanged: root.sync()
 
     // ── pausing ─────────────────────────────────────────────────────────
     // A screen showing a video pauses while a window covers it on the
@@ -308,15 +308,17 @@ Singleton {
     }
     onActiveChanged: {
         syncDebounce.restart();
-        if (active)
+        if (active) {
             writeSkwdConfig();
+            syncAudio();
+        }
     }
     // Turning it back on gives skwd another chance after a failure.
     onEnabledChanged: if (enabled) failed = false
 
     Timer {
         id: syncDebounce
-        interval: 300
+        interval: 0
         onTriggered: root.sync()
     }
 
@@ -454,6 +456,7 @@ Singleton {
             root.pauseSent = ({});
             pauseDebounce.restart();
             root.sync();
+            root.syncAudio();
         });
     }
 
@@ -470,10 +473,22 @@ Singleton {
     readonly property int transitionDuration: Math.max(50, Math.min(10000, GlobalStates.wallpaperTransitionDuration))
     readonly property string pauseMode: GlobalStates.wallpaperPauseMode
     readonly property string pauseScope: GlobalStates.wallpaperPauseScope
+    readonly property real videoWallpaperVolume: (GlobalStates && GlobalStates.videoWallpaperVolume !== undefined) ? GlobalStates.videoWallpaperVolume : 0.5
+    readonly property bool videoWallpaperMuted: (GlobalStates && GlobalStates.videoWallpaperMuted !== undefined) ? GlobalStates.videoWallpaperMuted : true
     onTransitionStyleChanged: configDebounce.restart()
     onTransitionDurationChanged: configDebounce.restart()
     onPauseModeChanged: configDebounce.restart()
     onPauseScopeChanged: configDebounce.restart()
+    onVideoWallpaperVolumeChanged: syncAudio()
+    onVideoWallpaperMutedChanged: syncAudio()
+
+    function syncAudio() {
+        if (!active || !daemonUp)
+            return;
+        const vol = Math.max(0, Math.min(100, Math.round(videoWallpaperVolume * 100)));
+        run([root.helm, "volume", String(vol)], null);
+        run([root.helm, videoWallpaperMuted ? "mute" : "unmute"], null);
+    }
 
     Timer {
         id: configDebounce
@@ -631,6 +646,7 @@ Singleton {
                 }
                 if (found === "local")
                     root.checkLatest();
+                Quickshell.execDetached(["bash", root.installer, "setup"]);
                 // A daemon left running by an earlier shell (a reload) is ours too.
                 root.run(["systemctl", "--user", "is-active", "--quiet", root.unit], code => {
                     if (code === 0)
@@ -743,9 +759,104 @@ Singleton {
             property bool installPrompted: false
             property bool silenceNotifications: true
             property string source: "auto"
+            property int precacheThreads: 4
         }
         // A change of `source` picks the daemon again.
         property string watchedSource: adapter.source
         onWatchedSourceChanged: if (root.source !== "unknown") root.detect()
+    }
+
+    // ── Pre-caching Service ─────────────────────────────────────────────
+    property string precacheState: "idle"   // idle | running | done | failed
+    property int precacheCount: 0
+    property int precacheTotal: 0
+    property string precacheSizeMb: "0.0"
+    property int precachePercent: 0
+    property int precacheMaxThreads: 12
+    readonly property int precacheThreads: Math.max(1, Math.min(precacheMaxThreads, options.adapter.precacheThreads !== undefined ? options.adapter.precacheThreads : 4))
+    readonly property string precacheScript: Quickshell.shellDir + "/scripts/skwd_precache.py"
+
+    function setPrecacheThreads(n) {
+        options.adapter.precacheThreads = Math.max(1, Math.min(precacheMaxThreads, n));
+    }
+
+    function refreshPrecacheStatus() {
+        if (!precacheStatusProc.running && !precacheRunProc.running) {
+            precacheStatusProc.running = true;
+        }
+    }
+
+    function runPrecache() {
+        if (!precacheRunProc.running) {
+            precacheState = "running";
+            precachePercent = 0;
+            precacheRunProc.running = true;
+        }
+    }
+
+    function clearPrecache() {
+        if (!precacheClearProc.running && !precacheRunProc.running) {
+            precacheClearProc.running = true;
+        }
+    }
+
+    Process {
+        id: precacheStatusProc
+        command: ["python3", root.precacheScript, "--status"]
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.startsWith("STATUS ")) {
+                    const parts = line.substring(7).trim().split(" ");
+                    if (parts.length >= 4) {
+                        root.precacheCount = parseInt(parts[0], 10) || 0;
+                        root.precacheTotal = parseInt(parts[1], 10) || 0;
+                        root.precacheSizeMb = parts[2];
+                        root.precachePercent = parseInt(parts[3], 10) || 0;
+                        if (parts.length >= 5) {
+                            root.precacheMaxThreads = parseInt(parts[4], 10) || 12;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Process {
+        id: precacheRunProc
+        command: ["python3", root.precacheScript, "--all", "--threads", String(root.precacheThreads)]
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.startsWith("PROGRESS ")) {
+                    const parts = line.substring(9).trim().split(" ");
+                    if (parts.length >= 3) {
+                        root.precacheCount = parseInt(parts[0], 10) || 0;
+                        root.precacheTotal = parseInt(parts[1], 10) || 0;
+                        root.precachePercent = parseInt(parts[2], 10) || 0;
+                    }
+                } else if (line.startsWith("DONE ")) {
+                    const parts = line.substring(5).trim().split(" ");
+                    if (parts.length >= 2) {
+                        root.precacheCount = parseInt(parts[0], 10) || 0;
+                        root.precacheSizeMb = parts[1];
+                        root.precachePercent = 100;
+                    }
+                    root.precacheState = "done";
+                }
+            }
+        }
+        onExited: code => {
+            if (root.precacheState === "running") {
+                root.precacheState = code === 0 ? "done" : "failed";
+            }
+            root.refreshPrecacheStatus();
+        }
+    }
+
+    Process {
+        id: precacheClearProc
+        command: ["python3", root.precacheScript, "--clear"]
+        onExited: code => {
+            root.refreshPrecacheStatus();
+        }
     }
 }
