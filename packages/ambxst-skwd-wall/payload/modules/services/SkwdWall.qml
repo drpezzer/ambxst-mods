@@ -188,7 +188,7 @@ Singleton {
         root.tintSources = map;
         return out;
     }
-    onShownChanged: syncDebounce.restart()
+    onShownChanged: root.sync()
 
     // skwd-helm apply, making the tinted copy first when it does not exist yet.
     function applyCommand(file, output) {
@@ -219,7 +219,7 @@ Singleton {
         return active && isMoving(path);
     }
 
-    onDesiredChanged: syncDebounce.restart()
+    onDesiredChanged: root.sync()
 
     // ── pausing ─────────────────────────────────────────────────────────
     // A screen showing a video pauses while a window covers it on the
@@ -316,7 +316,7 @@ Singleton {
 
     Timer {
         id: syncDebounce
-        interval: 300
+        interval: 0
         onTriggered: root.sync()
     }
 
@@ -631,6 +631,7 @@ Singleton {
                 }
                 if (found === "local")
                     root.checkLatest();
+                Quickshell.execDetached(["bash", root.installer, "setup"]);
                 // A daemon left running by an earlier shell (a reload) is ours too.
                 root.run(["systemctl", "--user", "is-active", "--quiet", root.unit], code => {
                     if (code === 0)
@@ -747,5 +748,90 @@ Singleton {
         // A change of `source` picks the daemon again.
         property string watchedSource: adapter.source
         onWatchedSourceChanged: if (root.source !== "unknown") root.detect()
+    }
+
+    // ── Pre-caching Service ─────────────────────────────────────────────
+    property string precacheState: "idle"   // idle | running | done | failed
+    property int precacheCount: 0
+    property int precacheTotal: 0
+    property string precacheSizeMb: "0.0"
+    property int precachePercent: 0
+    readonly property string precacheScript: Quickshell.shellDir + "/scripts/skwd_precache.py"
+
+    function refreshPrecacheStatus() {
+        if (!precacheStatusProc.running && !precacheRunProc.running) {
+            precacheStatusProc.running = true;
+        }
+    }
+
+    function runPrecache() {
+        if (!precacheRunProc.running) {
+            precacheState = "running";
+            precachePercent = 0;
+            precacheRunProc.running = true;
+        }
+    }
+
+    function clearPrecache() {
+        if (!precacheClearProc.running && !precacheRunProc.running) {
+            precacheClearProc.running = true;
+        }
+    }
+
+    Process {
+        id: precacheStatusProc
+        command: ["python3", root.precacheScript, "--status"]
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.startsWith("STATUS ")) {
+                    const parts = line.substring(7).trim().split(" ");
+                    if (parts.length >= 4) {
+                        root.precacheCount = parseInt(parts[0], 10) || 0;
+                        root.precacheTotal = parseInt(parts[1], 10) || 0;
+                        root.precacheSizeMb = parts[2];
+                        root.precachePercent = parseInt(parts[3], 10) || 0;
+                    }
+                }
+            }
+        }
+    }
+
+    Process {
+        id: precacheRunProc
+        command: ["python3", root.precacheScript, "--all"]
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.startsWith("PROGRESS ")) {
+                    const parts = line.substring(9).trim().split(" ");
+                    if (parts.length >= 3) {
+                        root.precacheCount = parseInt(parts[0], 10) || 0;
+                        root.precacheTotal = parseInt(parts[1], 10) || 0;
+                        root.precachePercent = parseInt(parts[2], 10) || 0;
+                    }
+                } else if (line.startsWith("DONE ")) {
+                    const parts = line.substring(5).trim().split(" ");
+                    if (parts.length >= 2) {
+                        root.precacheCount = parseInt(parts[0], 10) || 0;
+                        root.precacheSizeMb = parts[1];
+                        root.precachePercent = 100;
+                    }
+                    root.precacheState = "done";
+                }
+            }
+        }
+        onExited: code => {
+            if (root.precacheState === "running") {
+                root.precacheState = code === 0 ? "done" : "failed";
+            }
+            root.refreshPrecacheStatus();
+        }
+    }
+
+    Process {
+        id: precacheClearProc
+        command: ["python3", root.precacheScript, "--clear"]
+        onExited: code => {
+            root.refreshPrecacheStatus();
+        }
     }
 }

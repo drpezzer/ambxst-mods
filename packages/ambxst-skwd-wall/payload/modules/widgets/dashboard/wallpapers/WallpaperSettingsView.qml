@@ -969,6 +969,11 @@ FocusScope {
                     Layout.fillWidth: true
                 }
 
+                // Pre-caching card for instant Vulkan transitions and zero stutter
+                SkwdPrecacheCard {
+                    Layout.fillWidth: true
+                }
+
                 // Section 0: Transition Style — a carousel of skwd-wall's transitions
                 ColumnLayout {
                     id: sectionStyle

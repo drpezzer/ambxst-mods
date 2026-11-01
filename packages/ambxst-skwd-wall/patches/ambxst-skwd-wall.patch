@@ -325,6 +325,15 @@ diff --git a/modules/services/GlobalShortcuts.qml b/modules/services/GlobalShort
 index b1aa3be4..f32438ba 100644
 --- a/modules/services/GlobalShortcuts.qml
 +++ b/modules/services/GlobalShortcuts.qml
+@@ -21,7 +21,7 @@ QtObject {
+ 
+     // High-performance Pipe Listener (Daemon mode)
+     property Process pipeListener: Process {
+-        command: ["bash", "-c", 'd="' + root.ipcDir + '"; mkdir -p "$d"; rm -f "$d/' + root.ipcName + '"; mkfifo "$d/' + root.ipcName + '"; tail -f "$d/' + root.ipcName + '"']
++        command: ["bash", "-c", 'd="' + root.ipcDir + '"; mkdir -p "$d"; rm -f "$d/' + root.ipcName + '"; mkfifo "$d/' + root.ipcName + '"; while true; do cat "$d/' + root.ipcName + '"; done']
+         running: true
+         
+         stdout: SplitParser {
 @@ -46,10 +46,30 @@ QtObject {
  
              // Dashboard
@@ -634,6 +643,16 @@ index 63137c2a..f15abb3d 100644
 +            var matugenSource = getColorSource(wall);
  
              console.log("Using source for matugen:", matugenSource, "(type:", fileType + ")");
+ 
+@@ -1163,7 +1163,8 @@ PanelWindow {
+         }
+ 
+         WallpaperImage {
+             id: wallImage
+             anchors.fill: parent
+             source: wallpaper.effectiveWallpaper
++            visible: !SkwdWall.active
+         }
  
 diff --git a/modules/widgets/dashboard/wallpapers/WallpapersTab.qml b/modules/widgets/dashboard/wallpapers/WallpapersTab.qml
 index 195fd45f..f9147307 100644

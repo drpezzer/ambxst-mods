@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Ambxst Skwd-wall Static Renderer Wrapper
+
+Synchronizes static layer mapping with the Vulkan transition shader, preventing
+premature static frame display (1-frame flash) during transitions.
+"""
+import sys
+import os
+import time
+import socket
+import json
+import subprocess
+import hashlib
+
+HOME = os.path.expanduser("~")
+BASE_CACHE_DIR = os.path.join(HOME, ".cache/skwd-wall-opt")
+CONFIG_PATH = os.path.join(HOME, ".config/skwd-wall-v2/config.json")
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
+
+
+def find_real_binary():
+    if os.environ.get("SKWD_REAL_STILL"):
+        return os.environ["SKWD_REAL_STILL"]
+    local_bin = os.path.join(HOME, ".local/share/ambxst/skwd-wall/current/bin/skwd-wall-still")
+    if os.path.isfile(local_bin) and os.access(local_bin, os.X_OK):
+        return local_bin
+    for p in ["/usr/bin/skwd-wall-still", "/usr/local/bin/skwd-wall-still"]:
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    this_path = os.path.realpath(__file__)
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        candidate = os.path.join(directory, "skwd-wall-still")
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            if os.path.realpath(candidate) != this_path:
+                return candidate
+    return "/usr/bin/skwd-wall-still"
+
+
+def get_opt_path(src):
+    try:
+        abs_p = os.path.abspath(src)
+        ext = os.path.splitext(abs_p)[1].lower()
+        if ext in IMAGE_EXTS:
+            h = hashlib.sha256(abs_p.encode()).hexdigest()[:16]
+            base = os.path.splitext(os.path.basename(abs_p))[0]
+            if os.path.isdir(BASE_CACHE_DIR):
+                for res_dir in os.listdir(BASE_CACHE_DIR):
+                    cand = os.path.join(BASE_CACHE_DIR, res_dir, f"{h}_{base}.jpg")
+                    if os.path.exists(cand):
+                        return cand
+    except Exception:
+        pass
+    return src
+
+
+def get_transition_duration():
+    try:
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            return cfg.get("transition", {}).get("durationMs", 700)
+    except Exception:
+        pass
+    return 700
+
+
+def is_vk_layer_rendering():
+    try:
+        out = subprocess.check_output(["hyprctl", "-j", "layers"], stderr=subprocess.DEVNULL)
+        data = json.loads(out.decode("utf-8"))
+        for mon, info in data.items():
+            for level, layers in info.get("levels", {}).items():
+                for l in layers:
+                    if l.get("namespace") == "skwd-wall-vk" and l.get("alpha") == 1:
+                        return True
+    except Exception:
+        pass
+    return False
+
+
+def main():
+    hidden = os.environ.get("SKWD_PAPER_PREPARE_HIDDEN") == "1"
+    sock_path = os.environ.get("SKWD_PAPER_READY_SOCKET")
+
+    if hidden and sock_path and os.path.exists(sock_path):
+        s = None
+        try:
+            s = socket.socket(socket.AF_UNIX)
+            s.settimeout(2.0)
+            s.connect(sock_path)
+            pid = os.getpid()
+            msg = {"id": 0, "method": "paper.ready", "params": {"pid": pid, "generation": 0}}
+            s.sendall(json.dumps(msg).encode() + b"\n")
+            try:
+                s.recv(1024)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+        if s:
+            try:
+                s.close()
+            except Exception:
+                pass
+
+        # Wait up to 3 seconds for vk transition renderer to map and become active
+        vk_active = False
+        deadline = time.time() + 3.0
+        while time.time() < deadline:
+            if is_vk_layer_rendering():
+                vk_active = True
+                break
+            time.sleep(0.01)
+
+        # Hold mapping dormant until near the end of the transition
+        if vk_active:
+            duration_ms = get_transition_duration()
+            hold_sec = max(0.1, (duration_ms - 150) / 1000.0)
+            time.sleep(hold_sec)
+
+        if "SKWD_PAPER_PREPARE_HIDDEN" in os.environ:
+            del os.environ["SKWD_PAPER_PREPARE_HIDDEN"]
+
+    args = sys.argv[1:]
+    new_args = []
+    for arg in args:
+        if not arg.startswith("-") and os.path.isfile(arg):
+            new_args.append(get_opt_path(arg))
+        else:
+            new_args.append(arg)
+
+    real_bin = find_real_binary()
+    os.execv(real_bin, [real_bin] + new_args)
+
+
+if __name__ == "__main__":
+    main()

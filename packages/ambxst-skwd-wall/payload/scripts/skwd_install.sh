@@ -76,6 +76,7 @@ check_libs() {
 
 write_unit() {
     mkdir -p "$UNIT_DIR"
+    local SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     cat > "$UNIT_DIR/$UNIT.tmp" <<EOF
 # Written by the Ambxst Skwd-wall mod: skwd-wall's daemon from
 # ~/.local/share/ambxst/skwd-wall/current. Not used when skwd is installed
@@ -88,16 +89,34 @@ Conflicts=skwd-walld.service
 [Service]
 Type=simple
 Environment=PATH=$ROOT/current/bin:/usr/local/bin:/usr/bin:/bin
+Environment=SKWD_WALL_PAPER_STILL=$SCRIPT_DIR/skwd-wall-still-wrapper
+Environment=SKWD_WALL_PAPER_VK=$SCRIPT_DIR/skwd-wall-vk-wrapper
 ExecStart=$ROOT/current/bin/skwd-walld --wait-for-session
 Restart=on-failure
 RestartSec=2
 Slice=session.slice
 EOF
     mv -f "$UNIT_DIR/$UNIT.tmp" "$UNIT_DIR/$UNIT"
+
+    # Configure drop-in override for system install (skwd-walld.service)
+    local DROPIN_DIR="$UNIT_DIR/skwd-walld.service.d"
+    mkdir -p "$DROPIN_DIR"
+    cat > "$DROPIN_DIR/override.conf.tmp" <<EOF
+[Service]
+Environment=SKWD_WALL_PAPER_STILL=$SCRIPT_DIR/skwd-wall-still-wrapper
+Environment=SKWD_WALL_PAPER_VK=$SCRIPT_DIR/skwd-wall-vk-wrapper
+EOF
+    mv -f "$DROPIN_DIR/override.conf.tmp" "$DROPIN_DIR/override.conf"
+
     systemctl --user daemon-reload 2>/dev/null || true
 }
 
 case "${1:-status}" in
+setup)
+    write_unit
+    echo "DONE"
+    ;;
+
 status)
     echo "VERSION $(installed_tag)"
     echo "LATEST $(latest_tag)"
@@ -167,6 +186,6 @@ install)
     ;;
 
 *)
-    fail "usage: skwd_install.sh status|install"
+    fail "usage: skwd_install.sh status|install|setup"
     ;;
 esac
