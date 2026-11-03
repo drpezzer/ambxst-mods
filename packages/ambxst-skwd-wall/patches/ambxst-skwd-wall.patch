@@ -1,8 +1,8 @@
 diff --git a/modules/globals/GlobalStates.qml b/modules/globals/GlobalStates.qml
-index eb6e9ccd..d3a0bd6b 100644
+index eb6e9ccd..4b76825e 100644
 --- a/modules/globals/GlobalStates.qml
 +++ b/modules/globals/GlobalStates.qml
-@@ -190,6 +190,318 @@ Singleton {
+@@ -190,6 +190,334 @@ Singleton {
          wallpaperSelectedIndex = -1;
      }
  
@@ -13,6 +13,8 @@ index eb6e9ccd..d3a0bd6b 100644
 +    property int wallpaperTransitionDuration: StateService.get("wallpaperTransitionDuration", 700)
 +    property string wallpaperPauseMode: StateService.get("wallpaperPauseMode", "fullscreen")
 +    property string wallpaperPauseScope: StateService.get("wallpaperPauseScope", "perScreen")
++    property real videoWallpaperVolume: StateService.get("videoWallpaperVolume", 0.5)
++    property bool videoWallpaperMuted: StateService.get("videoWallpaperMuted", true)
 +    property bool wallpapersTabShowSettings: false
 +    property bool wallpaperPeriodicEnabled: StateService.get("wallpaperPeriodicEnabled", false)
 +    property int wallpaperPeriodicSeconds: StateService.get("wallpaperPeriodicSeconds", StateService.get("wallpaperPeriodicInterval", 15) * 60)
@@ -81,6 +83,16 @@ index eb6e9ccd..d3a0bd6b 100644
 +    function setWallpaperTransitionDuration(duration) {
 +        wallpaperTransitionDuration = duration;
 +        if (StateService && StateService.initialized) StateService.set("wallpaperTransitionDuration", duration);
++    }
++
++    function setVideoWallpaperVolume(vol) {
++        videoWallpaperVolume = Math.max(0, Math.min(1.0, vol));
++        if (StateService && StateService.initialized) StateService.set("videoWallpaperVolume", videoWallpaperVolume);
++    }
++
++    function setVideoWallpaperMuted(muted) {
++        videoWallpaperMuted = muted;
++        if (StateService && StateService.initialized) StateService.set("videoWallpaperMuted", videoWallpaperMuted);
 +    }
 +
 +    function setWallpaperPeriodicEnabled(enabled) {
@@ -303,6 +315,8 @@ index eb6e9ccd..d3a0bd6b 100644
 +                root.wallpaperRandomSourceFilters = StateService.get("wallpaperRandomSourceFilters", []);
 +                root.wallpaperPauseMode = StateService.get("wallpaperPauseMode", "fullscreen");
 +                root.wallpaperPauseScope = StateService.get("wallpaperPauseScope", "perScreen");
++                root.videoWallpaperVolume = StateService.get("videoWallpaperVolume", 0.5);
++                root.videoWallpaperMuted = StateService.get("videoWallpaperMuted", true);
 +            }
 +        }
 +        function onStateLoaded() {
@@ -315,6 +329,8 @@ index eb6e9ccd..d3a0bd6b 100644
 +            root.wallpaperRandomSourceFilters = StateService.get("wallpaperRandomSourceFilters", []);
 +            root.wallpaperPauseMode = StateService.get("wallpaperPauseMode", "fullscreen");
 +            root.wallpaperPauseScope = StateService.get("wallpaperPauseScope", "perScreen");
++            root.videoWallpaperVolume = StateService.get("videoWallpaperVolume", 0.5);
++            root.videoWallpaperMuted = StateService.get("videoWallpaperMuted", true);
 +        }
 +    }
 +
@@ -466,7 +482,7 @@ index 6ee88c15..29b7a0f6 100644
                          visible: (root.selectedMod?.error ?? "") !== ""
                              || (root.selectedMod?.compatibilityError ?? "") !== ""
 diff --git a/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml b/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
-index 30c36e6f..a07d382d 100644
+index 30c36e6f..a533f2bf 100644
 --- a/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
 +++ b/modules/widgets/dashboard/wallpapers/VideoWallpaper.qml
 @@ -21,11 +21,9 @@ Item {
@@ -502,6 +518,17 @@ index 30c36e6f..a07d382d 100644
          if (shouldPausePlayback) {
              if (player.playbackState === MediaPlayer.PlayingState)
                  player.pause();
+@@ -73,8 +77,8 @@ Item {
+ 
+     AudioOutput {
+         id: mutedAudio
+-        muted: true
+-        volume: 0
++        muted: (GlobalStates && GlobalStates.videoWallpaperMuted !== undefined) ? (GlobalStates.videoWallpaperMuted || videoWallpaper.shouldPausePlayback) : true
++        volume: (GlobalStates && GlobalStates.videoWallpaperVolume !== undefined) ? GlobalStates.videoWallpaperVolume : 0.5
+     }
+ 
+     Item {
 @@ -127,9 +131,33 @@ Item {
          function onVideoSyncTickChanged() {
              if (videoWallpaper.shouldPausePlayback)

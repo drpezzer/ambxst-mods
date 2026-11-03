@@ -1133,19 +1133,41 @@ FocusScope {
 
                         // Wheel: one card per notch; touchpads scroll by distance.
                         property real wheelRest: 0
-                        WheelHandler {
-                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                            onWheel: event => {
-                                // Wheels report notches (120 each): one card per notch. Touchpads report only pixels: a card per 20 px.
-                                const ang = event.angleDelta.x !== 0 ? event.angleDelta.x : event.angleDelta.y;
-                                const pix = event.pixelDelta ? (event.pixelDelta.x !== 0 ? event.pixelDelta.x : event.pixelDelta.y) : 0;
-                                const d = ang !== 0 ? ang / 120 : pix / 20;
-                                styleCarousel.wheelRest -= d;
-                                const steps = styleCarousel.wheelRest > 0 ? Math.floor(styleCarousel.wheelRest) : Math.ceil(styleCarousel.wheelRest);
-                                if (steps !== 0) {
-                                    styleCarousel.wheelRest -= steps;
-                                    root.currentSection = 0;
-                                    styleCarousel.step(steps);
+
+                        // Visible bounding box around the carousel scroll area (the red region)
+                        Rectangle {
+                            id: carouselScrollRegion
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.min(parent.width, styleCarousel.cardWidth + 2 * styleCarousel.sideBars * (styleCarousel.barWidth + styleCarousel.gap) + 24)
+                            height: styleCarousel.height
+                            radius: Styling.radius(4)
+                            color: "transparent"
+                            border.color: hoverCarousel.hovered ? Styling.srItem("primary") : Styling.srItem("overprimary")
+                            border.width: hoverCarousel.hovered ? 2 : 1.5
+                            z: 0
+
+                            Behavior on border.color { ColorAnimation { duration: 150 } }
+                            Behavior on border.width { NumberAnimation { duration: 150 } }
+
+                            HoverHandler {
+                                id: hoverCarousel
+                            }
+
+                            WheelHandler {
+                                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                                onWheel: event => {
+                                    // Wheels report notches (120 each): one card per notch. Touchpads report only pixels: a card per 20 px.
+                                    const ang = event.angleDelta.x !== 0 ? event.angleDelta.x : event.angleDelta.y;
+                                    const pix = event.pixelDelta ? (event.pixelDelta.x !== 0 ? event.pixelDelta.x : event.pixelDelta.y) : 0;
+                                    const d = ang !== 0 ? ang / 120 : pix / 20;
+                                    styleCarousel.wheelRest -= d;
+                                    const steps = styleCarousel.wheelRest > 0 ? Math.floor(styleCarousel.wheelRest) : Math.ceil(styleCarousel.wheelRest);
+                                    if (steps !== 0) {
+                                        styleCarousel.wheelRest -= steps;
+                                        root.currentSection = 0;
+                                        styleCarousel.step(steps);
+                                    }
                                 }
                             }
                         }
@@ -2772,6 +2794,97 @@ FocusScope {
                                 font.family: Config.theme.font
                                 font.pixelSize: Styling.fontSize(-3)
                                 color: Colors.outline
+                            }
+
+                            // Divider
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 1
+                                color: Colors.outline
+                                opacity: 0.15
+                            }
+
+                            // Video Wallpaper Audio Settings
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 12
+
+                                Text {
+                                    text: "Video Wallpaper Audio:"
+                                    font.family: Config.theme.font
+                                    font.pixelSize: Styling.fontSize(-2)
+                                    font.weight: Font.Bold
+                                    color: Colors.overBackground
+                                }
+
+                                // Mute / Unmute Button
+                                StyledRect {
+                                    id: muteBtnRect
+                                    Layout.preferredHeight: 32
+                                    Layout.preferredWidth: muteBtnRow.implicitWidth + 24
+                                    variant: (GlobalStates && GlobalStates.videoWallpaperMuted) ? "pane" : "primary"
+                                    radius: Styling.radius(2)
+
+                                    MouseArea {
+                                        id: muteMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (GlobalStates)
+                                                GlobalStates.setVideoWallpaperMuted(!GlobalStates.videoWallpaperMuted);
+                                        }
+                                    }
+
+                                    RowLayout {
+                                        id: muteBtnRow
+                                        anchors.centerIn: parent
+                                        spacing: 6
+
+                                        Text {
+                                            text: (GlobalStates && GlobalStates.videoWallpaperMuted) ? Icons.speakerSlash : Icons.speakerHigh
+                                            font.family: Icons.font
+                                            font.pixelSize: 14
+                                            color: (GlobalStates && GlobalStates.videoWallpaperMuted) ? Colors.outline : Styling.srItem("primary")
+                                        }
+
+                                        Text {
+                                            text: (GlobalStates && GlobalStates.videoWallpaperMuted) ? "Muted" : "Playing"
+                                            font.family: Config.theme.font
+                                            font.pixelSize: Styling.fontSize(-2)
+                                            font.weight: Font.Medium
+                                            color: (GlobalStates && GlobalStates.videoWallpaperMuted) ? Colors.outline : Styling.srItem("primary")
+                                        }
+                                    }
+                                }
+
+                                // Volume Slider
+                                StyledSlider {
+                                    id: wallVolSlider
+                                    Layout.fillWidth: true
+                                    Layout.maximumWidth: 260
+                                    Layout.preferredHeight: 24
+                                    scroll: false
+                                    value: (GlobalStates && GlobalStates.videoWallpaperVolume !== undefined) ? GlobalStates.videoWallpaperVolume : 0.5
+                                    progressColor: (GlobalStates && GlobalStates.videoWallpaperMuted) ? Colors.outline : Styling.srItem("overprimary")
+                                    onValueChanged: {
+                                        if (GlobalStates && Math.abs(GlobalStates.videoWallpaperVolume - value) > 0.01) {
+                                            GlobalStates.setVideoWallpaperVolume(value);
+                                            if (GlobalStates.videoWallpaperMuted && isDragging && value > 0.05) {
+                                                GlobalStates.setVideoWallpaperMuted(false);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: Math.round(((GlobalStates && GlobalStates.videoWallpaperVolume !== undefined) ? GlobalStates.videoWallpaperVolume : 0.5) * 100) + "%"
+                                    font.family: Config.theme.font
+                                    font.pixelSize: Styling.fontSize(-2)
+                                    font.weight: Font.Medium
+                                    color: (GlobalStates && GlobalStates.videoWallpaperMuted) ? Colors.outline : Colors.overBackground
+                                    Layout.preferredWidth: 38
+                                }
                             }
                         }
                     }

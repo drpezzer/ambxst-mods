@@ -73,6 +73,8 @@ Open the notch on the **Wallpapers** tab:
     fullscreen (or maximized), on that monitor only or on all of them. skwd-wall does
     the pausing itself. *That monitor only* gives each monitor its own video player,
     so a video shown on two screens is decoded twice; *All monitors* shares one.
+    Below that, a mute button and volume slider for video wallpaper sound (muted by
+    default), for skwd-wall and Ambxst's own player alike.
   - **Material You colour schemes** and **colour presets**.
 
 Everything in the panel follows your Ambxst theme, including the colours and
@@ -144,6 +146,13 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 
 ## Changelog
 
+- 1.4.0: wallpaper changes start right away (the 300 ms wait before applying is
+  gone; changes made together are still one apply). Mouse wheel turns the transition
+  carousel only over the cards, with a border around them; elsewhere it scrolls the
+  settings. Mute button and volume slider for video wallpapers. On Hyprland, the
+  new image no longer flashes through at the start of a transition (skwd-wall's
+  layers skip Hyprland's fade-in). Thanks to
+  [negative127](https://github.com/negative127) (PR #4).
 - 1.3.0: a bell at the top left of the wallpaper settings silences skwd-wall's
   "Wallpaper Changed" notifications (sound, popup and notification centre). On by default.
 - 1.2.4: verified on Ambxst 1.3.14 (base 83e8462a, notch stack rework, maximize and fake-fullscreen binds; also covers 1.3.13); patch applies verbatim, no source changes.

@@ -308,15 +308,19 @@ Singleton {
     }
     onActiveChanged: {
         syncDebounce.restart();
-        if (active)
+        if (active) {
             writeSkwdConfig();
+            syncAudio();
+        }
     }
     // Turning it back on gives skwd another chance after a failure.
     onEnabledChanged: if (enabled) failed = false
 
+    // Interval 0 = the next event-loop turn: changes made together (several
+    // screens at once) still become one apply, without a noticeable delay.
     Timer {
         id: syncDebounce
-        interval: 300
+        interval: 0
         onTriggered: root.sync()
     }
 
@@ -338,14 +342,29 @@ Singleton {
         const files = names.map(n => shown[n]);
         const same = names.length > 0 && files.every(f => f === files[0]);
         if (same) {
-            if (names.some(n => applied[n] !== files[0]))
+            if (names.some(n => applied[n] !== files[0])) {
+                noLayerFade();
                 applyAll(files[0]);
+            }
             return;
         }
-        for (const name in shown) {
-            if (applied[name] !== shown[name])
-                applyTo(name, shown[name]);
-        }
+        const changed = names.filter(n => applied[n] !== shown[n]);
+        if (changed.length > 0)
+            noLayerFade();
+        for (const name of changed)
+            applyTo(name, shown[name]);
+    }
+
+    // skwd shows the new image underneath its transition layer as soon as that
+    // layer has drawn its first frame. Hyprland fades layers in, so for the
+    // first frames the transition layer is see-through and the new image
+    // flashes through it. A no_anim rule for skwd's layers stops that. Adding
+    // a rule under the same name replaces it, and a config reload clears all
+    // rules, so it goes in before every apply.
+    readonly property bool hyprland: (Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "") !== ""
+    function noLayerFade() {
+        if (hyprland)
+            run(["hyprctl", "eval", 'hl.layer_rule({ name = "ambxst-skwd-wall-no-fade", match = { namespace = "skwd-wall-vk|skwd-paper" }, no_anim = true })'], null);
     }
 
     function applyAll(file) {
@@ -454,6 +473,7 @@ Singleton {
             root.pauseSent = ({});
             pauseDebounce.restart();
             root.sync();
+            root.syncAudio();
         });
     }
 
@@ -470,10 +490,29 @@ Singleton {
     readonly property int transitionDuration: Math.max(50, Math.min(10000, GlobalStates.wallpaperTransitionDuration))
     readonly property string pauseMode: GlobalStates.wallpaperPauseMode
     readonly property string pauseScope: GlobalStates.wallpaperPauseScope
+    readonly property real videoWallpaperVolume: (GlobalStates && GlobalStates.videoWallpaperVolume !== undefined) ? GlobalStates.videoWallpaperVolume : 0.5
+    readonly property bool videoWallpaperMuted: (GlobalStates && GlobalStates.videoWallpaperMuted !== undefined) ? GlobalStates.videoWallpaperMuted : true
     onTransitionStyleChanged: configDebounce.restart()
     onTransitionDurationChanged: configDebounce.restart()
     onPauseModeChanged: configDebounce.restart()
     onPauseScopeChanged: configDebounce.restart()
+    onVideoWallpaperVolumeChanged: audioDebounce.restart()
+    onVideoWallpaperMutedChanged: audioDebounce.restart()
+
+    // A slider drag changes the volume every frame: send the last value only.
+    Timer {
+        id: audioDebounce
+        interval: 80
+        onTriggered: root.syncAudio()
+    }
+
+    function syncAudio() {
+        if (!active || !daemonUp)
+            return;
+        const vol = Math.max(0, Math.min(100, Math.round(videoWallpaperVolume * 100)));
+        run([root.helm, "volume", String(vol)], null);
+        run([root.helm, videoWallpaperMuted ? "mute" : "unmute"], null);
+    }
 
     Timer {
         id: configDebounce
