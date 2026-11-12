@@ -74,6 +74,7 @@ Works with Ambxst `>=1.3.0`.
 
 ## Changelog
 
+- 1.0.11: verified on Ambxst 1.3.15 (base 5d71e924, Mango native overview and per-tag layouts, special-workspace window detection, low-battery threshold setting); patch applies verbatim, no source changes.
 - 1.0.10: verified on Ambxst 1.3.14 (base 83e8462a, notch stack rework, maximize and fake-fullscreen binds; also covers 1.3.13); patch applies verbatim, no source changes.
 - 1.0.9: verified on Ambxst 1.3.12 (base 1e1a5649, native mod updates; also covers 1.3.11); patch applies verbatim, no source changes.
 - 1.0.8: verified on Ambxst 1.3.10 (base bc602302, native clipboard and notification image cache); patch applies verbatim, no source changes.

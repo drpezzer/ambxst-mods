@@ -759,6 +759,7 @@ be removed (`ambxst mods remove drpezzer.<mod>`).
 
 ## Changelog
 
+- 4.1.2: **Ambxst 1.3.15 port.** 1.3.15 hands monitor and workspace ids to the shell as strings and gives every special workspace the numeric id 0 (only its new `identity` tells them apart). Two things broke silently: with "Dual Screen Single Bar" on, the bar compared a string monitor id with a number and hid on every screen; and the fullscreen check could no longer tell an open special workspace from a hidden one. Both now compare ids as strings and workspaces by identity. Needs Ambxst 1.3.15.
 - 4.1.1: **The farewell ends on black on every theme.** With a translucent
   or glass notch the swell stayed see-through; the notch now fades to black
   as it grows, and the sheet under the quote is black rather than the

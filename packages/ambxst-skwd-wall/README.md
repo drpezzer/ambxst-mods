@@ -146,6 +146,7 @@ installed). To remove that copy: `rm -r ~/.local/share/ambxst/skwd-wall
 
 ## Changelog
 
+- 1.4.1: Video pausing matches workspaces by identity. On Ambxst 1.3.15 every special workspace has the numeric id 0, so a fullscreen window parked on a hidden special workspace could pause a screen while another special workspace was open. Still works on older Ambxst.
 - 1.4.0: wallpaper changes start right away (the 300 ms wait before applying is
   gone; changes made together are still one apply). Mouse wheel turns the transition
   carousel only over the cards, with a border around them; elsewhere it scrolls the

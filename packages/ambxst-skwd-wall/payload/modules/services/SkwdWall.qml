@@ -232,10 +232,16 @@ Singleton {
         const mon = mons.find(m => m.name === name);
         if (!mon)
             return false;
-        const ws = mon.visibleWorkspace ? mon.visibleWorkspace.id : (mon.activeWorkspace ? mon.activeWorkspace.id : 0);
+        // Workspaces are matched by identity (Ambxst 1.3.15+: the compositor's
+        // own id, e.g. "-98" for a Hyprland special workspace) and fall back to
+        // the numeric id on older versions. Since 1.3.15 every special
+        // workspace has numeric id 0, so the id alone would also match windows
+        // parked on a hidden special workspace.
+        const wsKey = w => w ? String(w.identity !== undefined && w.identity !== "" ? w.identity : w.id) : "";
+        const ws = wsKey(mon.visibleWorkspace && (mon.visibleWorkspace.identity || mon.visibleWorkspace.id) ? mon.visibleWorkspace : mon.activeWorkspace);
         const area = mon.width * mon.height;
         return (AxctlService.clients.values || []).some(c => {
-            if (c.monitor !== mon.id || !c.workspace || c.workspace.id !== ws || c.hidden)
+            if (String(c.monitor) !== String(mon.id) || !c.workspace || wsKey(c.workspace) !== ws || c.hidden)
                 return false;
             if (c.fullscreen)
                 return true;
